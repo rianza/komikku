@@ -1,6 +1,7 @@
 buildscript {
     dependencies {
         classpath(libs.kotlin.gradle)
+        classpath(libs.android.shortcut.gradle)
         classpath(sylibs.gradleversionsx)
     }
 }

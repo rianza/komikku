@@ -8,7 +8,7 @@ plugins {
     alias(mihonx.plugins.android.application)
     alias(mihonx.plugins.compose)
     alias(mihonx.plugins.spotless)
-    alias(libs.plugins.shortcutHelper)
+    id("com.github.zellius.shortcut-helper")
     kotlin("plugin.parcelize")
     id("com.github.ben-manes.versions")
 
