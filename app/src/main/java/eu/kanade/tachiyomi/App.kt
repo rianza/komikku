@@ -213,9 +213,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         // Updates widget update
         WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
 
-        scope.launch(Dispatchers.IO) {
-            setupExhLogging() // EXH logging
-        }
+        setupExhLogging() // EXH logging
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
                 networkPreferences.verboseLogging().get() -> LogPriority.VERBOSE
@@ -309,7 +307,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         val syncPreferences: SyncPreferences = Injekt.get()
         val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
         if (syncPreferences.isSyncEnabled() && syncTriggerOpt.syncOnAppResume) {
-            SyncDataJob.startNow(this@App)
+            scope.launch(Dispatchers.IO) {
+                SyncDataJob.startNow(this@App)
+            }
         }
 
         // AM (DISCORD) -->
@@ -369,42 +369,44 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .disableBorder()
             .build()
 
-        val printers = mutableListOf<Printer>(AndroidPrinter())
+        XLog.init(logConfig, AndroidPrinter())
 
-        val logFolder = Injekt.get<StorageManager>().getLogsDirectory()
+        val scope = ProcessLifecycleOwner.get().lifecycleScope
+        scope.launch(Dispatchers.IO) {
+            val printers = mutableListOf<Printer>()
 
-        if (logFolder != null) {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+            val logFolder = Injekt.get<StorageManager>().getLogsDirectory()
 
-            printers += EnhancedFilePrinter
-                .Builder(logFolder) {
-                    fileNameGenerator = object : DateFileNameGenerator() {
-                        override fun generateFileName(logLevel: Int, timestamp: Long): String {
-                            return super.generateFileName(
-                                logLevel,
-                                timestamp,
-                            ) + "-${BuildConfig.BUILD_TYPE}.txt"
+            if (logFolder != null) {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+
+                printers += EnhancedFilePrinter
+                    .Builder(logFolder) {
+                        fileNameGenerator = object : DateFileNameGenerator() {
+                            override fun generateFileName(logLevel: Int, timestamp: Long): String {
+                                return super.generateFileName(
+                                    logLevel,
+                                    timestamp,
+                                ) + "-${BuildConfig.BUILD_TYPE}.txt"
+                            }
                         }
+                        flattener { timeMillis, level, tag, message ->
+                            "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
+                        }
+                        backupStrategy = NeverBackupStrategy()
                     }
-                    flattener { timeMillis, level, tag, message ->
-                        "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
-                    }
-                    backupStrategy = NeverBackupStrategy()
-                }
+            }
+
+            // Install Crashlytics in prod
+            if (telemetryIncluded) {
+                printers += CrashlyticsPrinter(LogLevel.ERROR)
+            }
+
+            printers.forEach { XLog.addPrinter(it) }
+
+            xLogD("Application booting...")
+            xLogD(CrashLogUtil(applicationContext).getDebugInfo())
         }
-
-        // Install Crashlytics in prod
-        if (telemetryIncluded) {
-            printers += CrashlyticsPrinter(LogLevel.ERROR)
-        }
-
-        XLog.init(
-            logConfig,
-            *printers.toTypedArray(),
-        )
-
-        xLogD("Application booting...")
-        xLogD(CrashLogUtil(applicationContext).getDebugInfo())
     }
 
     private inner class DisableIncognitoReceiver : BroadcastReceiver() {
