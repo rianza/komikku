@@ -408,7 +408,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * Whether this presenter is initialized yet.
      */
     fun needsInit(): Boolean {
-        return manga == null
+        return manga == null || state.value.viewerChapters == null
     }
 
     /**
@@ -1449,7 +1449,7 @@ class ReaderViewModel @JvmOverloads constructor(
     @Immutable
     data class State(
         val manga: Manga? = null,
-        val viewerChapters: ViewerChapters? = null,
+        @Transient val viewerChapters: ViewerChapters? = null,
         val bookmarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
@@ -1457,7 +1457,7 @@ class ReaderViewModel @JvmOverloads constructor(
         /**
          * Viewer used to display the pages (pager, webtoon, ...).
          */
-        val viewer: Viewer? = null,
+        @Transient val viewer: Viewer? = null,
         val dialog: Dialog? = null,
         val menuVisible: Boolean = false,
         @field:IntRange(from = -100, to = 100) val brightnessOverlayValue: Int = 0,
