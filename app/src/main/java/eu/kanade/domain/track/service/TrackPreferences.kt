@@ -34,19 +34,19 @@ class TrackPreferences(
 
     fun trackToken(tracker: Tracker) = preferenceStore.getString(Preference.privateKey("track_token_${tracker.id}"), "")
 
-    fun anilistScoreType() = preferenceStore.getString("anilist_score_type", Anilist.POINT_10)
+    val anilistScoreType: Preference<String> = preferenceStore.getString("anilist_score_type", Anilist.POINT_10)
 
-    fun autoUpdateTrack() = preferenceStore.getBoolean("pref_auto_update_manga_sync_key", true)
+    val autoUpdateTrack: Preference<Boolean> = preferenceStore.getBoolean("pref_auto_update_manga_sync_key", true)
 
-    fun trackOnAddingToLibrary() = preferenceStore.getBoolean("track_on_adding_to_library", true)
+    val trackOnAddingToLibrary: Preference<Boolean> = preferenceStore.getBoolean("track_on_adding_to_library", true)
 
-    fun autoUpdateTrackOnMarkRead() = preferenceStore.getEnum(
+    val autoUpdateTrackOnMarkRead: Preference<AutoTrackState> = preferenceStore.getEnum(
         "pref_auto_update_manga_on_mark_read",
         AutoTrackState.ALWAYS,
     )
 
     // SY -->
-    fun resolveUsingSourceMetadata() = preferenceStore.getBoolean(
+    val resolveUsingSourceMetadata: Preference<Boolean> = preferenceStore.getBoolean(
         "pref_resolve_using_source_metadata_key",
         true,
     )

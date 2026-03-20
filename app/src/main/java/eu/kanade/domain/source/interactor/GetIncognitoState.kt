@@ -14,7 +14,7 @@ class GetIncognitoState(
     private val sourceManager: SourceManager,
 ) {
     fun await(sourceId: Long?): Boolean {
-        if (basePreferences.incognitoMode().get()) return true
+        if (basePreferences.incognitoMode.get()) return true
         if (sourceId == null) return false
         // KMK -->
         return sourceManager.get(sourceId)?.isIncognitoModeEnabled() == true
@@ -22,11 +22,11 @@ class GetIncognitoState(
     }
 
     fun subscribe(sourceId: Long?): Flow<Boolean> {
-        if (sourceId == null) return basePreferences.incognitoMode().changes()
+        if (sourceId == null) return basePreferences.incognitoMode.changes()
 
         return combine(
-            basePreferences.incognitoMode().changes(),
-            sourcePreferences.incognitoExtensions().changes(),
+            basePreferences.incognitoMode.changes(),
+            sourcePreferences.incognitoExtensions.changes(),
         ) { incognito, incognitoExtensions ->
             // KMK -->
             incognito || sourceManager.get(sourceId)?.isIncognitoModeEnabled(incognitoExtensions) == true

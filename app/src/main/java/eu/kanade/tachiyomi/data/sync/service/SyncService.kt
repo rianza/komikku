@@ -285,7 +285,7 @@ abstract class SyncService(
         val localMapByUid = localCategoriesList.filter { it.uid != 0L }.associateBy { it.uid }
         val localMapByName = localCategoriesList.associateBy { it.name }
 
-        val lastSyncTime = syncPreferences.lastSyncTimestamp().get()
+        val lastSyncTime = syncPreferences.lastSyncTimestamp.get()
 
         remoteCategoriesList.forEach { remote ->
             var localMatch: BackupCategory? = null

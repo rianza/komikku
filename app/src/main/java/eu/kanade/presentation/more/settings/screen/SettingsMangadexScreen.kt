@@ -178,7 +178,7 @@ object SettingsMangadexScreen : SearchableSettings {
         sourcePreferences: SourcePreferences,
     ): Preference.PreferenceItem.ListPreference<String> {
         return Preference.PreferenceItem.ListPreference(
-            preference = sourcePreferences.preferredMangaDexId(),
+            preference = sourcePreferences.preferredMangaDexId,
             entries = MdUtil.getEnabledMangaDexs(sourcePreferences)
                 .associate { it.id.toString() to it.toString() }
                 .toImmutableMap(),
@@ -258,7 +258,7 @@ object SettingsMangadexScreen : SearchableSettings {
                 onDismissRequest = { dialogOpen = false },
                 onSelectionConfirmed = { items ->
                     dialogOpen = false
-                    sourcePreferences.mangadexSyncToLibraryIndexes().set(
+                    sourcePreferences.mangadexSyncToLibraryIndexes.set(
                         List(items.size) { index -> (index + 1).toString() }.toSet(),
                     )
                     LibraryUpdateJob.startNow(

@@ -130,15 +130,15 @@ object SettingsTrackingScreen : SearchableSettings {
 
         return listOf(
             Preference.PreferenceItem.SwitchPreference(
-                preference = trackPreferences.trackOnAddingToLibrary(),
+                preference = trackPreferences.trackOnAddingToLibrary,
                 title = stringResource(KMR.strings.pref_track_on_add_library),
             ),
             Preference.PreferenceItem.SwitchPreference(
-                preference = trackPreferences.autoUpdateTrack(),
+                preference = trackPreferences.autoUpdateTrack,
                 title = stringResource(MR.strings.pref_auto_update_manga_sync),
             ),
             Preference.PreferenceItem.ListPreference(
-                preference = trackPreferences.autoUpdateTrackOnMarkRead(),
+                preference = trackPreferences.autoUpdateTrackOnMarkRead,
                 entries = AutoTrackState.entries
                     .associateWith { stringResource(it.titleRes) }
                     .toPersistentMap(),
@@ -146,13 +146,13 @@ object SettingsTrackingScreen : SearchableSettings {
             ),
             // KMK -->
             Preference.PreferenceItem.SwitchPreference(
-                preference = trackPreferences.autoSyncProgressFromTrackers(),
+                preference = trackPreferences.autoSyncProgressFromTrackers,
                 title = stringResource(KMR.strings.pref_auto_sync_progress_from_trackers),
             ),
             // KMK <--
             // SY -->
             Preference.PreferenceItem.SwitchPreference(
-                preference = trackPreferences.resolveUsingSourceMetadata(),
+                preference = trackPreferences.resolveUsingSourceMetadata,
                 title = stringResource(SYMR.strings.pref_tracker_resolve_using_source_metadata),
                 subtitle = stringResource(SYMR.strings.pref_tracker_resolve_using_source_metadata_summary),
             ),

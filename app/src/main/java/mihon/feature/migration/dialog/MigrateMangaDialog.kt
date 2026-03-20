@@ -152,7 +152,7 @@ private class MigrateDialogScreenModel(
                 if (applicable) add(it)
             }
         }
-        val selectedFlags = sourcePreference.migrationFlags().get()
+        val selectedFlags = sourcePreference.migrationFlags.get()
         mutableState.update {
             State(
                 current = current,
@@ -177,7 +177,7 @@ private class MigrateDialogScreenModel(
         val current = state.current ?: return
         val target = state.target ?: return
         // KMK -->
-        // sourcePreference.migrationFlags().set(state.selectedFlags)
+        // sourcePreference.migrationFlags.set(state.selectedFlags)
         // KMK <--
         mutableState.update { it.copy(isMigrating = true) }
         try {

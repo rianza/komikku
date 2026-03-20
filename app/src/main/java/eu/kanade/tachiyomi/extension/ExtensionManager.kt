@@ -88,7 +88,7 @@ class ExtensionManager(
         ExtensionInstallReceiver(InstallationListener()).register(context)
     }
 
-    private var subLanguagesEnabledOnFirstRun = preferences.enabledLanguages().isSet()
+    private var subLanguagesEnabledOnFirstRun = preferences.enabledLanguages.isSet()
 
     fun getExtensionPackage(sourceId: Long): String? {
         return installedExtensionsFlow.value.find { extension ->
@@ -160,7 +160,7 @@ class ExtensionManager(
 
     // EXH -->
     private fun <T : Extension> Map<String, T>.filterNotBlacklisted(): Map<String, T> {
-        val blacklistEnabled = preferences.enableSourceBlacklist().get()
+        val blacklistEnabled = preferences.enableSourceBlacklist.get()
         return filterNot { (_, extension) ->
             extension.isBlacklisted(blacklistEnabled)
                 .also {
@@ -170,9 +170,9 @@ class ExtensionManager(
     }
 
     private fun Extension.isBlacklisted(
-        blacklistEnabled: Boolean = preferences.enableSourceBlacklist().get(),
+        blacklistEnabled: Boolean = preferences.enableSourceBlacklist.get(),
         // KMK -->
-        isHentaiEnabled: Boolean = Injekt.get<ExhPreferences>().isHentaiEnabled().get(),
+        isHentaiEnabled: Boolean = Injekt.get<ExhPreferences>().isHentaiEnabled.get(),
         // KMK <--
     ): Boolean {
         return pkgName in BlacklistedSources.BLACKLISTED_EXTENSIONS &&
@@ -228,12 +228,12 @@ class ExtensionManager(
             .map(Extension.Available.Source::lang)
 
         val deviceLanguage = Locale.getDefault().language
-        val defaultLanguages = preferences.enabledLanguages().defaultValue()
+        val defaultLanguages = preferences.enabledLanguages.defaultValue()
         val languagesToEnable = availableLanguages.filter {
             it != deviceLanguage && it.startsWith(deviceLanguage)
         }
 
-        preferences.enabledLanguages().set(defaultLanguages + languagesToEnable)
+        preferences.enabledLanguages.set(defaultLanguages + languagesToEnable)
         subLanguagesEnabledOnFirstRun = true
     }
 
@@ -243,6 +243,11 @@ class ExtensionManager(
      * @param availableExtensions The list of extensions given by the [api].
      */
     private fun updatedInstalledExtensionsStatuses(availableExtensions: List<Extension.Available>) {
+        if (availableExtensions.isEmpty()) {
+            preferences.extensionUpdatesCount.set(0)
+            return
+        }
+
         val installedExtensionsMap = installedExtensionMapFlow.value.toMutableMap()
         var changed = false
         for ((pkgName, extension) in installedExtensionsMap) {
@@ -460,7 +465,7 @@ class ExtensionManager(
 
     private fun updatePendingUpdatesCount() {
         val pendingUpdateCount = installedExtensionMapFlow.value.values.count { it.hasUpdate }
-        preferences.extensionUpdatesCount().set(pendingUpdateCount)
+        preferences.extensionUpdatesCount.set(pendingUpdateCount)
         if (pendingUpdateCount == 0) {
             ExtensionUpdateNotifier(context).dismiss()
         }

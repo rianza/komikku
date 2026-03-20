@@ -43,7 +43,7 @@ internal class ExtensionInstaller(
     private val activeJobs = ConcurrentHashMap<String, Job>()
     private val activeSteps = ConcurrentHashMap<Long, MutableStateFlow<InstallStep>>()
     // KMK <--
-    private val extensionInstaller = Injekt.get<BasePreferences>().extensionInstaller()
+    private val extensionInstaller = Injekt.get<BasePreferences>().extensionInstaller
 
     private val httpClient: OkHttpClient = Injekt.get<NetworkHelper>().client
 

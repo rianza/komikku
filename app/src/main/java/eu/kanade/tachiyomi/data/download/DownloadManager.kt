@@ -502,7 +502,7 @@ class DownloadManager(
         } else {
             // KMK <--
             // Retrieve the categories that are set to exclude from being deleted on read
-            val categoriesToExclude = downloadPreferences.removeExcludeCategories().get().map(String::toLong).toSet()
+            val categoriesToExclude = downloadPreferences.removeExcludeCategories.get().map(String::toLong).toSet()
 
             val categoriesForManga = getCategories.await(manga.id)
                 .map { it.id }
@@ -514,7 +514,7 @@ class DownloadManager(
             }
         }
 
-        return if (!downloadPreferences.removeBookmarkedChapters().get() &&
+        return if (!downloadPreferences.removeBookmarkedChapters.get() &&
             // KMK -->
             // if manually deleting single chapter then will allow deleting bookmark chapter
             (chapters.size > 1 || !ignoreCategoryExclusion)

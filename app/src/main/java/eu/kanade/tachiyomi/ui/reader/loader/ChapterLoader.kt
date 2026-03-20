@@ -65,7 +65,7 @@ class ChapterLoader(
                 // otherwise use the requested page.
                 if (!chapter.chapter.read /* --> EH */ ||
                     readerPrefs
-                        .preserveReadingPosition()
+                        .preserveReadingPosition
                         .get() ||
                     page != null // <-- EH
                 ) {

@@ -260,14 +260,14 @@ class MangaScreenModel(
     private val filteredChapters: List<ChapterList.Item>?
         get() = successState?.processedChapters
 
-    val chapterSwipeStartAction = libraryPreferences.swipeToEndAction().get()
-    val chapterSwipeEndAction = libraryPreferences.swipeToStartAction().get()
-    private var autoTrackState = trackPreferences.autoUpdateTrackOnMarkRead().get()
+    val chapterSwipeStartAction = libraryPreferences.swipeToEndAction.get()
+    val chapterSwipeEndAction = libraryPreferences.swipeToStartAction.get()
+    private var autoTrackState = trackPreferences.autoUpdateTrackOnMarkRead.get()
 
-    private val skipFiltered by readerPreferences.skipFiltered().asState(screenModelScope)
+    private val skipFiltered by readerPreferences.skipFiltered.asState(screenModelScope)
 
     val isUpdateIntervalEnabled =
-        LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in libraryPreferences.autoUpdateMangaRestrictions().get()
+        LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in libraryPreferences.autoUpdateMangaRestrictions.get()
 
     private val selectedPositions: Array<Int> = arrayOf(-1, -1) // first and last selected index in list
     private val selectedChapterIds: HashSet<Long> = HashSet()
@@ -482,8 +482,8 @@ class MangaScreenModel(
                     dialog = null,
                     hideMissingChapters = libraryPreferences.hideMissingChapters().get(),
                     // SY -->
-                    showRecommendationsInOverflow = uiPreferences.recommendsInOverflow().get(),
-                    showMergeInOverflow = uiPreferences.mergeInOverflow().get(),
+                    showRecommendationsInOverflow = uiPreferences.recommendsInOverflow.get(),
+                    showMergeInOverflow = uiPreferences.mergeInOverflow.get(),
                     showMergeWithAnother = smartSearched,
                     mergedData = mergedData,
                     meta = raiseMetadata(meta, source),
@@ -494,8 +494,8 @@ class MangaScreenModel(
                         PagePreviewState.Unused
                     },
                     alwaysShowReadingProgress =
-                    readerPreferences.preserveReadingPosition().get() && manga.isEhBasedManga(),
-                    previewsRowCount = uiPreferences.previewsRowCount().get(),
+                    readerPreferences.preserveReadingPosition.get() && manga.isEhBasedManga(),
+                    previewsRowCount = uiPreferences.previewsRowCount.get(),
                     // SY <--
                 )
             }
@@ -837,7 +837,7 @@ class MangaScreenModel(
 
                 // Now check if user previously set categories, when available
                 val categories = getCategories()
-                val defaultCategoryId = libraryPreferences.defaultCategory().get().toLong()
+                val defaultCategoryId = libraryPreferences.defaultCategory.get().toLong()
                 val defaultCategory = categories.find { it.id == defaultCategoryId }
                 when {
                     // Default category set

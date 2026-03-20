@@ -96,7 +96,7 @@ open class SourceFeedScreenModel(
 
     private val coroutineDispatcher = Executors.newFixedThreadPool(5).asCoroutineDispatcher()
 
-    val startExpanded by uiPreferences.expandFilters().asState(screenModelScope)
+    val startExpanded by uiPreferences.expandFilters.asState(screenModelScope)
 
     // KMK -->
     var incognitoMode = mutableStateOf(getIncognitoState.await(source.id))

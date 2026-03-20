@@ -137,7 +137,7 @@ fun Screen.feedTab(
                         state = state,
                         contentPadding = contentPadding,
                         onClickSavedSearch = { savedSearch, source ->
-                            screenModel.sourcePreferences.lastUsedSource().set(savedSearch.source)
+                            screenModel.sourcePreferences.lastUsedSource.set(savedSearch.source)
                             navigator.push(
                                 BrowseSourceScreen(
                                     source.id,
@@ -147,7 +147,7 @@ fun Screen.feedTab(
                             )
                         },
                         onClickSource = { source ->
-                            screenModel.sourcePreferences.lastUsedSource().set(source.id)
+                            screenModel.sourcePreferences.lastUsedSource.set(source.id)
                             navigator.push(
                                 BrowseSourceScreen(
                                     source.id,

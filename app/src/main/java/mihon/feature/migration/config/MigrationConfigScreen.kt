@@ -439,8 +439,8 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
         }
 
         private fun initSources() {
-            val languages = sourcePreferences.enabledLanguages().get()
-            val includedSources = sourcePreferences.migrationSources().get()
+            val languages = sourcePreferences.enabledLanguages.get()
+            val includedSources = sourcePreferences.migrationSources.get()
                 // KMK -->
                 .mapIndexed { index, id -> id to index }.toMap()
             // KMK <--
@@ -513,7 +513,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             state.value.sources
                 .filter { source -> source.isSelected }
                 .map { source -> source.source.id }
-                .let { sources -> sourcePreferences.migrationSources().set(sources) }
+                .let { sources -> sourcePreferences.migrationSources.set(sources) }
         }
 
         data class State(

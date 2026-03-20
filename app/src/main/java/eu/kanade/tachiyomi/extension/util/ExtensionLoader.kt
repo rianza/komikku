@@ -50,7 +50,7 @@ internal object ExtensionLoader {
     // KMK <--
 
     private val loadNsfwSource by lazy {
-        preferences.showNsfwSource().get()
+        preferences.showNsfwSource.get()
     }
 
     private const val EXTENSION_FEATURE = "tachiyomi.extension"

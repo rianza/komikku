@@ -94,7 +94,7 @@ class WebtoonViewer(
         // KMK -->
         readerPreferences
             // KMK <--
-            .readerHideThreshold()
+            .readerHideThreshold
             .get()
             .threshold
 

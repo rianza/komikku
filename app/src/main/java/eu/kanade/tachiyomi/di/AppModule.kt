@@ -70,7 +70,7 @@ class AppModule(val app: Application) : InjektModule {
 
         addSingletonFactory<SqlDriver> {
             // SY -->
-            if (securityPreferences.encryptDatabase().get()) {
+            if (securityPreferences.encryptDatabase.get()) {
                 System.loadLibrary("sqlcipher")
 
                 return@addSingletonFactory AndroidSqliteDriver(

@@ -67,7 +67,7 @@ class PagerConfig(
     var shiftDoublePage = false
 
     var doublePages =
-        readerPreferences.pageLayout().get() == PageLayout.DOUBLE_PAGES && !readerPreferences.dualPageSplitPaged().get()
+        readerPreferences.pageLayout.get() == PageLayout.DOUBLE_PAGES && !readerPreferences.dualPageSplitPaged.get()
         set(value) {
             field = value
             if (!value) {
@@ -77,7 +77,7 @@ class PagerConfig(
 
     var invertDoublePages = false
 
-    var autoDoublePages = readerPreferences.pageLayout().get() == PageLayout.AUTOMATIC
+    var autoDoublePages = readerPreferences.pageLayout.get() == PageLayout.AUTOMATIC
 
     @ColorInt
     var pageCanvasColor = Color.WHITE
@@ -86,7 +86,7 @@ class PagerConfig(
     // SY <--
 
     init {
-        readerPreferences.readerTheme()
+        readerPreferences.readerTheme
             .register(
                 {
                     // SY -->
@@ -103,27 +103,27 @@ class PagerConfig(
                 },
             )
 
-        readerPreferences.imageScaleType()
+        readerPreferences.imageScaleType
             .register({ imageScaleType = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.zoomStart()
+        readerPreferences.zoomStart
             .register({ zoomTypeFromPreference(it) }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.cropBorders()
+        readerPreferences.cropBorders
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigateToPan()
+        readerPreferences.navigateToPan
             .register({ navigateToPan = it })
 
-        readerPreferences.landscapeZoom()
+        readerPreferences.landscapeZoom
             .register({ landscapeZoom = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.navigationModePager()
+        readerPreferences.navigationModePager
             .register({ navigationMode = it }, { updateNavigation(navigationMode) })
 
-        readerPreferences.pagerNavInverted()
+        readerPreferences.pagerNavInverted
             .register({ tappingInverted = it }, { navigator.invertMode = it })
-        readerPreferences.pagerNavInverted().changes()
+        readerPreferences.pagerNavInverted.changes()
             .drop(1)
             .onEach { navigationModeChangedListener?.invoke() }
             .launchIn(scope)
@@ -135,7 +135,7 @@ class PagerConfig(
             .launchIn(scope)
         // KMK <--
 
-        readerPreferences.dualPageSplitPaged()
+        readerPreferences.dualPageSplitPaged
             .register(
                 { dualPageSplit = it },
                 {
@@ -144,16 +144,16 @@ class PagerConfig(
                 },
             )
 
-        readerPreferences.dualPageInvertPaged()
+        readerPreferences.dualPageInvertPaged
             .register({ dualPageInvert = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.dualPageRotateToFit()
+        readerPreferences.dualPageRotateToFit
             .register(
                 { dualPageRotateToFit = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.dualPageRotateToFitInvert()
+        readerPreferences.dualPageRotateToFitInvert
             .register(
                 { dualPageRotateToFitInvert = it },
                 { imagePropertyChangedListener?.invoke() },
@@ -179,10 +179,10 @@ class PagerConfig(
         // KMK <--
 
         // SY -->
-        readerPreferences.pageTransitionsPager()
+        readerPreferences.pageTransitionsPager
             .register({ usePageTransitions = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.pageLayout()
+        readerPreferences.pageLayout
             .register(
                 {
                     autoDoublePages = it == PageLayout.AUTOMATIC
@@ -199,10 +199,10 @@ class PagerConfig(
                 },
             )
 
-        readerPreferences.centerMarginType()
+        readerPreferences.centerMarginType
             .register({ centerMarginType = it }, { imagePropertyChangedListener?.invoke() })
 
-        readerPreferences.invertDoublePages()
+        readerPreferences.invertDoublePages
             .register({ invertDoublePages = it && dualPageSplit == false }, { imagePropertyChangedListener?.invoke() })
         // SY <--
     }

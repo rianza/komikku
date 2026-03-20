@@ -17,7 +17,7 @@ fun Source.getNameForMangaInfo(
     // SY <--
 ): String {
     val preferences = Injekt.get<SourcePreferences>()
-    val enabledLanguages = preferences.enabledLanguages().get()
+    val enabledLanguages = preferences.enabledLanguages.get()
         .filterNot { it in listOf("all", "other") }
     val hasOneActiveLanguages = enabledLanguages.size == 1
     val isInEnabledLanguages = lang in enabledLanguages
@@ -89,6 +89,6 @@ fun Source.isIncognitoModeEnabled(incognitoExtensions: Set<String>? = null): Boo
         isEhBasedSource() -> EH_PACKAGE
         else -> Injekt.get<ExtensionManager>().getExtensionPackage(id)
     }
-    return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions().get())
+    return extensionPackage in (incognitoExtensions ?: Injekt.get<SourcePreferences>().incognitoExtensions.get())
 }
 // KMK <--

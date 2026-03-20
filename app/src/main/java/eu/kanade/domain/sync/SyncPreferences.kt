@@ -10,28 +10,28 @@ import java.util.UUID
 class SyncPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
-    fun clientHost() = preferenceStore.getString("sync_client_host", "https://sync.tachiyomi.org")
-    fun clientAPIKey() = preferenceStore.getString("sync_client_api_key", "")
-    fun lastSyncTimestamp() = preferenceStore.getLong(Preference.appStateKey("last_sync_timestamp"), 0L)
+    val clientHost: Preference<String> = preferenceStore.getString("sync_client_host", "https://sync.tachiyomi.org")
+    val clientAPIKey: Preference<String> = preferenceStore.getString("sync_client_api_key", "")
+    val lastSyncTimestamp: Preference<Long> = preferenceStore.getLong(Preference.appStateKey("last_sync_timestamp"), 0L)
 
-    fun lastSyncEtag() = preferenceStore.getString("sync_etag", "")
+    val lastSyncEtag: Preference<String> = preferenceStore.getString("sync_etag", "")
 
-    fun syncInterval() = preferenceStore.getInt("sync_interval", 0)
-    fun syncService() = preferenceStore.getInt("sync_service", 0)
+    val syncInterval: Preference<Int> = preferenceStore.getInt("sync_interval", 0)
+    val syncService: Preference<Int> = preferenceStore.getInt("sync_service", 0)
 
     // KMK -->
-    fun webDavUrl() = preferenceStore.getString("webdav_url", "")
-    fun webDavUsername() = preferenceStore.getString("webdav_username", "")
-    fun webDavPassword() = preferenceStore.getString("webdav_password", "")
-    fun webDavFolder() = preferenceStore.getString("webdav_folder", "komikku")
+    val webDavUrl: Preference<String> = preferenceStore.getString("webdav_url", "")
+    val webDavUsername: Preference<String> = preferenceStore.getString("webdav_username", "")
+    val webDavPassword: Preference<String> = preferenceStore.getString("webdav_password", "")
+    val webDavFolder: Preference<String> = preferenceStore.getString("webdav_folder", "komikku")
     // KMK <--
 
-    fun googleDriveAccessToken() = preferenceStore.getString(
+    val googleDriveAccessToken: Preference<String> = preferenceStore.getString(
         Preference.appStateKey("google_drive_access_token"),
         "",
     )
 
-    fun googleDriveRefreshToken() = preferenceStore.getString(
+    val googleDriveRefreshToken: Preference<String> = preferenceStore.getString(
         Preference.appStateKey("google_drive_refresh_token"),
         "",
     )
@@ -50,7 +50,7 @@ class SyncPreferences(
     }
 
     fun isSyncEnabled(): Boolean {
-        return syncService().get() != SyncManager.SyncService.NONE.value
+        return syncService.get() != SyncManager.SyncService.NONE.value
     }
 
     fun getSyncSettings(): SyncSettings {
