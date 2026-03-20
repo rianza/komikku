@@ -72,44 +72,44 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
 private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
     HeadingItem(MR.strings.pager_viewer)
 
-    val navigationModePager by screenModel.preferences.navigationModePager().collectAsState()
-    val pagerNavInverted by screenModel.preferences.pagerNavInverted().collectAsState()
+    val navigationModePager by screenModel.preferences.navigationModePager.collectAsState()
+    val pagerNavInverted by screenModel.preferences.pagerNavInverted.collectAsState()
     TapZonesItems(
         selected = navigationModePager,
-        onSelect = screenModel.preferences.navigationModePager()::set,
+        onSelect = screenModel.preferences.navigationModePager::set,
         invertMode = pagerNavInverted,
-        onSelectInvertMode = screenModel.preferences.pagerNavInverted()::set,
+        onSelectInvertMode = screenModel.preferences.pagerNavInverted::set,
     )
 
-    val imageScaleType by screenModel.preferences.imageScaleType().collectAsState()
+    val imageScaleType by screenModel.preferences.imageScaleType.collectAsState()
     SettingsChipRow(MR.strings.pref_image_scale_type) {
         ReaderPreferences.ImageScaleType.mapIndexed { index, it ->
             FilterChip(
                 selected = imageScaleType == index + 1,
-                onClick = { screenModel.preferences.imageScaleType().set(index + 1) },
+                onClick = { screenModel.preferences.imageScaleType.set(index + 1) },
                 label = { Text(stringResource(it)) },
             )
         }
     }
 
-    val zoomStart by screenModel.preferences.zoomStart().collectAsState()
+    val zoomStart by screenModel.preferences.zoomStart.collectAsState()
     SettingsChipRow(MR.strings.pref_zoom_start) {
         ReaderPreferences.ZoomStart.mapIndexed { index, it ->
             FilterChip(
                 selected = zoomStart == index + 1,
-                onClick = { screenModel.preferences.zoomStart().set(index + 1) },
+                onClick = { screenModel.preferences.zoomStart.set(index + 1) },
                 label = { Text(stringResource(it)) },
             )
         }
     }
 
     // SY -->
-    val pageLayout by screenModel.preferences.pageLayout().collectAsState()
+    val pageLayout by screenModel.preferences.pageLayout.collectAsState()
     SettingsChipRow(SYMR.strings.page_layout) {
         ReaderPreferences.PageLayouts.mapIndexed { index, it ->
             FilterChip(
                 selected = pageLayout == index,
-                onClick = { screenModel.preferences.pageLayout().set(index) },
+                onClick = { screenModel.preferences.pageLayout.set(index) },
                 label = { Text(stringResource(it)) },
             )
         }
@@ -119,13 +119,13 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
-        pref = screenModel.preferences.smallerTapZone(),
+        pref = screenModel.preferences.smallerTapZone,
     )
     // KMK <--
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_crop_borders),
-        pref = screenModel.preferences.cropBorders(),
+        pref = screenModel.preferences.cropBorders,
     )
 
     // KMK -->
@@ -133,72 +133,72 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
         // KMK <--
         CheckboxItem(
             label = stringResource(MR.strings.pref_landscape_zoom),
-            pref = screenModel.preferences.landscapeZoom(),
+            pref = screenModel.preferences.landscapeZoom,
         )
     }
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_navigate_pan),
-        pref = screenModel.preferences.navigateToPan(),
+        pref = screenModel.preferences.navigateToPan,
     )
 
-    val dualPageSplitPaged by screenModel.preferences.dualPageSplitPaged().collectAsState()
+    val dualPageSplitPaged by screenModel.preferences.dualPageSplitPaged.collectAsState()
     CheckboxItem(
         label = stringResource(MR.strings.pref_dual_page_split),
-        pref = screenModel.preferences.dualPageSplitPaged(),
+        pref = screenModel.preferences.dualPageSplitPaged,
     )
 
     if (dualPageSplitPaged) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_dual_page_invert),
-            pref = screenModel.preferences.dualPageInvertPaged(),
+            pref = screenModel.preferences.dualPageInvertPaged,
         )
     }
 
-    val dualPageRotateToFit by screenModel.preferences.dualPageRotateToFit().collectAsState()
+    val dualPageRotateToFit by screenModel.preferences.dualPageRotateToFit.collectAsState()
     CheckboxItem(
         label = stringResource(MR.strings.pref_page_rotate),
-        pref = screenModel.preferences.dualPageRotateToFit(),
+        pref = screenModel.preferences.dualPageRotateToFit,
     )
 
     if (dualPageRotateToFit) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_page_rotate_invert),
-            pref = screenModel.preferences.dualPageRotateToFitInvert(),
+            pref = screenModel.preferences.dualPageRotateToFitInvert,
         )
     }
 
     // SY -->
     CheckboxItem(
         label = stringResource(MR.strings.pref_page_transitions),
-        pref = screenModel.preferences.pageTransitionsPager(),
+        pref = screenModel.preferences.pageTransitionsPager,
     )
 
     CheckboxItem(
         label = stringResource(SYMR.strings.invert_double_pages),
-        pref = screenModel.preferences.invertDoublePages(),
+        pref = screenModel.preferences.invertDoublePages,
     )
 
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.pref_paged_disable_zoom_in),
-        pref = screenModel.preferences.pagedDisableZoomIn(),
+        pref = screenModel.preferences.pagedDisableZoomIn,
     )
-    val pagedDisableZoomIn by screenModel.preferences.pagedDisableZoomIn().collectAsState()
+    val pagedDisableZoomIn by screenModel.preferences.pagedDisableZoomIn.collectAsState()
     if (!pagedDisableZoomIn) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_double_tap_zoom),
-            pref = screenModel.preferences.pagedDoubleTapZoomEnabled(),
+            pref = screenModel.preferences.pagedDoubleTapZoomEnabled,
         )
     }
     // KMK <--
 
-    val centerMarginType by screenModel.preferences.centerMarginType().collectAsState()
+    val centerMarginType by screenModel.preferences.centerMarginType.collectAsState()
     SettingsChipRow(SYMR.strings.pref_center_margin) {
         ReaderPreferences.CenterMarginTypes.mapIndexed { index, it ->
             FilterChip(
                 selected = centerMarginType == index,
-                onClick = { screenModel.preferences.centerMarginType().set(index) },
+                onClick = { screenModel.preferences.centerMarginType.set(index) },
                 label = { Text(stringResource(it)) },
             )
         }
@@ -217,19 +217,19 @@ private fun WebtoonViewerSettings(
 
     HeadingItem(MR.strings.webtoon_viewer)
 
-    val navigationModeWebtoon by screenModel.preferences.navigationModeWebtoon().collectAsState()
-    val webtoonNavInverted by screenModel.preferences.webtoonNavInverted().collectAsState()
+    val navigationModeWebtoon by screenModel.preferences.navigationModeWebtoon.collectAsState()
+    val webtoonNavInverted by screenModel.preferences.webtoonNavInverted.collectAsState()
     TapZonesItems(
         selected = navigationModeWebtoon,
-        onSelect = screenModel.preferences.navigationModeWebtoon()::set,
+        onSelect = screenModel.preferences.navigationModeWebtoon::set,
         invertMode = webtoonNavInverted,
-        onSelectInvertMode = screenModel.preferences.webtoonNavInverted()::set,
+        onSelectInvertMode = screenModel.preferences.webtoonNavInverted::set,
     )
 
     // KMK -->
-    val webtoonScaleTypePref = screenModel.preferences.webtoonScaleType()
+    val webtoonScaleTypePref = screenModel.preferences.webtoonScaleType
     val webtoonScaleType by webtoonScaleTypePref.collectAsState()
-    val webtoonSmartScaleLongStripGap = screenModel.preferences.longStripGapSmartScale().get()
+    val webtoonSmartScaleLongStripGap = screenModel.preferences.longStripGapSmartScale.get()
     if (readingMode != ReadingMode.CONTINUOUS_VERTICAL || webtoonSmartScaleLongStripGap) {
         SettingsChipRow(KMR.strings.pref_webtoon_scale_type) {
             ReaderPreferences.WebtoonScaleType.entries.forEach { scaleType ->
@@ -243,14 +243,14 @@ private fun WebtoonViewerSettings(
     }
     // KMK <--
 
-    val webtoonSidePadding by screenModel.preferences.webtoonSidePadding().collectAsState()
+    val webtoonSidePadding by screenModel.preferences.webtoonSidePadding.collectAsState()
     SliderItem(
         value = webtoonSidePadding,
         valueRange = ReaderPreferences.let { it.WEBTOON_PADDING_MIN..it.WEBTOON_PADDING_MAX },
         label = stringResource(MR.strings.pref_webtoon_side_padding),
         valueString = numberFormat.format(webtoonSidePadding / 100f),
         onChange = {
-            screenModel.preferences.webtoonSidePadding().set(it)
+            screenModel.preferences.webtoonSidePadding.set(it)
         },
         pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     )
@@ -258,66 +258,66 @@ private fun WebtoonViewerSettings(
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
-        pref = screenModel.preferences.smallerTapZone(),
+        pref = screenModel.preferences.smallerTapZone,
     )
     // KMK <--
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_crop_borders),
-        pref = screenModel.preferences.cropBordersWebtoon(),
+        pref = screenModel.preferences.cropBordersWebtoon,
     )
 
     // SY -->
     CheckboxItem(
         label = stringResource(SYMR.strings.pref_smooth_scroll),
-        pref = screenModel.preferences.smoothAutoScroll(),
+        pref = screenModel.preferences.smoothAutoScroll,
     )
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_page_transitions),
-        pref = screenModel.preferences.pageTransitionsWebtoon(),
+        pref = screenModel.preferences.pageTransitionsWebtoon,
     )
     // SY <--
 
-    val dualPageSplitWebtoon by screenModel.preferences.dualPageSplitWebtoon().collectAsState()
+    val dualPageSplitWebtoon by screenModel.preferences.dualPageSplitWebtoon.collectAsState()
     CheckboxItem(
         label = stringResource(MR.strings.pref_dual_page_split),
-        pref = screenModel.preferences.dualPageSplitWebtoon(),
+        pref = screenModel.preferences.dualPageSplitWebtoon,
     )
 
     if (dualPageSplitWebtoon) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_dual_page_invert),
-            pref = screenModel.preferences.dualPageInvertWebtoon(),
+            pref = screenModel.preferences.dualPageInvertWebtoon,
         )
     }
 
-    val dualPageRotateToFitWebtoon by screenModel.preferences.dualPageRotateToFitWebtoon().collectAsState()
+    val dualPageRotateToFitWebtoon by screenModel.preferences.dualPageRotateToFitWebtoon.collectAsState()
     CheckboxItem(
         label = stringResource(MR.strings.pref_page_rotate),
-        pref = screenModel.preferences.dualPageRotateToFitWebtoon(),
+        pref = screenModel.preferences.dualPageRotateToFitWebtoon,
     )
 
     if (dualPageRotateToFitWebtoon) {
         CheckboxItem(
             label = stringResource(MR.strings.pref_page_rotate_invert),
-            pref = screenModel.preferences.dualPageRotateToFitInvertWebtoon(),
+            pref = screenModel.preferences.dualPageRotateToFitInvertWebtoon,
         )
     }
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_double_tap_zoom),
-        pref = screenModel.preferences.webtoonDoubleTapZoomEnabled(),
+        pref = screenModel.preferences.webtoonDoubleTapZoomEnabled,
     )
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.pref_pinch_to_zoom),
-        pref = screenModel.preferences.webtoonPinchToZoomEnabled(),
+        pref = screenModel.preferences.webtoonPinchToZoomEnabled,
     )
     // KMK <--
     CheckboxItem(
         label = stringResource(MR.strings.pref_webtoon_disable_zoom_out),
-        pref = screenModel.preferences.webtoonDisableZoomOut(),
+        pref = screenModel.preferences.webtoonDisableZoomOut,
     )
 }
 
@@ -328,7 +328,7 @@ private fun WebtoonWithGapsViewerSettings(screenModel: ReaderSettingsScreenModel
 
     CheckboxItem(
         label = stringResource(MR.strings.pref_crop_borders),
-        pref = screenModel.preferences.cropBordersContinuousVertical(),
+        pref = screenModel.preferences.cropBordersContinuousVertical,
     )
 }
 // SY <--

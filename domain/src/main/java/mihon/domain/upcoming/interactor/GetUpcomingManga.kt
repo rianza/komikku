@@ -37,8 +37,8 @@ class GetUpcomingManga(
     suspend fun updatingMangas(): List<Manga> {
         val libraryManga = getLibraryManga.await()
 
-        val includedCategories = libraryPreferences.updateCategories().get().map { it.toLong() }.toSet()
-        val excludedCategories = libraryPreferences.updateCategoriesExclude().get().map { it.toLong() }.toSet()
+        val includedCategories = libraryPreferences.updateCategories.get().map { it.toLong() }.toSet()
+        val excludedCategories = libraryPreferences.updateCategoriesExclude.get().map { it.toLong() }.toSet()
 
         val listToUpdate = libraryManga.filter {
             val included = includedCategories.isEmpty() || it.categories.intersect(includedCategories).isNotEmpty()
@@ -46,7 +46,7 @@ class GetUpcomingManga(
             included && !excluded
         }
 
-        val restrictions = libraryPreferences.autoUpdateMangaRestrictions().get()
+        val restrictions = libraryPreferences.autoUpdateMangaRestrictions.get()
         val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond() * 1000
 
         return listToUpdate

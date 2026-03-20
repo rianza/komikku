@@ -94,7 +94,7 @@ class WebtoonViewer(
         // KMK -->
         readerPreferences
             // KMK <--
-            .readerHideThreshold()
+            .readerHideThreshold
             .get()
             .threshold
 
@@ -179,7 +179,7 @@ class WebtoonViewer(
         }
 
         config.webtoonScaleTypeChangedListener = f@{ scaleType ->
-            if (!isContinuous && !readerPreferences.longStripGapSmartScale().get()) return@f
+            if (!isContinuous && !readerPreferences.longStripGapSmartScale.get()) return@f
 
             recycler.post {
                 recycler.doOnLayout doOnLayout@{

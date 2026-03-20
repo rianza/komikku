@@ -78,10 +78,10 @@ class UpdatesScreenModel(
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
     val events: Flow<Event> = _events.receiveAsFlow()
 
-    val lastUpdated by libraryPreferences.lastUpdatedTimestamp().asState(screenModelScope)
+    val lastUpdated by libraryPreferences.lastUpdatedTimestamp.asState(screenModelScope)
 
     // SY -->
-    val preserveReadingPosition by readerPreferences.preserveReadingPosition().asState(screenModelScope)
+    val preserveReadingPosition by readerPreferences.preserveReadingPosition.asState(screenModelScope)
     // SY <--
 
     // First and last selected index in list
@@ -488,7 +488,7 @@ class UpdatesScreenModel(
     }
 
     fun resetNewUpdatesCount() {
-        libraryPreferences.newUpdatesCount().set(0)
+        libraryPreferences.newUpdatesCount.set(0)
     }
 
     // KMK -->
@@ -502,8 +502,8 @@ class UpdatesScreenModel(
         }
     }
 
-    val chapterSwipeStartAction by libraryPreferences.swipeToEndAction().asState(screenModelScope)
-    val chapterSwipeEndAction by libraryPreferences.swipeToStartAction().asState(screenModelScope)
+    val chapterSwipeStartAction by libraryPreferences.swipeToEndAction.asState(screenModelScope)
+    val chapterSwipeEndAction by libraryPreferences.swipeToStartAction.asState(screenModelScope)
 
     /**
      * @throws IllegalStateException if the swipe action is [LibraryPreferences.ChapterSwipeAction.Disabled]
@@ -551,11 +551,11 @@ class UpdatesScreenModel(
 
     private fun getUpdatesItemPreferenceFlow(): Flow<ItemPreferences> {
         return combine(
-            updatesPreferences.filterDownloaded().changes(),
-            updatesPreferences.filterUnread().changes(),
-            updatesPreferences.filterStarted().changes(),
-            updatesPreferences.filterBookmarked().changes(),
-            updatesPreferences.filterExcludedScanlators().changes(),
+            updatesPreferences.filterDownloaded.changes(),
+            updatesPreferences.filterUnread.changes(),
+            updatesPreferences.filterStarted.changes(),
+            updatesPreferences.filterBookmarked.changes(),
+            updatesPreferences.filterExcludedScanlators.changes(),
         ) { downloaded, unread, started, bookmarked, excludedScanlators ->
             ItemPreferences(
                 filterDownloaded = downloaded,

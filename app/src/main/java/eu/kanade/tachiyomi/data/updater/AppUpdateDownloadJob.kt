@@ -70,7 +70,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 return Result.failure()
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                val restrictions = exhPreferences.appShouldAutoUpdate().get()
+                val restrictions = exhPreferences.appShouldAutoUpdate.get()
                 if ((
                         AppUpdatePolicy.DEVICE_ONLY_ON_WIFI in restrictions &&
                             !context.isConnectedToWifi()
@@ -294,7 +294,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     // KMK -->
                     if (scheduled) {
                         data.putBoolean(SCHEDULED_RUN, true)
-                        val restrictions = Injekt.get<ExhPreferences>().appShouldAutoUpdate().get()
+                        val restrictions = Injekt.get<ExhPreferences>().appShouldAutoUpdate.get()
                         val networkType = if (AppUpdatePolicy.DEVICE_NETWORK_NOT_METERED in restrictions) {
                             NetworkType.UNMETERED
                         } else {

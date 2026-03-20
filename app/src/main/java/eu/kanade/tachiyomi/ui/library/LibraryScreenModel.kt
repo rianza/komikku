@@ -173,7 +173,7 @@ class LibraryScreenModel(
 
     init {
         mutableState.update { state ->
-            state.copy(activeCategoryIndex = libraryPreferences.lastUsedCategory().get())
+            state.copy(activeCategoryIndex = libraryPreferences.lastUsedCategory.get())
         }
         screenModelScope.launchIO {
             combine(
@@ -251,9 +251,9 @@ class LibraryScreenModel(
                     .distinctUntilChanged(),
                 // KMK -->
                 combine(
-                    libraryPreferences.sortingMode().changes(),
-                    libraryPreferences.showHiddenCategories().changes(),
-                    libraryPreferences.showEmptyCategoriesSearch().changes(),
+                    libraryPreferences.sortingMode.changes(),
+                    libraryPreferences.showHiddenCategories.changes(),
+                    libraryPreferences.showEmptyCategoriesSearch.changes(),
                     ::Triple,
                 ),
                 combine(
@@ -315,9 +315,9 @@ class LibraryScreenModel(
         }
 
         combine(
-            libraryPreferences.categoryTabs().changes(),
-            libraryPreferences.categoryNumberOfItems().changes(),
-            libraryPreferences.showContinueReadingButton().changes(),
+            libraryPreferences.categoryTabs.changes(),
+            libraryPreferences.categoryNumberOfItems.changes(),
+            libraryPreferences.showContinueReadingButton.changes(),
         ) { a, b, c -> arrayOf(a, b, c) }
             .onEach { (showCategoryTabs, showMangaCount, showMangaContinueButton) ->
                 mutableState.update { state ->
@@ -361,9 +361,9 @@ class LibraryScreenModel(
 
         // SY -->
         combine(
-            exhPreferences.isHentaiEnabled().changes(),
-            sourcePreferences.disabledSources().changes(),
-            exhPreferences.enableExhentai().changes(),
+            exhPreferences.isHentaiEnabled.changes(),
+            sourcePreferences.disabledSources.changes(),
+            exhPreferences.enableExhentai.changes(),
         ) { isHentaiEnabled, disabledSources, enableExhentai ->
             isHentaiEnabled && (EH_SOURCE_ID.toString() !in disabledSources || enableExhentai)
         }
@@ -375,14 +375,14 @@ class LibraryScreenModel(
             }
             .launchIn(screenModelScope)
 
-        libraryPreferences.groupLibraryBy().changes()
+        libraryPreferences.groupLibraryBy.changes()
             .onEach {
                 mutableState.update { state ->
                     state.copy(groupType = it)
                 }
             }
             .launchIn(screenModelScope)
-        syncPreferences.syncService()
+        syncPreferences.syncService
             .changes()
             .distinctUntilChanged()
             .onEach { syncService ->
@@ -393,14 +393,14 @@ class LibraryScreenModel(
 
         // KMK -->
         combine(
-            libraryPreferences.filterCategories().changes(),
-            libraryPreferences.filterCategoriesInclude().changes(),
-            libraryPreferences.filterCategoriesExclude().changes(),
+            libraryPreferences.filterCategories.changes(),
+            libraryPreferences.filterCategoriesInclude.changes(),
+            libraryPreferences.filterCategoriesExclude.changes(),
         ) { filter, included, excluded ->
             Triple(
                 filter,
-                included.mapNotNull(String::toLongOrNull).toImmutableSet(),
-                excluded.mapNotNull(String::toLongOrNull).toImmutableSet(),
+                included.mapNotNull { it.toLongOrNull() }.toImmutableSet(),
+                excluded.mapNotNull { it.toLongOrNull() }.toImmutableSet(),
             )
         }
             .distinctUntilChanged()
@@ -619,7 +619,7 @@ class LibraryScreenModel(
     ): Map<Category, List</* LibraryItem */ Long>> {
         // SY -->
         val listOfTags by lazy {
-            libraryPreferences.sortTagsForLibrary().get()
+            libraryPreferences.sortTagsForLibrary.get()
                 .asSequence()
                 .mapNotNull {
                     val list = it.split("|")
@@ -712,7 +712,7 @@ class LibraryScreenModel(
             val sort = groupSort ?: key.sort
             if (sort.type == LibrarySort.Type.Random) {
                 // SY <--
-                return@mapValues value.shuffled(Random(libraryPreferences.randomSortSeed().get()))
+                return@mapValues value.shuffled(Random(libraryPreferences.randomSortSeed.get()))
             }
 
             val manga = value.mapNotNull { favoritesById[it] }
@@ -729,26 +729,26 @@ class LibraryScreenModel(
 
     private fun getLibraryItemPreferencesFlow(): Flow<ItemPreferences> {
         return combine(
-            libraryPreferences.downloadBadge().changes(),
-            libraryPreferences.unreadBadge().changes(),
-            libraryPreferences.localBadge().changes(),
-            libraryPreferences.languageBadge().changes(),
-            libraryPreferences.autoUpdateMangaRestrictions().changes(),
+            libraryPreferences.downloadBadge.changes(),
+            libraryPreferences.unreadBadge.changes(),
+            libraryPreferences.localBadge.changes(),
+            libraryPreferences.languageBadge.changes(),
+            libraryPreferences.autoUpdateMangaRestrictions.changes(),
 
-            preferences.downloadedOnly().changes(),
-            libraryPreferences.filterDownloaded().changes(),
-            libraryPreferences.filterUnread().changes(),
-            libraryPreferences.filterStarted().changes(),
-            libraryPreferences.filterBookmarked().changes(),
-            libraryPreferences.filterCompleted().changes(),
-            libraryPreferences.filterIntervalCustom().changes(),
+            preferences.downloadedOnly.changes(),
+            libraryPreferences.filterDownloaded.changes(),
+            libraryPreferences.filterUnread.changes(),
+            libraryPreferences.filterStarted.changes(),
+            libraryPreferences.filterBookmarked.changes(),
+            libraryPreferences.filterCompleted.changes(),
+            libraryPreferences.filterIntervalCustom.changes(),
             // SY -->
-            libraryPreferences.filterLewd().changes(),
+            libraryPreferences.filterLewd.changes(),
             // SY <--
             // KMK -->
-            libraryPreferences.sourceBadge().changes(),
-            libraryPreferences.useLangIcon().changes(),
-            libraryPreferences.filterCategories().changes(),
+            libraryPreferences.sourceBadge.changes(),
+            libraryPreferences.useLangIcon.changes(),
+            libraryPreferences.filterCategories.changes(),
             // KMK <--
         ) {
             ItemPreferences(
@@ -1169,11 +1169,11 @@ class LibraryScreenModel(
     }
 
     fun getDisplayMode(): PreferenceMutableState<LibraryDisplayMode> {
-        return libraryPreferences.displayMode().asState(screenModelScope)
+        return libraryPreferences.displayMode.asState(screenModelScope)
     }
 
     fun getColumnsForOrientation(isLandscape: Boolean): PreferenceMutableState<Int> {
-        return (if (isLandscape) libraryPreferences.landscapeColumns() else libraryPreferences.portraitColumns())
+        return (if (isLandscape) libraryPreferences.landscapeColumns else libraryPreferences.portraitColumns)
             .asState(screenModelScope)
     }
 
@@ -1451,7 +1451,7 @@ class LibraryScreenModel(
         }
             .coercedActiveCategoryIndex
 
-        libraryPreferences.lastUsedCategory().set(newIndex)
+        libraryPreferences.lastUsedCategory.set(newIndex)
     }
 
     fun openChangeCategoryDialog() {
@@ -1625,13 +1625,13 @@ class LibraryScreenModel(
     }
 
     fun onAcceptSyncWarning() {
-        exhPreferences.exhShowSyncIntro().set(false)
+        exhPreferences.exhShowSyncIntro.set(false)
     }
 
     fun openFavoritesSyncDialog() {
         mutableState.update {
             it.copy(
-                dialog = if (exhPreferences.exhShowSyncIntro().get()) {
+                dialog = if (exhPreferences.exhShowSyncIntro.get()) {
                     Dialog.SyncFavoritesWarning
                 } else {
                     Dialog.SyncFavoritesConfirm

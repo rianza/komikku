@@ -65,7 +65,7 @@ class ReaderTransitionView @JvmOverloads constructor(
         data?.let {
             // KMK -->
             val uiPreferences = Injekt.get<UiPreferences>()
-            val themeCoverBased = uiPreferences.themeCoverBased().get()
+            val themeCoverBased = uiPreferences.themeCoverBased.get()
             // KMK <--
             TachiyomiTheme(
                 // KMK -->

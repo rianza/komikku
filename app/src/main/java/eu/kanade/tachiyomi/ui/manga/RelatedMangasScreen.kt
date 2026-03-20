@@ -37,7 +37,7 @@ fun RelatedMangasScreen(
     successState: MangaScreenModel.State.Success,
 ) {
     val sourcePreferences: SourcePreferences = Injekt.get()
-    var displayMode by sourcePreferences.sourceDisplayMode().asState(scope)
+    var displayMode by sourcePreferences.sourceDisplayMode.asState(scope)
 
     val bulkFavoriteState by bulkFavoriteScreenModel.state.collectAsState()
 
@@ -118,9 +118,9 @@ private fun getColumnsPreference(orientation: Int): GridCells {
 
     val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
     val columns = if (isLandscape) {
-        libraryPreferences.landscapeColumns()
+        libraryPreferences.landscapeColumns
     } else {
-        libraryPreferences.portraitColumns()
+        libraryPreferences.portraitColumns
     }.get()
     return if (columns == 0) GridCells.Adaptive(128.dp) else GridCells.Fixed(columns)
 }

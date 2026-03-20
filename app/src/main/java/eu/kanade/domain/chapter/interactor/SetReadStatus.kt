@@ -80,7 +80,7 @@ class SetReadStatus(
             manually &&
             // KMK <--
             read &&
-            downloadPreferences.removeAfterMarkedAsRead().get()
+            downloadPreferences.removeAfterMarkedAsRead.get()
         ) {
             chaptersToUpdate
                 // KMK -->

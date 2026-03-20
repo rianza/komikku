@@ -34,7 +34,7 @@ class PaletteScreen(
     @Composable
     override fun Content() {
         val uiPreferences = Injekt.get<UiPreferences>()
-        val themeCoverBased = uiPreferences.themeCoverBased().get()
+        val themeCoverBased = uiPreferences.themeCoverBased.get()
 
         val seedColor = seedColor?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
 

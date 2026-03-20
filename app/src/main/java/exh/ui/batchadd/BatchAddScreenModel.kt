@@ -27,7 +27,7 @@ class BatchAddScreenModel(
     private val galleryAdder by lazy { GalleryAdder() }
 
     // KMK -->
-    val isHentaiEnabled by Injekt.get<ExhPreferences>().isHentaiEnabled().asState(screenModelScope)
+    val isHentaiEnabled by Injekt.get<ExhPreferences>().isHentaiEnabled.asState(screenModelScope)
     // KMK <--
 
     fun addGalleries(context: Context) {
@@ -43,7 +43,7 @@ class BatchAddScreenModel(
 
     private fun addGalleries(context: Context, galleries: String) {
         val splitGalleries = if (ehVisitedRegex.containsMatchIn(galleries)) {
-            val url = if (exhPreferences.enableExhentai().get()) {
+            val url = if (exhPreferences.enableExhentai.get()) {
                 "https://exhentai.org/g/"
             } else {
                 "https://e-hentai.org/g/"

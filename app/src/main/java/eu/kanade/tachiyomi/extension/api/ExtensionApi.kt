@@ -51,7 +51,7 @@ internal class ExtensionApi {
 
     suspend fun findExtensions(): List<Extension.Available> {
         // KMK -->
-        val disabledRepos = sourcePreferences.disabledRepos().get()
+        val disabledRepos = sourcePreferences.disabledRepos.get()
         // KMK <--
         return withIOContext {
             getExtensionRepo.getAll()
@@ -109,7 +109,7 @@ internal class ExtensionApi {
         }
 
         // SY -->
-        val blacklistEnabled = sourcePreferences.enableSourceBlacklist().get()
+        val blacklistEnabled = sourcePreferences.enableSourceBlacklist.get()
         // SY <--
 
         val installedExtensions = ExtensionLoader.loadExtensions(context)
@@ -181,9 +181,9 @@ internal class ExtensionApi {
 
     // SY -->
     private fun Extension.isBlacklisted(
-        blacklistEnabled: Boolean = sourcePreferences.enableSourceBlacklist().get(),
+        blacklistEnabled: Boolean = sourcePreferences.enableSourceBlacklist.get(),
         // KMK -->
-        isHentaiEnabled: Boolean = Injekt.get<ExhPreferences>().isHentaiEnabled().get(),
+        isHentaiEnabled: Boolean = Injekt.get<ExhPreferences>().isHentaiEnabled.get(),
         // KMK <--
     ): Boolean {
         return pkgName in BlacklistedSources.BLACKLISTED_EXTENSIONS &&

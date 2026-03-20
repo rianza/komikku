@@ -121,7 +121,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 return
             }
             val screen = // KMK --> if (mangaId == null) {
-                MigrationListScreen(mangaIds, extraSearchQuery, screenModel.sourcePreferences.migrationSmartSearchSingleEntry().get())
+                MigrationListScreen(mangaIds, extraSearchQuery, screenModel.sourcePreferences.migrationSmartSearchSingleEntry.get())
             // KMK -->
             // } else {
             //     MigrateSearchScreen(mangaId)
@@ -405,8 +405,8 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
     ) : StateScreenModel<ScreenModel.State>(State()) {
 
         // KMK -->
-        private val pinnedSources by lazy { sourcePreferences.pinnedSources().get().mapNotNull { it.toLongOrNull() } }
-        private val disabledSources by lazy { sourcePreferences.disabledSources().get().mapNotNull { it.toLongOrNull() } }
+        private val pinnedSources by lazy { sourcePreferences.pinnedSources.get().mapNotNull { it.toLongOrNull() } }
+        private val disabledSources by lazy { sourcePreferences.disabledSources.get().mapNotNull { it.toLongOrNull() } }
         // KMK <--
 
         private val sourcesComparator = { includedSources: /* KMK --> */ Map<Long, Int> /* KMK <-- */ ->
@@ -439,8 +439,8 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
         }
 
         private fun initSources() {
-            val languages = sourcePreferences.enabledLanguages().get()
-            val includedSources = sourcePreferences.migrationSources().get()
+            val languages = sourcePreferences.enabledLanguages.get()
+            val includedSources = sourcePreferences.migrationSources.get()
                 // KMK -->
                 .mapIndexed { index, id -> id to index }.toMap()
             // KMK <--
@@ -513,7 +513,7 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
             state.value.sources
                 .filter { source -> source.isSelected }
                 .map { source -> source.source.id }
-                .let { sources -> sourcePreferences.migrationSources().set(sources) }
+                .let { sources -> sourcePreferences.migrationSources.set(sources) }
         }
 
         data class State(

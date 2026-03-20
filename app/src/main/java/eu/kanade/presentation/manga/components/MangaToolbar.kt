@@ -79,7 +79,7 @@ fun MangaToolbar(
     fun onHomeClicked() = navigator?.popUntil { screen ->
         screen is SourceFeedScreen || screen is BrowseSourceScreen
     }
-    val isHomeEnabled = Injekt.get<UiPreferences>().showHomeOnRelatedMangas().get()
+    val isHomeEnabled = Injekt.get<UiPreferences>().showHomeOnRelatedMangas.get()
     // KMK <--
 
     val isActionMode = actionModeCounter > 0

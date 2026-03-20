@@ -29,7 +29,7 @@ class AppUpdateChecker(
         context: Context,
         forceCheck: Boolean = false,
         // KMK -->
-        autoUpdate: Boolean = AppUpdatePolicy.DISABLE_AUTO_DOWNLOAD !in exhPreferences.appShouldAutoUpdate().get(),
+        autoUpdate: Boolean = AppUpdatePolicy.DISABLE_AUTO_DOWNLOAD !in exhPreferences.appShouldAutoUpdate.get(),
         // KMK <--
     ): GetApplicationRelease.Result {
         return withIOContext {

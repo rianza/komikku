@@ -70,11 +70,11 @@ class MigrationListScreenModel(
     val items
         inline get() = state.value.items
 
-    private var hideUnmatched = preferences.migrationHideUnmatched().get()
-    private var hideWithoutUpdates = preferences.migrationHideWithoutUpdates().get()
+    private var hideUnmatched = preferences.migrationHideUnmatched.get()
+    private var hideWithoutUpdates = preferences.migrationHideWithoutUpdates.get()
     // KMK -->
-    private var prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
-    private var deepSearchMode = preferences.migrationDeepSearchMode().get()
+    private var prioritizeByChapters = preferences.migrationPrioritizeByChapters.get()
+    private var deepSearchMode = preferences.migrationDeepSearchMode.get()
     // KMK <--
 
     private val navigateBackChannel = Channel<Unit>()
@@ -143,11 +143,11 @@ class MigrationListScreenModel(
         throttleManager.resetThrottle()
         // SY <--
         // KMK -->
-        // val prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
-        // val deepSearchMode = preferences.migrationDeepSearchMode().get()
+        // val prioritizeByChapters = preferences.migrationPrioritizeByChapters.get()
+        // val deepSearchMode = preferences.migrationDeepSearchMode.get()
         // KMK <--
 
-        val sources = preferences.migrationSources().get()
+        val sources = preferences.migrationSources.get()
             .mapNotNull { sourceManager.get(it) as? CatalogueSource }
 
         for (manga in mangas) {
@@ -439,10 +439,10 @@ class MigrationListScreenModel(
     }
 
     fun updateOptions() {
-        hideUnmatched = preferences.migrationHideUnmatched().get()
-        hideWithoutUpdates = preferences.migrationHideWithoutUpdates().get()
-        prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
-        deepSearchMode = preferences.migrationDeepSearchMode().get()
+        hideUnmatched = preferences.migrationHideUnmatched.get()
+        hideWithoutUpdates = preferences.migrationHideWithoutUpdates.get()
+        prioritizeByChapters = preferences.migrationPrioritizeByChapters.get()
+        deepSearchMode = preferences.migrationDeepSearchMode.get()
     }
     // KMK <--
 

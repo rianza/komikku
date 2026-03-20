@@ -43,6 +43,9 @@ class CategoriesRestorer(
                                 name = backupCategory.name,
                                 order = backupCategory.order,
                                 flags = backupCategory.flags,
+                                // KMK -->
+                                hidden = if (backupCategory.hidden) 1L else 0L,
+                                // KMK <--
                                 version = backupCategory.version,
                                 uid = if (backupCategory.uid != 0L) backupCategory.uid else dbCategory.uid,
                                 last_modified_at = backupCategory.lastModifiedAt,
@@ -59,12 +62,12 @@ class CategoriesRestorer(
                             backupCategory.name,
                             order,
                             backupCategory.flags,
-                            backupCategory.version,
-                            backupCategory.uid,
-                            backupCategory.lastModifiedAt,
                             // KMK -->
                             hidden = if (backupCategory.hidden) 1L else 0L,
                             // KMK <--
+                            backupCategory.version,
+                            backupCategory.uid,
+                            backupCategory.lastModifiedAt,
                         )
                         categoriesQueries.selectLastInsertedRowId()
                     }
@@ -78,7 +81,7 @@ class CategoriesRestorer(
             }
             // SY <--
 
-            libraryPreferences.categorizedDisplaySettings().set(
+            libraryPreferences.categorizedDisplaySettings.set(
                 (dbCategories + categories)
                     .distinctBy { it.flags }
                     .size > 1,

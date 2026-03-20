@@ -37,10 +37,10 @@ class WebDavSyncService(
 
     private class WebDavException(message: String?) : Exception(message)
 
-    private val url: String = syncPreferences.webDavUrl().get().trim()
-    private val folder: String = syncPreferences.webDavFolder().get().trim('/')
-    private val username: String = syncPreferences.webDavUsername().get().trim()
-    private val password: String = syncPreferences.webDavPassword().get()
+    private val url: String = syncPreferences.webDavUrl.get().trim()
+    private val folder: String = syncPreferences.webDavFolder.get().trim('/')
+    private val username: String = syncPreferences.webDavUsername.get().trim()
+    private val password: String = syncPreferences.webDavPassword.get()
     private val credentials: String = Credentials.basic(username, password)
 
     private fun buildWebDavFileUrl(fileName: String = "backup.proto"): String {
@@ -125,7 +125,7 @@ class WebDavSyncService(
     private suspend fun pullSyncData(): Pair<SyncData?, String> {
         if (!validateSettings()) return Pair(null, "")
 
-        val lastETag = syncPreferences.lastSyncEtag().get()
+        val lastETag = syncPreferences.lastSyncEtag.get()
         val headersBuilder = Headers.Builder().add("Authorization", credentials)
         if (lastETag.isNotEmpty()) headersBuilder.add("If-None-Match", lastETag)
 
@@ -174,7 +174,7 @@ class WebDavSyncService(
         when {
             response.isSuccessful -> {
                 val newETag = response.headers["ETag"]?.trim('"') ?: ""
-                if (newETag.isNotEmpty()) syncPreferences.lastSyncEtag().set(newETag)
+                if (newETag.isNotEmpty()) syncPreferences.lastSyncEtag.set(newETag)
                 xLogI("WebDAV sync completed")
             }
             response.code == HttpStatus.SC_PRECONDITION_FAILED -> {

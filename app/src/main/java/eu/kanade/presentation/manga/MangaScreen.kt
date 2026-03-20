@@ -437,16 +437,16 @@ private fun MangaScreenSmallImpl(
     // SY <--
     // KMK -->
     val uiPreferences = Injekt.get<UiPreferences>()
-    val relatedMangasEnabled by Injekt.get<SourcePreferences>().relatedMangas().collectAsState()
-    val expandRelatedMangas by uiPreferences.expandRelatedMangas().collectAsState()
-    val showRelatedMangasInOverflow by uiPreferences.relatedMangasInOverflow().collectAsState()
+    val relatedMangasEnabled by Injekt.get<SourcePreferences>().relatedMangas.collectAsState()
+    val expandRelatedMangas by uiPreferences.expandRelatedMangas.collectAsState()
+    val showRelatedMangasInOverflow by uiPreferences.relatedMangasInOverflow.collectAsState()
 
     var layoutSize by remember { mutableStateOf(IntSize.Zero) }
     var fabSize by remember { mutableStateOf(IntSize.Zero) }
     var positionOnScreen by remember { mutableStateOf(Offset.Zero) }
     var offsetX by remember { mutableFloatStateOf(0f) }
-    val fabPosition by uiPreferences.readButtonPosition().collectAsState()
-    val readButtonPosition = uiPreferences.readButtonPosition()
+    val fabPosition by uiPreferences.readButtonPosition.collectAsState()
+    val readButtonPosition = uiPreferences.readButtonPosition
     // KMK <--
 
     BackHandler(onBack = {
@@ -900,16 +900,16 @@ private fun MangaScreenLargeImpl(
     // SY <--
     // KMK -->
     val uiPreferences = Injekt.get<UiPreferences>()
-    val relatedMangasEnabled by Injekt.get<SourcePreferences>().relatedMangas().collectAsState()
-    val expandRelatedMangas by uiPreferences.expandRelatedMangas().collectAsState()
-    val showRelatedMangasInOverflow by uiPreferences.relatedMangasInOverflow().collectAsState()
+    val relatedMangasEnabled by Injekt.get<SourcePreferences>().relatedMangas.collectAsState()
+    val expandRelatedMangas by uiPreferences.expandRelatedMangas.collectAsState()
+    val showRelatedMangasInOverflow by uiPreferences.relatedMangasInOverflow.collectAsState()
 
     var layoutSize by remember { mutableStateOf(IntSize.Zero) }
     var fabSize by remember { mutableStateOf(IntSize.Zero) }
     var positionOnScreen by remember { mutableStateOf(Offset.Zero) }
     var offsetX by remember { mutableFloatStateOf(0f) }
-    val fabPosition by uiPreferences.readButtonPosition().collectAsState()
-    val readButtonPosition = uiPreferences.readButtonPosition()
+    val fabPosition by uiPreferences.readButtonPosition.collectAsState()
+    val readButtonPosition = uiPreferences.readButtonPosition
     // KMK <--
 
     val insetPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues()
