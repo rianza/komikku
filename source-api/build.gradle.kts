@@ -1,39 +1,51 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    id("mihon.library")
-    kotlin("multiplatform")
-    kotlin("plugin.serialization")
+    alias(mihonx.plugins.kotlin.multiplatform)
+    alias(mihonx.plugins.spotless)
+
+    alias(libs.plugins.kotlin.serialization)
+
     id("com.github.ben-manes.versions")
 }
 
 kotlin {
-    androidTarget()
-    sourceSets {
-        val commonMain by getting {
-            dependencies {
-                api(libs.kotlinx.serialization.json)
-                api(libs.injekt)
-                api(libs.rxJava)
-                api(libs.jsoup)
-
-                // SY -->
-                api(projects.i18n)
-                api(projects.i18nSy)
-                api(libs.kotlin.reflect)
-                // SY <--
-
-                implementation(project.dependencies.platform(libs.androidx.compose.bom))
-                implementation(libs.androidx.compose.runtime)
+    @Suppress("UnstableApiUsage")
+    android {
+        namespace = "eu.kanade.tachiyomi.source"
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("consumer-proguard.pro")
             }
         }
-        val androidMain by getting {
+
+        // TODO(antsy): Remove when https://youtrack.jetbrains.com/issue/KT-83319 is resolved
+        withHostTest { }
+    }
+
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    dependencies {
+        api(libs.kotlinx.serialization.json)
+        api(libs.injekt)
+        api(libs.rxJava)
+        api(libs.jsoup)
+
+        implementation(platform(libs.androidx.compose.bom))
+        implementation(libs.androidx.compose.runtime)
+
+        // SY -->
+        api(projects.i18n)
+        api(projects.i18nSy)
+        api(libs.kotlin.reflect)
+        // SY <--
+    }
+
+    sourceSets {
+        androidMain {
             dependencies {
                 implementation(projects.core.common)
                 api(libs.androidx.preference)
-
-                // Workaround for https://youtrack.jetbrains.com/issue/KT-57605
-                implementation(libs.kotlinx.coroutines.android)
             }
         }
     }
@@ -44,10 +56,3 @@ kotlin {
     }
 }
 
-android {
-    namespace = "eu.kanade.tachiyomi.source"
-
-    defaultConfig {
-        consumerProguardFile("consumer-proguard.pro")
-    }
-}
