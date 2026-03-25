@@ -100,8 +100,8 @@ android {
     }
 
     sourceSets {
-        getByName("preview").res.directories.add("src/beta/res")
-        getByName("benchmark").res.directories.add("src/debug/res")
+        getByName("preview").res.srcDirs("src/beta/res")
+        getByName("benchmark").res.srcDirs("src/debug/res")
     }
 
     splits {
@@ -151,6 +151,10 @@ android {
         viewBinding = true
         buildConfig = true
         aidl = true
+
+        // Disable some unused things
+        renderScript = false
+        shaders = false
     }
 
     lint {
