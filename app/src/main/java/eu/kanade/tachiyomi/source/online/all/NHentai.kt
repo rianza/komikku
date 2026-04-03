@@ -200,8 +200,9 @@ class NHentai(delegate: HttpSource, val context: Context) :
     var nhConfig: JsonConfig? = null
     suspend fun getNhConfig() {
         try {
-            val body = withIOContext { client.newCall(GET("https://nhentai.net/api/v2/config", headers)).awaitSuccess() }
-                .use { it.body.string() }
+            val response =
+                withIOContext { client.newCall(GET("https://nhentai.net/api/v2/config", headers)).awaitSuccess() }
+            val body = response.body.string()
             nhConfig = jsonParser.decodeFromString<JsonConfig>(body)
         } catch (_: Exception) {
             nhConfig = JsonConfig(
