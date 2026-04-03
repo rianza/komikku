@@ -16,6 +16,9 @@ class BackupCategory(
     // KMK <--
     // SY specific values
     /*@ProtoNumber(600) var mangaOrder: List<Long> = emptyList(),*/
+    @ProtoNumber(601) var version: Long = 0,
+    @ProtoNumber(602) var uid: Long = 0,
+    @ProtoNumber(603) var lastModifiedAt: Long = 0,
 ) {
     fun toCategory(id: Long) = Category(
         id = id,
@@ -25,6 +28,9 @@ class BackupCategory(
         // KMK -->
         hidden = this@BackupCategory.hidden,
         // KMK <--
+        version = this@BackupCategory.version,
+        uid = this@BackupCategory.uid,
+        lastModifiedAt = this@BackupCategory.lastModifiedAt,
         /*mangaOrder = this@BackupCategory.mangaOrder*/
     )
 }
@@ -38,5 +44,8 @@ val backupCategoryMapper = { category: Category ->
         // KMK -->
         hidden = category.hidden,
         // KMK <--
+        version = category.version,
+        uid = category.uid,
+        lastModifiedAt = category.lastModifiedAt,
     )
 }

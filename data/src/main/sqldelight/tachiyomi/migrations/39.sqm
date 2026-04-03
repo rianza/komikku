@@ -18,3 +18,4 @@ FROM mangas JOIN libraryUpdateError
 ON mangas._id = libraryUpdateError.manga_id
 WHERE favorite = 1
 ORDER BY lastUpdate DESC;
+

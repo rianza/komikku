@@ -45,6 +45,9 @@ class CategoryRepositoryImpl(
                 // KMK -->
                 hidden = if (category.hidden) 1L else 0L,
                 // KMK <--
+                version = category.version,
+                uid = category.uid,
+                last_modified_at = category.lastModifiedAt,
             )
             categoriesQueries.selectLastInsertedRowId()
         }
@@ -73,6 +76,10 @@ class CategoryRepositoryImpl(
             // KMK -->
             hidden = update.hidden?.let { if (it) 1L else 0L },
             // KMK <--
+            version = update.version,
+            uid = update.uid,
+            last_modified_at = update.lastModifiedAt,
+            isSyncing = null,
             categoryId = update.id,
         )
     }
