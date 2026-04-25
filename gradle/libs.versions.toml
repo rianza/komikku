@@ -37,7 +37,7 @@ firebase-bom = "34.15.0"
 firebase-crashlytics = "3.0.7"
 flexibleAdapter = "c8013533"
 google-services = "4.5.0"
-image-decoder = "41c059e540"
+image-decoder = "e03b81e18a"
 injekt = "91edab2317"
 jsoup = "1.22.2"
 junit = "6.0.3"
@@ -129,7 +129,7 @@ firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "fir
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 flexibleAdapter = { module = "com.github.arkon.FlexibleAdapter:flexible-adapter", version.ref = "flexibleAdapter" }
 haze = "dev.chrisbanes.haze:haze:1.7.2"
-image-decoder = { module = "com.github.tachiyomiorg:image-decoder", version.ref = "image-decoder" }
+image-decoder = { module = "com.github.mihonapp:image-decoder", version.ref = "image-decoder" }
 injekt = { module = "com.github.mihonapp:injekt", version.ref = "injekt" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
