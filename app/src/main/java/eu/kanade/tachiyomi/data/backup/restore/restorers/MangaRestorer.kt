@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
@@ -10,7 +13,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupMergedMangaReference
 import eu.kanade.tachiyomi.data.backup.models.BackupTracking
 import exh.EXHMigrations
 import exh.source.MERGED_SOURCE_ID
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import tachiyomi.data.UpdateStrategyColumnAdapter
 import tachiyomi.data.manga.MangaMapper
 import tachiyomi.data.manga.MergedMangaMapper
@@ -37,7 +40,7 @@ import kotlin.math.min
 class MangaRestorer(
     private var isSync: Boolean = false,
 
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
     private val getCategories: GetCategories = Injekt.get(),
     private val getMangaByUrlAndSourceId: GetMangaByUrlAndSourceId = Injekt.get(),
     private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
@@ -60,7 +63,9 @@ class MangaRestorer(
     }
 
     suspend fun sortByNew(backupMangas: List<BackupManga>): List<BackupManga> {
-        val urlsBySource = handler.awaitList { mangasQueries.getAllMangaSourceAndUrl() }
+        val urlsBySource = database.mangasQueries
+            .getAllMangaSourceAndUrl()
+            .awaitAsList()
             .groupBy({ it.source }, { it.url })
 
         return backupMangas
@@ -80,7 +85,7 @@ class MangaRestorer(
         backupManga: BackupManga,
         backupCategories: List<BackupCategory>,
     ) {
-        handler.await(inTransaction = true) {
+        database.transaction {
             val dbManga = findExistingManga(backupManga)
             var manga = backupManga.getMangaImpl()
             // SY -->
@@ -108,8 +113,8 @@ class MangaRestorer(
             )
 
             if (isSync) {
-                mangasQueries.resetIsSyncing()
-                chaptersQueries.resetIsSyncing()
+                database.mangasQueries.resetIsSyncing()
+                database.chaptersQueries.resetIsSyncing()
             }
         }
     }
@@ -147,35 +152,33 @@ class MangaRestorer(
     }
 
     suspend fun updateManga(manga: Manga): Manga {
-        handler.await(true) {
-            mangasQueries.update(
-                source = manga.source,
-                url = manga.url,
-                // SY -->
-                artist = manga.ogArtist,
-                author = manga.ogAuthor,
-                description = manga.ogDescription,
-                genre = manga.ogGenre?.joinToString(separator = ", "),
-                title = manga.ogTitle,
-                status = manga.ogStatus,
-                thumbnailUrl = manga.ogThumbnailUrl,
-                // SY <--
-                favorite = manga.favorite,
-                lastUpdate = manga.lastUpdate,
-                nextUpdate = null,
-                calculateInterval = null,
-                initialized = manga.initialized,
-                viewer = manga.viewerFlags,
-                chapterFlags = manga.chapterFlags,
-                coverLastModified = manga.coverLastModified,
-                dateAdded = manga.dateAdded,
-                mangaId = manga.id,
-                updateStrategy = manga.updateStrategy.let(UpdateStrategyColumnAdapter::encode),
-                version = manga.version,
-                isSyncing = 1,
-                notes = manga.notes,
-            )
-        }
+        database.mangasQueries.update(
+            source = manga.source,
+            url = manga.url,
+            // SY -->
+            artist = manga.ogArtist,
+            author = manga.ogAuthor,
+            description = manga.ogDescription,
+            genre = manga.ogGenre?.joinToString(separator = ", "),
+            title = manga.ogTitle,
+            status = manga.ogStatus,
+            thumbnailUrl = manga.ogThumbnailUrl,
+            // SY <--
+            favorite = manga.favorite,
+            lastUpdate = manga.lastUpdate,
+            nextUpdate = null,
+            calculateInterval = null,
+            initialized = manga.initialized,
+            viewer = manga.viewerFlags,
+            chapterFlags = manga.chapterFlags,
+            coverLastModified = manga.coverLastModified,
+            dateAdded = manga.dateAdded,
+            mangaId = manga.id,
+            updateStrategy = manga.updateStrategy.let(UpdateStrategyColumnAdapter::encode),
+            version = manga.version,
+            isSyncing = 1,
+            notes = manga.notes,
+        )
         return manga
     }
 
@@ -262,9 +265,9 @@ class MangaRestorer(
         )
 
     private suspend fun insertNewChapters(chapters: List<Chapter>) {
-        handler.await(true) {
+        database.transaction {
             chapters.forEach { chapter ->
-                chaptersQueries.insert(
+                database.chaptersQueries.insert(
                     chapter.mangaId,
                     chapter.url,
                     chapter.name,
@@ -283,9 +286,9 @@ class MangaRestorer(
     }
 
     private suspend fun updateExistingChapters(chapters: List<Chapter>) {
-        handler.await(true) {
+        database.transaction {
             chapters.forEach { chapter ->
-                chaptersQueries.update(
+                database.chaptersQueries.update(
                     mangaId = null,
                     url = null,
                     name = null,
@@ -313,34 +316,32 @@ class MangaRestorer(
      * @return id of [Manga], null if not found
      */
     private suspend fun insertManga(manga: Manga): Long {
-        return handler.awaitOneExecutable(true) {
-            mangasQueries.insert(
-                source = manga.source,
-                url = manga.url,
-                // SY -->
-                artist = manga.ogArtist,
-                author = manga.ogAuthor,
-                description = manga.ogDescription,
-                genre = manga.ogGenre,
-                title = manga.ogTitle,
-                status = manga.ogStatus,
-                thumbnailUrl = manga.ogThumbnailUrl,
-                // SY <--
-                favorite = manga.favorite,
-                lastUpdate = manga.lastUpdate,
-                nextUpdate = 0L,
-                calculateInterval = 0L,
-                initialized = manga.initialized,
-                viewerFlags = manga.viewerFlags,
-                chapterFlags = manga.chapterFlags,
-                coverLastModified = manga.coverLastModified,
-                dateAdded = manga.dateAdded,
-                updateStrategy = manga.updateStrategy,
-                version = manga.version,
-                notes = manga.notes,
-            )
-            mangasQueries.selectLastInsertedRowId()
-        }
+        return database.mangasQueries.insert(
+            source = manga.source,
+            url = manga.url,
+            // SY -->
+            artist = manga.ogArtist,
+            author = manga.ogAuthor,
+            description = manga.ogDescription,
+            genre = manga.ogGenre,
+            title = manga.ogTitle,
+            status = manga.ogStatus,
+            thumbnailUrl = manga.ogThumbnailUrl,
+            // SY <--
+            favorite = manga.favorite,
+            lastUpdate = manga.lastUpdate,
+            nextUpdate = 0L,
+            calculateInterval = 0L,
+            initialized = manga.initialized,
+            viewerFlags = manga.viewerFlags,
+            chapterFlags = manga.chapterFlags,
+            coverLastModified = manga.coverLastModified,
+            dateAdded = manga.dateAdded,
+            updateStrategy = manga.updateStrategy,
+            version = manga.version,
+            notes = manga.notes,
+        )
+            .awaitAsOne()
     }
 
     private suspend fun restoreMangaDetails(
@@ -398,10 +399,10 @@ class MangaRestorer(
         }
 
         if (mangaCategoriesToUpdate.isNotEmpty()) {
-            handler.await(true) {
-                mangas_categoriesQueries.deleteMangaCategoryByMangaId(manga.id)
+            database.transaction {
+                database.mangas_categoriesQueries.deleteMangaCategoryByMangaId(manga.id)
                 mangaCategoriesToUpdate.forEach { (mangaId, categoryId) ->
-                    mangas_categoriesQueries.insert(mangaId, categoryId)
+                    database.mangas_categoriesQueries.insert(mangaId, categoryId)
                 }
             }
         }
@@ -409,17 +410,16 @@ class MangaRestorer(
 
     private suspend fun restoreHistory(manga: Manga, backupHistory: List<BackupHistory>) {
         val toUpdate = backupHistory.mapNotNull { history ->
-            // KMK -->
-            val dbHistory = handler.awaitList { historyQueries.getHistoryByChapterUrl(manga.id, history.url) }
-                .firstOrNull()
-            // KMK <--
+            val dbHistory = database.historyQueries
+                .getHistoryByChapterUrl(manga.id, history.url)
+                .awaitAsOneOrNull()
             val item = history.getHistoryImpl()
 
             if (dbHistory == null) {
-                // KMK -->
-                val chapter = handler.awaitList { chaptersQueries.getChapterByUrlAndMangaId(history.url, manga.id) }
-                    .firstOrNull()
-                // KMK <--
+                val chapter = database.chaptersQueries
+                    .getChapterByUrl(history.url)
+                    .awaitAsList()
+                    .find { it.manga_id == manga.id }
                 return@mapNotNull if (chapter == null) {
                     // Chapter doesn't exist; skip
                     null
@@ -440,15 +440,14 @@ class MangaRestorer(
             )
         }
 
-        if (toUpdate.isNotEmpty()) {
-            handler.await(true) {
-                toUpdate.forEach {
-                    historyQueries.upsert(
-                        it.chapterId,
-                        it.readAt,
-                        it.readDuration,
-                    )
-                }
+        if (toUpdate.isEmpty()) return
+        database.transaction {
+            toUpdate.forEach {
+                database.historyQueries.upsert(
+                    it.chapterId,
+                    it.readAt,
+                    it.readDuration,
+                )
             }
         }
     }
@@ -483,26 +482,26 @@ class MangaRestorer(
         if (newTracks.isNotEmpty()) {
             insertTrack.awaitAll(newTracks)
         }
-        if (existingTracks.isNotEmpty()) {
-            handler.await(true) {
-                existingTracks.forEach { track ->
-                    manga_syncQueries.update(
-                        track.mangaId,
-                        track.trackerId,
-                        track.remoteId,
-                        track.libraryId,
-                        track.title,
-                        track.lastChapterRead,
-                        track.totalChapters,
-                        track.status,
-                        track.score,
-                        track.remoteUrl,
-                        track.startDate,
-                        track.finishDate,
-                        track.private,
-                        track.id,
-                    )
-                }
+
+        if (existingTracks.isEmpty()) return
+        database.transaction {
+            existingTracks.forEach { track ->
+                database.manga_syncQueries.update(
+                    track.mangaId,
+                    track.trackerId,
+                    track.remoteId,
+                    track.libraryId,
+                    track.title,
+                    track.lastChapterRead,
+                    track.totalChapters,
+                    track.status,
+                    track.score,
+                    track.remoteUrl,
+                    track.startDate,
+                    track.finishDate,
+                    track.private,
+                    track.id,
+                )
             }
         }
     }
@@ -519,13 +518,13 @@ class MangaRestorer(
         backupMergedMangaReferences: List<BackupMergedMangaReference>,
     ) {
         // Get merged manga references from file and from db
-        val dbMergedMangaReferences = handler.awaitList {
-            mergedQueries.selectAll(MergedMangaMapper::map)
-        }
+        val dbMergedMangaReferences =
+            database.mergedQueries.selectAll(MergedMangaMapper::map)
+                .awaitAsList()
 
         // Iterate over them
+        // KMK -->
         backupMergedMangaReferences
-            // KMK -->
             .map { EXHMigrations.migrateBackupMergedMangaReference(it) }
             // KMK <--
             .forEach { backupMergedMangaReference ->
@@ -538,33 +537,26 @@ class MangaRestorer(
                     }
                 ) {
                     // Let the db assign the id
-                    // KMK -->
-                    val mergedManga = handler.awaitList {
-                        // KMK <--
-                        mangasQueries.getMangaByUrlAndSource(
-                            backupMergedMangaReference.mangaUrl,
-                            backupMergedMangaReference.mangaSourceId,
-                            MangaMapper::mapManga,
-                        )
-                        // KMK -->
-                    }.firstOrNull()
-                        // KMK <--
+                    val mergedManga = database.mangasQueries.getMangaByUrlAndSource(
+                        backupMergedMangaReference.mangaUrl,
+                        backupMergedMangaReference.mangaSourceId,
+                        MangaMapper::mapManga,
+                    )
+                        .awaitAsOneOrNull()
                         ?: return@forEach
                     backupMergedMangaReference.getMergedMangaReference().run {
-                        handler.await {
-                            mergedQueries.insert(
-                                infoManga = isInfoManga,
-                                getChapterUpdates = getChapterUpdates,
-                                chapterSortMode = chapterSortMode.toLong(),
-                                chapterPriority = chapterPriority.toLong(),
-                                downloadChapters = downloadChapters,
-                                mergeId = mergeMangaId,
-                                mergeUrl = mergeUrl,
-                                mangaId = mergedManga.id,
-                                mangaUrl = mangaUrl,
-                                mangaSource = mangaSourceId,
-                            )
-                        }
+                        database.mergedQueries.insert(
+                            infoManga = isInfoManga,
+                            getChapterUpdates = getChapterUpdates,
+                            chapterSortMode = chapterSortMode.toLong(),
+                            chapterPriority = chapterPriority.toLong(),
+                            downloadChapters = downloadChapters,
+                            mergeId = mergeMangaId,
+                            mergeUrl = mergeUrl,
+                            mangaId = mergedManga.id,
+                            mangaUrl = mangaUrl,
+                            mangaSource = mangaSourceId,
+                        )
                     }
                 }
             }
@@ -615,18 +607,14 @@ class MangaRestorer(
      */
     private suspend fun restoreExcludedScanlators(manga: Manga, excludedScanlators: List<String>) {
         if (excludedScanlators.isEmpty()) return
-        val existingExcludedScanlators = handler.awaitList {
-            excluded_scanlatorsQueries.getExcludedScanlatorsByMangaId(manga.id)
-            // KMK -->
-        }.toSet()
-        val toInsert = excludedScanlators.toSet().subtract(existingExcludedScanlators)
-        if (toInsert.isNotEmpty()) {
-            handler.await(inTransaction = true) {
-                // KMK <--
-                toInsert.forEach {
-                    excluded_scanlatorsQueries.insert(manga.id, it)
-                }
-            }
+        val existingExcludedScanlators = database.excluded_scanlatorsQueries
+            .getExcludedScanlatorsByMangaId(manga.id)
+            .awaitAsList()
+        val toInsert = excludedScanlators.filter { it !in existingExcludedScanlators }
+        if (toInsert.isEmpty()) return
+        database.transaction {
+            toInsert.forEach { database.excluded_scanlatorsQueries.insert(manga.id, it) }
         }
     }
 }
+

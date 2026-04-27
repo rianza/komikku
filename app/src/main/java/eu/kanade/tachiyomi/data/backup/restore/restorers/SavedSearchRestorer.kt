@@ -1,28 +1,26 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import exh.EXHMigrations
 import exh.util.nullIfBlank
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class SavedSearchRestorer(
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
 ) {
     suspend fun restoreSavedSearches(backupSavedSearches: List<BackupSavedSearch>) {
         if (backupSavedSearches.isEmpty()) return
 
         // KMK -->
-        handler.await(true) {
-            // KMK <--
-            val currentSavedSearches = handler.awaitList {
-                // KMK -->
-                // saved_searchQueries.selectNamesAndSources()
-                saved_searchQueries.selectAll()
-                // KMK <--
-            }
+        val currentSavedSearches = database.saved_searchQueries
+            .selectAll()
+            .awaitAsList()
+        // KMK <--
 
+        database.transaction {
             backupSavedSearches.map {
                 // KMK -->
                 EXHMigrations.migrateBackupSavedSearch(it)
@@ -37,7 +35,7 @@ class SavedSearchRestorer(
                     // KMK <--
                 }
             }.forEach { backupSavedSearch ->
-                saved_searchQueries.insert(
+                database.saved_searchQueries.insert(
                     source = backupSavedSearch.source,
                     name = backupSavedSearch.name,
                     query = backupSavedSearch.query.nullIfBlank(),
@@ -48,3 +46,4 @@ class SavedSearchRestorer(
         }
     }
 }
+

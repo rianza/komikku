@@ -26,9 +26,14 @@ SELECT count(*) FROM feed_saved_search WHERE global = 1;
 selectBySource:
 SELECT * FROM feed_saved_search WHERE source = :sourceId AND global = 0 ORDER BY feed_order;
 
-insert:
-INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
- VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));
+-- KMK -->
+insert {
+    INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
+    VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));
+
+    SELECT last_insert_rowid();
+}
+-- KMK <--
 
 deleteById:
 DELETE FROM feed_saved_search WHERE _id = :id;
@@ -83,3 +88,4 @@ SET source = coalesce(:source, source),
     feed_order = coalesce(:feed_order, feed_order)
 WHERE _id = :id;
 -- KMK <--
+

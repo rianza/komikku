@@ -24,7 +24,7 @@ import mihon.core.migration.MigrationJobFactory
 import mihon.core.migration.MigrationStrategyFactory
 import mihon.core.migration.Migrator
 import mihon.core.migration.migrations.migrations
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import tachiyomi.domain.manga.interactor.GetAllManga
 import tachiyomi.domain.manga.interactor.GetExhFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetFavorites
@@ -40,7 +40,7 @@ import java.util.UUID
 @Suppress("unused")
 object DebugFunctions {
     private val app: Application by injectLazy()
-    private val handler: DatabaseHandler by injectLazy()
+    private val database: Database by injectLazy()
     private val sourceManager: SourceManager by injectLazy()
     private val updateManga: UpdateManga by injectLazy()
     private val getFavorites: GetFavorites by injectLazy()
@@ -129,7 +129,7 @@ object DebugFunctions {
     }
 
     fun addAllMangaInDatabaseToLibrary() {
-        runBlocking { handler.await { ehQueries.addAllMangaInDatabaseToLibrary() } }
+        runBlocking { database.ehQueries.addAllMangaInDatabaseToLibrary() }
     }
 
     fun countMangaInDatabaseInLibrary() = runBlocking { getFavorites.await().size }
@@ -141,12 +141,12 @@ object DebugFunctions {
     fun countMetadataInDatabase() = runBlocking { getSearchMetadata.await().size }
 
     fun countMangaInLibraryWithMissingMetadata() = runBlocking {
-        runBlocking { getAllManga.await() }.count {
+        getAllManga.await().count {
             it.favorite && getSearchMetadata.await(it.id) == null
         }
     }
 
-    fun clearSavedSearches() = runBlocking { handler.await { saved_searchQueries.deleteAll() } }
+    fun clearSavedSearches() = runBlocking { database.saved_searchQueries.deleteAll() }
 
     fun listAllSources() = sourceManager.getCatalogueSources().joinToString("\n") {
         "${it.id}: ${it.name} (${it.lang.uppercase()})"
@@ -211,7 +211,7 @@ object DebugFunctions {
 
     private fun convertSources(from: Long, to: Long) {
         runBlocking {
-            handler.await { ehQueries.migrateSource(to, from) }
+            database.ehQueries.migrateSource(to, from)
         }
     }
 
@@ -294,17 +294,17 @@ object DebugFunctions {
     }*/
 
     fun fixReaderViewerBackupBug() {
-        runBlocking { handler.await { ehQueries.fixReaderViewerBackupBug() } }
+        runBlocking { database.ehQueries.fixReaderViewerBackupBug() }
     }
 
     fun resetReaderViewerForAllManga() {
-        runBlocking { handler.await { ehQueries.resetReaderViewerForAllManga() } }
+        runBlocking { database.ehQueries.resetReaderViewerForAllManga() }
     }
 
     fun migrateLangNhentaiToMultiLangSource() {
         val sources = nHentaiSourceIds - NHENTAI_SOURCE_ID
 
-        runBlocking { handler.await { ehQueries.migrateAllNhentaiToOtherLang(NHENTAI_SOURCE_ID, sources) } }
+        runBlocking { database.ehQueries.migrateAllNhentaiToOtherLang(NHENTAI_SOURCE_ID, sources) }
     }
 
     fun exportProtobufScheme() = ProtoBufSchemaGenerator.generateSchemaText(Backup.serializer().descriptor)
@@ -319,3 +319,4 @@ object DebugFunctions {
         LibraryUpdateJob.stop(context)
     }
 }
+

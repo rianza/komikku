@@ -1,10 +1,14 @@
 package tachiyomi.data.history
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.toLong
 import tachiyomi.core.common.util.system.logcat
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.history.model.History
 import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.history.model.HistoryWithRelations
@@ -12,7 +16,7 @@ import tachiyomi.domain.history.repository.HistoryRepository
 import tachiyomi.domain.manga.model.Manga
 
 class HistoryRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : HistoryRepository {
 
     override fun getHistory(
@@ -23,62 +27,68 @@ class HistoryRepositoryImpl(
         nonLibraryEntries: Boolean?,
         // KMK <--
     ): Flow<List<HistoryWithRelations>> {
-        return handler.subscribeToList {
-            historyViewQueries.history(
-                // KMK -->
+        // KMK -->
+        return database.historyViewQueries
+            .history(
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
                 unfinishedManga?.toLong(),
                 unfinishedChapter,
                 nonLibraryEntries,
-                // KMK <--
                 query,
                 HistoryMapper::mapHistoryWithRelations,
             )
-        }
+            .subscribeToList()
+        // KMK <--
     }
 
     override suspend fun getLastHistory(): HistoryWithRelations? {
-        return handler.awaitOneOrNull {
-            historyViewQueries.getLatestHistory(
+        // KMK -->
+        return database.historyViewQueries
+            .getLatestHistory(
                 Manga.CHAPTER_SHOW_NOT_BOOKMARKED,
                 Manga.CHAPTER_SHOW_BOOKMARKED,
                 HistoryMapper::mapHistoryWithRelations,
             )
-        }
+            .awaitAsOneOrNull()
+        // KMK <--
     }
 
     override suspend fun getTotalReadDuration(): Long {
-        return handler.awaitOne { historyQueries.getReadDuration() }
+        return database.historyQueries
+            .getReadDuration()
+            .awaitAsOne()
     }
 
     override suspend fun getHistoryByMangaId(mangaId: Long): List<History> {
-        return handler.awaitList { historyQueries.getHistoryByMangaId(mangaId, HistoryMapper::mapHistory) }
+        return database.historyQueries
+            .getHistoryByMangaId(mangaId, HistoryMapper::mapHistory)
+            .awaitAsList()
     }
 
     // KMK -->
     override suspend fun resetHistory(historyIds: List<Long>) {
         try {
-            handler.await { historyQueries.resetHistoryByIds(historyIds) }
-            // KMK <--
+            database.historyQueries.resetHistoryByIds(historyIds)
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
         }
     }
+    // KMK <--
 
     // KMK -->
     override suspend fun resetHistoryByMangaIds(mangaIds: List<Long>) {
         try {
-            handler.await { historyQueries.resetHistoryByMangaIds(mangaIds) }
-            // KMK <--
+            database.historyQueries.resetHistoryByMangaIds(mangaIds)
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
         }
     }
+    // KMK <--
 
     override suspend fun deleteAllHistory(): Boolean {
         return try {
-            handler.await { historyQueries.removeAllHistory() }
+            database.historyQueries.removeAllHistory()
             true
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, throwable = e)
@@ -99,9 +109,9 @@ class HistoryRepositoryImpl(
 
     private suspend fun partialUpdate(vararg historyUpdates: HistoryUpdate) {
         try {
-            handler.await(inTransaction = true) {
+            database.transaction {
                 historyUpdates.forEach { historyUpdate ->
-                    historyQueries.upsert(
+                    database.historyQueries.upsert(
                         chapterId = historyUpdate.chapterId,
                         readAt = historyUpdate.readAt,
                         time_read = historyUpdate.sessionReadDuration,
@@ -114,3 +124,4 @@ class HistoryRepositoryImpl(
     }
     // SY <--
 }
+

@@ -1,67 +1,74 @@
 package tachiyomi.data.source
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import kotlinx.coroutines.flow.Flow
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
+import tachiyomi.data.subscribeToList
 import tachiyomi.domain.source.model.SavedSearch
 import tachiyomi.domain.source.repository.SavedSearchRepository
 
 class SavedSearchRepositoryImpl(
-    private val handler: DatabaseHandler,
+    private val database: Database,
 ) : SavedSearchRepository {
 
     override suspend fun getById(savedSearchId: Long): SavedSearch? {
-        return handler.awaitOneOrNull { saved_searchQueries.selectById(savedSearchId, SavedSearchMapper::map) }
+        return database.saved_searchQueries
+            .selectById(savedSearchId, SavedSearchMapper::map)
+            .awaitAsOneOrNull()
     }
 
     override suspend fun getBySourceId(sourceId: Long): List<SavedSearch> {
-        return handler.awaitList { saved_searchQueries.selectBySource(sourceId, SavedSearchMapper::map) }
+        return database.saved_searchQueries
+            .selectBySource(sourceId, SavedSearchMapper::map)
+            .awaitAsList()
     }
 
     override fun getBySourceIdAsFlow(sourceId: Long): Flow<List<SavedSearch>> {
-        return handler.subscribeToList { saved_searchQueries.selectBySource(sourceId, SavedSearchMapper::map) }
+        return database.saved_searchQueries
+            .selectBySource(sourceId, SavedSearchMapper::map)
+            .subscribeToList()
     }
 
     override suspend fun delete(savedSearchId: Long) {
-        handler.await { saved_searchQueries.deleteById(savedSearchId) }
+        database.saved_searchQueries
+            .deleteById(savedSearchId)
     }
 
     override suspend fun insert(savedSearch: SavedSearch): Long {
         // KMK -->
-        return handler.await(true) {
-            val currentSavedSearches = handler.awaitList {
-                saved_searchQueries.selectAll(SavedSearchMapper::map)
-            }
-            val existedSavedSearchId = currentSavedSearches.find { currentSavedSearch ->
-                currentSavedSearch.source == savedSearch.source &&
-                    currentSavedSearch.name == savedSearch.name &&
-                    currentSavedSearch.query == savedSearch.query &&
-                    currentSavedSearch.filtersJson == savedSearch.filtersJson
-            }?.id
+        val currentSavedSearches = database.saved_searchQueries
+            .selectAll(SavedSearchMapper::map)
+            .awaitAsList()
+        val existedSavedSearchId = currentSavedSearches.find { currentSavedSearch ->
+            currentSavedSearch.source == savedSearch.source &&
+                currentSavedSearch.name == savedSearch.name &&
+                currentSavedSearch.query == savedSearch.query &&
+                currentSavedSearch.filtersJson == savedSearch.filtersJson
+        }?.id
 
-            existedSavedSearchId
-                // KMK <--
-                ?: handler.awaitOneExecutable(true) {
-                    saved_searchQueries.insert(
-                        savedSearch.source,
-                        savedSearch.name,
-                        savedSearch.query,
-                        savedSearch.filtersJson,
-                    )
-                    saved_searchQueries.selectLastInsertedRowId()
-                }
-        }
+        return existedSavedSearchId
+            ?: database.saved_searchQueries.insert(
+                savedSearch.source,
+                savedSearch.name,
+                savedSearch.query,
+                savedSearch.filtersJson,
+            ).awaitAsOne()
+        // KMK <--
     }
 
     override suspend fun insertAll(savedSearch: List<SavedSearch>) {
-        handler.await(true) {
+        database.transaction {
             savedSearch.forEach {
-                saved_searchQueries.insert(
+                database.saved_searchQueries.insert(
                     it.source,
                     it.name,
                     it.query,
                     it.filtersJson,
-                )
+                ).awaitAsOneOrNull()
             }
         }
     }
 }
+
