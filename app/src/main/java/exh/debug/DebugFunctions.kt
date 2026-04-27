@@ -24,7 +24,7 @@ import mihon.core.migration.MigrationJobFactory
 import mihon.core.migration.MigrationStrategyFactory
 import mihon.core.migration.Migrator
 import mihon.core.migration.migrations.migrations
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import tachiyomi.domain.manga.interactor.GetAllManga
 import tachiyomi.domain.manga.interactor.GetExhFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetFavorites
@@ -40,7 +40,7 @@ import java.util.UUID
 @Suppress("unused")
 object DebugFunctions {
     private val app: Application by injectLazy()
-    private val handler: DatabaseHandler by injectLazy()
+    private val database: Database by injectLazy()
     private val sourceManager: SourceManager by injectLazy()
     private val updateManga: UpdateManga by injectLazy()
     private val getFavorites: GetFavorites by injectLazy()
@@ -129,7 +129,7 @@ object DebugFunctions {
     }
 
     fun addAllMangaInDatabaseToLibrary() {
-        runBlocking { handler.await { ehQueries.addAllMangaInDatabaseToLibrary() } }
+        runBlocking { database.ehQueries.addAllMangaInDatabaseToLibrary() }
     }
 
     fun countMangaInDatabaseInLibrary() = runBlocking { getFavorites.await().size }
@@ -146,7 +146,7 @@ object DebugFunctions {
         }
     }
 
-    fun clearSavedSearches() = runBlocking { handler.await { saved_searchQueries.deleteAll() } }
+    fun clearSavedSearches() = runBlocking { database.saved_searchQueries.deleteAll() }
 
     fun listAllSources() = sourceManager.getCatalogueSources().joinToString("\n") {
         "${it.id}: ${it.name} (${it.lang.uppercase()})"
@@ -211,100 +211,22 @@ object DebugFunctions {
 
     private fun convertSources(from: Long, to: Long) {
         runBlocking {
-            handler.await { ehQueries.migrateSource(to, from) }
+            database.ehQueries.migrateSource(to, from)
         }
     }
-
-    /*fun copyEHentaiSavedSearchesToExhentai() {
-        runBlocking {
-            val source = sourceManager.get(EH_SOURCE_ID) as? CatalogueSource ?: return@runBlocking
-            val newSource = sourceManager.get(EXH_SOURCE_ID) as? CatalogueSource ?: return@runBlocking
-            val savedSearches = prefs.savedSearches().get().mapNotNull {
-                try {
-                    val id = it.substringBefore(':').toLong()
-                    if (id != source.id) return@mapNotNull null
-                    Json.decodeFromString<JsonSavedSearch>(it.substringAfter(':'))
-                } catch (t: RuntimeException) {
-                    // Load failed
-                    xLogE("Failed to load saved search!", t)
-                    t.printStackTrace()
-                    null
-                }
-            }.toMutableList()
-            savedSearches += prefs.savedSearches().get().mapNotNull {
-                try {
-                    val id = it.substringBefore(':').toLong()
-                    if (id != newSource.id) return@mapNotNull null
-                    Json.decodeFromString<JsonSavedSearch>(it.substringAfter(':'))
-                } catch (t: RuntimeException) {
-                    // Load failed
-                    xLogE("Failed to load saved search!", t)
-                    t.printStackTrace()
-                    null
-                }
-            }.filterNot { newSavedSearch -> savedSearches.any { it.name == newSavedSearch.name } }
-
-            val otherSerialized = prefs.savedSearches().get().filter {
-                !it.startsWith("${newSource.id}:")
-            }
-            val newSerialized = savedSearches.map {
-                "${newSource.id}:" + Json.encodeToString(it)
-            }
-            prefs.savedSearches().set((otherSerialized + newSerialized).toSet())
-        }
-    }
-
-    fun copyExhentaiSavedSearchesToEHentai() {
-        runBlocking {
-            val source = sourceManager.get(EXH_SOURCE_ID) as? CatalogueSource ?: return@runBlocking
-            val newSource = sourceManager.get(EH_SOURCE_ID) as? CatalogueSource ?: return@runBlocking
-            val savedSearches = prefs.savedSearches().get().mapNotNull {
-                try {
-                    val id = it.substringBefore(':').toLong()
-                    if (id != source.id) return@mapNotNull null
-                    Json.decodeFromString<JsonSavedSearch>(it.substringAfter(':'))
-                } catch (t: RuntimeException) {
-                    // Load failed
-                    xLogE("Failed to load saved search!", t)
-                    t.printStackTrace()
-                    null
-                }
-            }.toMutableList()
-            savedSearches += prefs.savedSearches().get().mapNotNull {
-                try {
-                    val id = it.substringBefore(':').toLong()
-                    if (id != newSource.id) return@mapNotNull null
-                    Json.decodeFromString<JsonSavedSearch>(it.substringAfter(':'))
-                } catch (t: RuntimeException) {
-                    // Load failed
-                    xLogE("Failed to load saved search!", t)
-                    t.printStackTrace()
-                    null
-                }
-            }.filterNot { newSavedSearch -> savedSearches.any { it.name == newSavedSearch.name } }
-
-            val otherSerialized = prefs.savedSearches().get().filter {
-                !it.startsWith("${newSource.id}:")
-            }
-            val newSerialized = savedSearches.map {
-                "${newSource.id}:" + Json.encodeToString(it)
-            }
-            prefs.savedSearches().set((otherSerialized + newSerialized).toSet())
-        }
-    }*/
 
     fun fixReaderViewerBackupBug() {
-        runBlocking { handler.await { ehQueries.fixReaderViewerBackupBug() } }
+        runBlocking { database.ehQueries.fixReaderViewerBackupBug() }
     }
 
     fun resetReaderViewerForAllManga() {
-        runBlocking { handler.await { ehQueries.resetReaderViewerForAllManga() } }
+        runBlocking { database.ehQueries.resetReaderViewerForAllManga() }
     }
 
     fun migrateLangNhentaiToMultiLangSource() {
         val sources = nHentaiSourceIds - NHENTAI_SOURCE_ID
 
-        runBlocking { handler.await { ehQueries.migrateAllNhentaiToOtherLang(NHENTAI_SOURCE_ID, sources) } }
+        runBlocking { database.ehQueries.migrateAllNhentaiToOtherLang(NHENTAI_SOURCE_ID, sources) }
     }
 
     fun exportProtobufScheme() = ProtoBufSchemaGenerator.generateSchemaText(Backup.serializer().descriptor)

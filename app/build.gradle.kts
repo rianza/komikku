@@ -215,9 +215,14 @@ dependencies {
     implementation(libs.androidx.paging.compose)
 
     implementation(libs.androidx.sqlite.bundled)
+
     // SY -->
     implementation(sylibs.sqlcipher)
     // SY <--
+
+    // sqldelight
+    implementation(libs.sqldelight.androidDriver)
+    implementation(libs.sqldelight.async)
 
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.collections.immutable)

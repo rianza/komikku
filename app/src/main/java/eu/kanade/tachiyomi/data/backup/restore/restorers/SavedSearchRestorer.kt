@@ -3,25 +3,25 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 import eu.kanade.tachiyomi.data.backup.models.BackupSavedSearch
 import exh.EXHMigrations
 import exh.util.nullIfBlank
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class SavedSearchRestorer(
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
 ) {
     suspend fun restoreSavedSearches(backupSavedSearches: List<BackupSavedSearch>) {
         if (backupSavedSearches.isEmpty()) return
 
         // KMK -->
-        handler.await(true) {
+        database.transaction {
             // KMK <--
-            val currentSavedSearches = handler.awaitList {
+            val currentSavedSearches = database.saved_searchQueries
                 // KMK -->
-                // saved_searchQueries.selectNamesAndSources()
-                saved_searchQueries.selectAll()
+                // .selectNamesAndSources()
+                .selectAll()
                 // KMK <--
-            }
+                .executeAsList()
 
             backupSavedSearches.map {
                 // KMK -->
@@ -37,7 +37,7 @@ class SavedSearchRestorer(
                     // KMK <--
                 }
             }.forEach { backupSavedSearch ->
-                saved_searchQueries.insert(
+                database.saved_searchQueries.insert(
                     source = backupSavedSearch.source,
                     name = backupSavedSearch.name,
                     query = backupSavedSearch.query.nullIfBlank(),

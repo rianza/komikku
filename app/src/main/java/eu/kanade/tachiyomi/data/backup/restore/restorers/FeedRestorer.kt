@@ -3,23 +3,23 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import exh.EXHMigrations
 import exh.util.nullIfBlank
-import tachiyomi.data.DatabaseHandler
+import tachiyomi.data.Database
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
 class FeedRestorer(
-    private val handler: DatabaseHandler = Injekt.get(),
+    private val database: Database = Injekt.get(),
 ) {
     suspend fun restoreFeeds(backupFeeds: List<BackupFeed>) {
         if (backupFeeds.isEmpty()) return
 
-        handler.await(true) {
-            val currentFeeds = handler.awaitList {
-                feed_saved_searchQueries.selectAllFeedWithSavedSearch()
-            }
-            val currentSavedSearches = handler.awaitList {
-                saved_searchQueries.selectAll()
-            }
+        database.transaction {
+            val currentFeeds = database.feed_saved_searchQueries
+                .selectAllFeedWithSavedSearch()
+                .executeAsList()
+            val currentSavedSearches = database.saved_searchQueries
+                .selectAll()
+                .executeAsList()
 
             backupFeeds.map {
                 // KMK -->
@@ -53,20 +53,20 @@ class FeedRestorer(
                             (currentSavedSearch.filters_json ?: "[]") == backupFeed.savedSearch.filterList
                     }?._id
 
-                    existedSavedSearchId ?: handler.awaitOneExecutable(true) {
+                    existedSavedSearchId ?: run {
                         // Just in case, trying to create the associated saved_search
-                        saved_searchQueries.insert(
+                        database.saved_searchQueries.insert(
                             source = backupFeed.source,
                             name = backupFeed.savedSearch.name,
                             query = backupFeed.savedSearch.query.nullIfBlank(),
                             filtersJson = backupFeed.savedSearch.filterList.nullIfBlank()
                                 ?.takeUnless { it == "[]" },
                         )
-                        saved_searchQueries.selectLastInsertedRowId()
+                        database.saved_searchQueries.selectLastInsertedRowId().executeAsOne()
                     }
                 }
 
-                feed_saved_searchQueries.insert(
+                database.feed_saved_searchQueries.insert(
                     sourceId = backupFeed.source,
                     savedSearch = savedSearchId,
                     global = backupFeed.global,
