@@ -23,7 +23,7 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.komikku"
+        applicationId = "app.moon"
 
         versionCode = 78
         versionName = "1.13.6"
