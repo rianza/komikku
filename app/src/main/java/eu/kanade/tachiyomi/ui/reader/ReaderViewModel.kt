@@ -638,7 +638,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 manga.ogTitle,
                 // SY <--
                 manga.source,
-                skipCache = true,
+                skipCache = false,
             )
             if (isDownloaded) {
                 chapter.state = ReaderChapter.State.Wait

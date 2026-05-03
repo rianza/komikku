@@ -51,7 +51,7 @@ class ReaderTransitionView @JvmOverloads constructor(
                             chapterUrl = goingToChapter.url,
                             mangaTitle = /* SY --> */ manga.ogTitle, /* SY <-- */
                             sourceId = manga.source,
-                            skipCache = true,
+                            skipCache = false,
                         )
                     } ?: false,
             )
