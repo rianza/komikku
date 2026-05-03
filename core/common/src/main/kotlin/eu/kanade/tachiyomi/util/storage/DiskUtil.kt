@@ -57,17 +57,19 @@ object DiskUtil {
             if (uri.authority == "com.android.externalstorage.documents") {
                 val docId = DocumentsContract.getDocumentId(uri)
                 val split = docId.split(":")
+                if (split.size < 2) return null
                 val type = split[0]
+                val path = split[1]
 
                 if ("primary".equals(type, ignoreCase = true)) {
-                    return Environment.getExternalStorageDirectory().absolutePath + "/" + split[1]
+                    return Environment.getExternalStorageDirectory().absolutePath + "/" + path
                 } else {
                     // This handles non-primary storage (SD cards)
                     val storages = getExternalStorages(context)
                     for (storage in storages) {
                         // On some devices, the type might be the volume ID
                         if (storage.absolutePath.contains(type, ignoreCase = true)) {
-                            return storage.absolutePath + "/" + split[1]
+                            return storage.absolutePath + "/" + path
                         }
                     }
                 }
