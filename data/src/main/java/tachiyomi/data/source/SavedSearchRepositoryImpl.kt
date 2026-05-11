@@ -49,7 +49,7 @@ class SavedSearchRepositoryImpl(
         }?.id
 
         return existedSavedSearchId
-            ?: database.saved_searchQueries.insert(
+            ?: database.saved_searchQueries.insertReturningId(
                 savedSearch.source,
                 savedSearch.name,
                 savedSearch.query,
@@ -66,7 +66,7 @@ class SavedSearchRepositoryImpl(
                     it.name,
                     it.query,
                     it.filtersJson,
-                ).awaitAsOneOrNull()
+                )
             }
         }
     }

@@ -27,12 +27,14 @@ selectBySource:
 SELECT * FROM feed_saved_search WHERE source = :sourceId AND global = 0 ORDER BY feed_order;
 
 -- KMK -->
-insert {
-    INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
-    VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));
+insertReturningId:
+INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
+VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search))
+RETURNING _id;
 
-    SELECT last_insert_rowid();
-}
+insert:
+INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
+VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));
 -- KMK <--
 
 deleteById:

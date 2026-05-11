@@ -79,7 +79,7 @@ class FeedSavedSearchRepositoryImpl(
         }?.id
 
         return existedFeedId
-            ?: database.feed_saved_searchQueries.insert(
+            ?: database.feed_saved_searchQueries.insertReturningId(
                 feedSavedSearch.source,
                 feedSavedSearch.savedSearch,
                 feedSavedSearch.global,
@@ -94,7 +94,7 @@ class FeedSavedSearchRepositoryImpl(
                     it.source,
                     it.savedSearch,
                     it.global,
-                ).awaitAsOne()
+                )
             }
         }
     }
