@@ -17,7 +17,7 @@ CREATE TABLE categories(
 );
 
 -- Insert system category
-INSERT OR IGNORE INTO categories(_id, name, sort, flags, manga_order, hidden, version, uid, last_modified_at, is_syncing) 
+INSERT OR IGNORE INTO categories(_id, name, sort, flags, manga_order, hidden, version, uid, last_modified_at, is_syncing)
 VALUES (0, "", -1, 0, "", 0, 0, 0, 0, 0);
 -- Disallow deletion of default category
 CREATE TRIGGER IF NOT EXISTS system_category_delete_trigger BEFORE DELETE
@@ -87,12 +87,9 @@ JOIN mangas_categories MC
 ON C._id = MC.category_id
 WHERE MC.manga_id = :mangaId;
 
-insert {
-    INSERT INTO categories(name, sort, flags, manga_order, hidden, version, uid, last_modified_at)
-    VALUES (:name, :order, :flags, "", :hidden, :version, :uid, :last_modified_at);
-
-    SELECT last_insert_rowid();
-}
+insert:
+INSERT INTO categories(name, sort, flags, manga_order, hidden, version, uid, last_modified_at)
+VALUES (:name, :order, :flags, "", :hidden, :version, :uid, :last_modified_at);
 
 delete:
 DELETE FROM categories
