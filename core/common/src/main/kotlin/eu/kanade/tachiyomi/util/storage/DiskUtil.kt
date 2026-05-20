@@ -5,6 +5,7 @@ import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
+import android.provider.DocumentsContract
 import androidx.core.content.ContextCompat
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.util.lang.Hash
@@ -46,6 +47,37 @@ object DiskUtil {
             size = f.length()
         }
         return size
+    }
+
+    /**
+     * Attempts to resolve a SAF URI to a direct filesystem path.
+     */
+    fun getFilePathFromUri(context: Context, uri: Uri): String? {
+        if (DocumentsContract.isDocumentUri(context, uri)) {
+            if (uri.authority == "com.android.externalstorage.documents") {
+                val docId = DocumentsContract.getDocumentId(uri)
+                val split = docId.split(":")
+                if (split.size < 2) return null
+                val type = split[0]
+                val path = split[1]
+
+                if ("primary".equals(type, ignoreCase = true)) {
+                    return Environment.getExternalStorageDirectory().absolutePath + "/" + path
+                } else {
+                    // This handles non-primary storage (SD cards)
+                    val storages = getExternalStorages(context)
+                    for (storage in storages) {
+                        // On some devices, the type might be the volume ID
+                        if (storage.absolutePath.contains(type, ignoreCase = true)) {
+                            return storage.absolutePath + "/" + path
+                        }
+                    }
+                }
+            }
+        } else if ("file".equals(uri.scheme, ignoreCase = true)) {
+            return uri.path
+        }
+        return null
     }
 
     /**

@@ -62,12 +62,24 @@ class StorageManager(
     }
 
     private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
-            .takeIf {
-                // KMK -->
-                it?.isAccessibleDirectory == true
-                // KMK <--
-            }
+        val storageUri = uri.toUri()
+        val path = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            Environment.isExternalStorageManager()
+        ) {
+            DiskUtil.getFilePathFromUri(context, storageUri)
+        } else {
+            null
+        }
+
+        return if (path != null) {
+            UniFile.fromFile(File(path))
+        } else {
+            UniFile.fromUri(context, storageUri)
+        }.takeIf {
+            // KMK -->
+            it?.isAccessibleDirectory == true
+            // KMK <--
+        }
     }
 
     fun getAutomaticBackupsDirectory(): UniFile? {
