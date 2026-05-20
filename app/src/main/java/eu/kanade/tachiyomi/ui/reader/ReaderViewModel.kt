@@ -284,6 +284,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 chapterUrl = chapter.url,
                 mangaTitle = chapterManga.ogTitle,
                 sourceId = chapterManga.source,
+                skipCache = true,
             )
         }
         // SY <--
@@ -422,8 +423,10 @@ class ReaderViewModel @JvmOverloads constructor(
                 val manga = getManga.await(mangaId)
                 if (manga != null) {
                     // SY -->
-                    sourceManager.isInitialized.first { it }
-                    val source = sourceManager.getOrStub(manga.source)
+                    val source = sourceManager.get(manga.source) ?: run {
+                        sourceManager.isInitialized.first { it }
+                        sourceManager.getOrStub(manga.source)
+                    }
                     val metadataSource = source.getMainSource<MetadataSource<*, *>>()
                     val metadata = if (metadataSource != null) {
                         getFlatMetadataById.await(mangaId)?.raise(metadataSource.metaClass)
@@ -431,16 +434,12 @@ class ReaderViewModel @JvmOverloads constructor(
                         null
                     }
                     val mergedReferences = if (source is MergedSource) {
-                        runBlocking {
-                            getMergedReferencesById.await(manga.id)
-                        }
+                        getMergedReferencesById.await(manga.id)
                     } else {
                         emptyList()
                     }
                     val mergedManga = if (source is MergedSource) {
-                        runBlocking {
-                            getMergedMangaById.await(manga.id)
-                        }.associateBy { it.id }
+                        getMergedMangaById.await(manga.id).associateBy { it.id }
                     } else {
                         null
                     }
@@ -726,6 +725,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 nextChapterManga.ogTitle,
                 nextChapterManga.source,
                 // KMK <--
+                skipCache = true,
             )
             if (!isNextChapterDownloaded) return@launchIO
 

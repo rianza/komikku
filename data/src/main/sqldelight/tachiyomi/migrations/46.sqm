@@ -1,0 +1,7 @@
+-- Migration to add missing performance indexes for Joined Views and Merged Sources
+
+CREATE INDEX IF NOT EXISTS merged_manga_id_index ON merged(manga_id);
+CREATE INDEX IF NOT EXISTS merged_merge_url_index ON merged(merge_url);
+CREATE INDEX IF NOT EXISTS manga_sync_manga_id_index ON manga_sync(manga_id);
+-- KMK: index for mangas.sq: getDuplicateLibraryManga's track_dupes
+CREATE INDEX IF NOT EXISTS idx_manga_sync_sync_id_remote_id ON manga_sync(sync_id, remote_id, manga_id);
