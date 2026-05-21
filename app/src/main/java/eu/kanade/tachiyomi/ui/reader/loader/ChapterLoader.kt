@@ -100,7 +100,7 @@ class ChapterLoader(
             mangaTitle = manga.ogTitle,
             // SY <--
             sourceId = manga.source,
-            skipCache = true,
+            skipCache = false,
         )
         return when {
             // SY -->
@@ -117,7 +117,7 @@ class ChapterLoader(
                     chapterUrl = chapter.chapter.url,
                     mangaTitle = manga.ogTitle,
                     sourceId = manga.source,
-                    skipCache = true,
+                    skipCache = false,
                 )
                 when {
                     isMergedMangaDownloaded -> DownloadPageLoader(

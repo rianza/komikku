@@ -422,7 +422,9 @@ class ReaderViewModel @JvmOverloads constructor(
                 val manga = getManga.await(mangaId)
                 if (manga != null) {
                     // SY -->
-                    sourceManager.isInitialized.first { it }
+                    if (sourceManager.get(manga.source) == null) {
+                        sourceManager.isInitialized.first { it }
+                    }
                     val source = sourceManager.getOrStub(manga.source)
                     val metadataSource = source.getMainSource<MetadataSource<*, *>>()
                     val metadata = if (metadataSource != null) {
@@ -599,7 +601,10 @@ class ReaderViewModel @JvmOverloads constructor(
 
         logcat { "Loading adjacent ${chapter.chapter.url}" }
 
-        mutableState.update { it.copy(isLoadingAdjacentChapter = true) }
+        val isReady = chapter.state is ReaderChapter.State.Loaded
+        if (!isReady) {
+            mutableState.update { it.copy(isLoadingAdjacentChapter = true) }
+        }
         try {
             withIOContext {
                 loadChapter(loader, chapter)
@@ -638,7 +643,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 manga.ogTitle,
                 // SY <--
                 manga.source,
-                skipCache = true,
+                skipCache = false,
             )
             if (isDownloaded) {
                 chapter.state = ReaderChapter.State.Wait
