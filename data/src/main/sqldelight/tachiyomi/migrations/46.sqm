@@ -1,0 +1,4 @@
+-- Migration to add missing performance indexes for Joined Views and Merged Sources
+
+CREATE INDEX IF NOT EXISTS merged_manga_id_index ON merged(manga_id);
+CREATE INDEX IF NOT EXISTS manga_sync_manga_id_index ON manga_sync(manga_id);

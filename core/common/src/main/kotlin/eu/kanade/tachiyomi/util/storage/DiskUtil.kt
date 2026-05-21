@@ -53,9 +53,16 @@ object DiskUtil {
      * Attempts to resolve a SAF URI to a direct filesystem path.
      */
     fun getFilePathFromUri(context: Context, uri: Uri): String? {
-        if (DocumentsContract.isDocumentUri(context, uri)) {
+        val isDocumentUri = DocumentsContract.isDocumentUri(context, uri)
+        val isTreeUri = DocumentsContract.isTreeUri(uri)
+
+        if (isDocumentUri || isTreeUri) {
             if (uri.authority == "com.android.externalstorage.documents") {
-                val docId = DocumentsContract.getDocumentId(uri)
+                val docId = if (isDocumentUri) {
+                    DocumentsContract.getDocumentId(uri)
+                } else {
+                    DocumentsContract.getTreeDocumentId(uri)
+                }
                 val split = docId.split(":")
                 if (split.size < 2) return null
                 val type = split[0]

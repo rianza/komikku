@@ -284,6 +284,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 chapterUrl = chapter.url,
                 mangaTitle = chapterManga.ogTitle,
                 sourceId = chapterManga.source,
+                skipCache = true,
             )
         }
         // SY <--
@@ -728,6 +729,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 nextChapterManga.ogTitle,
                 nextChapterManga.source,
                 // KMK <--
+                skipCache = true,
             )
             if (!isNextChapterDownloaded) return@launchIO
 

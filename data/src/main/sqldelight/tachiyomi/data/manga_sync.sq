@@ -20,6 +20,8 @@ CREATE TABLE manga_sync(
     ON DELETE CASCADE
 );
 
+CREATE INDEX manga_sync_manga_id_index ON manga_sync(manga_id);
+
 delete:
 DELETE FROM manga_sync
 WHERE manga_id = :mangaId AND sync_id = :syncId;
