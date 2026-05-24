@@ -64,7 +64,7 @@ import eu.kanade.presentation.components.RestoringBannerBackgroundColor
 import eu.kanade.presentation.components.SyncingBannerBackgroundColor
 import eu.kanade.presentation.components.UpdatingBannerBackgroundColor
 import eu.kanade.presentation.more.settings.screen.ConfigureExhDialog
-import eu.kanade.presentation.more.settings.screen.about.AboutScreen.Companion.getReleaseNotes
+import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.more.settings.screen.about.WhatsNewDialog
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionReposScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
@@ -429,7 +429,7 @@ class MainActivity : BaseActivity() {
                             scope.launch {
                                 isCheckingWhatsNew = true
 
-                                getReleaseNotes(
+                                AboutScreen.getReleaseNotes(
                                     context = context,
                                     onAvailableUpdate = { result ->
                                         val whatsNewScreen = WhatsNewScreen(
