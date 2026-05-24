@@ -62,7 +62,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-class AboutScreen : Screen() {
+object AboutScreen : Screen() {
     @Suppress("unused")
     private fun readResolve(): Any = AboutScreen
 
@@ -331,81 +331,79 @@ class AboutScreen : Screen() {
         }
     }
 
-    companion object {
-        // KMK -->
-        suspend fun getReleaseNotes(
-            context: Context,
-            onAvailableUpdate: (GetApplicationRelease.Result.NewUpdate) -> Unit,
-            onFinish: () -> Unit,
-        ) {
-            val updateChecker = AppUpdateChecker()
-            withUIContext {
-                try {
-                    when (val result = withIOContext { updateChecker.getReleaseNotes() }) {
-                        is GetApplicationRelease.Result.NewUpdate -> {
-                            onAvailableUpdate(result)
-                        }
-
-                        else -> {}
+    // KMK -->
+    suspend fun getReleaseNotes(
+        context: Context,
+        onAvailableUpdate: (GetApplicationRelease.Result.NewUpdate) -> Unit,
+        onFinish: () -> Unit,
+    ) {
+        val updateChecker = AppUpdateChecker()
+        withUIContext {
+            try {
+                when (val result = withIOContext { updateChecker.getReleaseNotes() }) {
+                    is GetApplicationRelease.Result.NewUpdate -> {
+                        onAvailableUpdate(result)
                     }
-                } catch (e: Exception) {
-                    context.toast(e.message)
-                    logcat(LogPriority.ERROR, e)
-                } finally {
-                    onFinish()
+
+                    else -> {}
                 }
+            } catch (e: Exception) {
+                context.toast(e.message)
+                logcat(LogPriority.ERROR, e)
+            } finally {
+                onFinish()
             }
         }
-        // KMK <--
+    }
+    // KMK <--
 
-        fun getVersionName(withBuildDate: Boolean): String {
-            return when {
-                isDebugBuildType -> {
-                    "Debug ${BuildConfig.COMMIT_SHA}".let {
-                        if (withBuildDate) {
-                            "$it (${getFormattedBuildTime()})"
-                        } else {
-                            it
-                        }
-                    }
-                }
-
-                isPreviewBuildType -> {
-                    "Beta r${BuildConfig.COMMIT_COUNT}".let {
-                        if (withBuildDate) {
-                            "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
-                        } else {
-                            "$it (${BuildConfig.COMMIT_SHA})"
-                        }
-                    }
-                }
-
-                else -> {
-                    "Stable ${BuildConfig.VERSION_NAME}".let {
-                        if (withBuildDate) {
-                            "$it (${getFormattedBuildTime()})"
-                        } else {
-                            it
-                        }
+    fun getVersionName(withBuildDate: Boolean): String {
+        return when {
+            isDebugBuildType -> {
+                "Debug ${BuildConfig.COMMIT_SHA}".let {
+                    if (withBuildDate) {
+                        "$it (${getFormattedBuildTime()})"
+                    } else {
+                        it
                     }
                 }
             }
-        }
 
-        internal fun getFormattedBuildTime(): String {
-            return try {
-                LocalDateTime.ofInstant(
-                    Instant.parse(BuildConfig.BUILD_TIME),
-                    ZoneId.systemDefault(),
+            isPreviewBuildType -> {
+                "Beta r${BuildConfig.COMMIT_COUNT}".let {
+                    if (withBuildDate) {
+                        "$it (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
+                    } else {
+                        "$it (${BuildConfig.COMMIT_SHA})"
+                    }
+                }
+            }
+
+            else -> {
+                "Stable ${BuildConfig.VERSION_NAME}".let {
+                    if (withBuildDate) {
+                        "$it (${getFormattedBuildTime()})"
+                    } else {
+                        it
+                    }
+                }
+            }
+        }
+    }
+
+    internal fun getFormattedBuildTime(): String {
+        return try {
+            LocalDateTime.ofInstant(
+                Instant.parse(BuildConfig.BUILD_TIME),
+                ZoneId.systemDefault(),
+            )
+                .toDateTimestampString(
+                    UiPreferences.dateFormat(
+                        Injekt.get<UiPreferences>().dateFormat().get(),
+                    ),
                 )
-                    .toDateTimestampString(
-                        UiPreferences.dateFormat(
-                            Injekt.get<UiPreferences>().dateFormat().get(),
-                        ),
-                    )
-            } catch (_: Exception) {
-                BuildConfig.BUILD_TIME
-            }
+        } catch (_: Exception) {
+            BuildConfig.BUILD_TIME
         }
     }
 }
