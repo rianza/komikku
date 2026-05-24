@@ -37,6 +37,8 @@ class EnhancedFilePrinter internal constructor(
      */
     private val writer: Writer
 
+    private val writeLock = Any()
+
     @Volatile
     private var worker: Worker? = null
 
@@ -57,30 +59,40 @@ class EnhancedFilePrinter internal constructor(
      * Do the real job of writing log to file.
      */
     private fun doPrintln(timeMillis: Long, logLevel: Int, tag: String, msg: String) {
-        val lastFileName = writer.lastFileName
-        if (fileNameGenerator.isFileNameChangeable) {
-            val newFileName = fileNameGenerator.generateFileName(logLevel, System.currentTimeMillis())
-            require(
-                !(
-                    newFileName == null ||
-                        newFileName.trim {
-                            it <= ' '
-                        }.isEmpty()
-                    ),
-            ) { "File name should not be empty." }
-            if (newFileName != lastFileName) {
-                if (writer.isOpened) {
-                    writer.close()
-                }
-                cleanLogFilesIfNecessary()
-                val file = folder.createFile(newFileName)
-                if (file == null || writer.open(file).not()) {
-                    return
+        synchronized(writeLock) {
+            val lastFileName = writer.lastFileName
+            if (fileNameGenerator.isFileNameChangeable) {
+                val newFileName = fileNameGenerator.generateFileName(logLevel, System.currentTimeMillis())
+                require(
+                    !(
+                        newFileName == null ||
+                            newFileName.trim {
+                                it <= ' '
+                            }.isEmpty()
+                        ),
+                ) { "File name should not be empty." }
+                if (newFileName != lastFileName) {
+                    if (writer.isOpened) {
+                        writer.close()
+                    }
+                    cleanLogFilesIfNecessary()
+                    val file = folder.createFile(newFileName)
+                    if (file == null || writer.open(file).not()) {
+                        return
+                    }
                 }
             }
+            val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
+            writer.appendLog(flattenedLog)
         }
-        val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
-        writer.appendLog(flattenedLog)
+    }
+
+    fun releaseFileHandle() {
+        synchronized(writeLock) {
+            if (writer.isOpened) {
+                writer.close()
+            }
+        }
     }
 
     private val maxTimeMillis = 7.days.inWholeMilliseconds

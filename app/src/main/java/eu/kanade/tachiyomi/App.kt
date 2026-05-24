@@ -111,6 +111,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
+    private var logFilePrinter: EnhancedFilePrinter? = null
+
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
@@ -315,6 +317,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     override fun onStop(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStopped()
+        logFilePrinter?.releaseFileHandle()
 
         // AM (DISCORD) -->
         DiscordRPCService.stop(applicationContext)
@@ -372,21 +375,21 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (logFolder != null) {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
-            printers += EnhancedFilePrinter
-                .Builder(logFolder) {
-                    fileNameGenerator = object : DateFileNameGenerator() {
-                        override fun generateFileName(logLevel: Int, timestamp: Long): String {
-                            return super.generateFileName(
-                                logLevel,
-                                timestamp,
-                            ) + "-${BuildConfig.BUILD_TYPE}.txt"
-                        }
+            logFilePrinter = EnhancedFilePrinter.Builder(logFolder) {
+                fileNameGenerator = object : DateFileNameGenerator() {
+                    override fun generateFileName(logLevel: Int, timestamp: Long): String {
+                        return super.generateFileName(
+                            logLevel,
+                            timestamp,
+                        ) + "-${BuildConfig.BUILD_TYPE}.txt"
                     }
-                    flattener { timeMillis, level, tag, message ->
-                        "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
-                    }
-                    backupStrategy = NeverBackupStrategy()
                 }
+                flattener { timeMillis, level, tag, message ->
+                    "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
+                }
+                backupStrategy = NeverBackupStrategy()
+            }
+            printers += logFilePrinter!!
         }
 
         // Install Crashlytics in prod

@@ -221,14 +221,16 @@ class LocalSource(
                 // Top level ComicInfo.xml
                 comicInfoFile != null -> {
                     noXmlFile?.delete()
-                    setMangaDetailsFromComicInfoFile(comicInfoFile.openInputStream(), manga)
+                    comicInfoFile.openInputStream().use { setMangaDetailsFromComicInfoFile(it, manga) }
                 }
                 // SY -->
                 comicInfoArchiveFile != null -> {
                     noXmlFile?.delete()
 
-                    comicInfoArchiveFile.archiveReader(context).getInputStream(COMIC_INFO_FILE)
-                        ?.let { setMangaDetailsFromComicInfoFile(it, manga) }
+                    comicInfoArchiveFile.archiveReader(context).use { reader ->
+                        reader.getInputStream(COMIC_INFO_FILE)
+                            ?.use { setMangaDetailsFromComicInfoFile(it, manga) }
+                    }
                 }
 
                 // SY <--
@@ -236,7 +238,7 @@ class LocalSource(
                 // Old custom JSON format
                 // TODO: remove support for this entirely after a while
                 legacyJsonDetailsFile != null -> {
-                    json.decodeFromStream<MangaDetails>(legacyJsonDetailsFile.openInputStream()).run {
+                    legacyJsonDetailsFile.openInputStream().use { json.decodeFromStream<MangaDetails>(it) }.run {
                         title?.let { manga.title = it }
                         author?.let { manga.author = it }
                         artist?.let { manga.artist = it }
@@ -264,10 +266,12 @@ class LocalSource(
 
                     // SY -->
                     if (copiedFile != null && copiedFile.name != COMIC_INFO_ARCHIVE) {
-                        setMangaDetailsFromComicInfoFile(copiedFile.openInputStream(), manga)
+                        copiedFile.openInputStream().use { setMangaDetailsFromComicInfoFile(it, manga) }
                     } else if (copiedFile != null && copiedFile.name == COMIC_INFO_ARCHIVE) {
-                        copiedFile.archiveReader(context).getInputStream(COMIC_INFO_FILE)
-                            ?.let { setMangaDetailsFromComicInfoFile(it, manga) }
+                        copiedFile.archiveReader(context).use { reader ->
+                            reader.getInputStream(COMIC_INFO_FILE)
+                                ?.use { setMangaDetailsFromComicInfoFile(it, manga) }
+                        }
                     } // SY <--
                     else {
                         // Avoid re-scanning
