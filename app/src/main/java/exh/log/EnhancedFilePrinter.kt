@@ -78,16 +78,17 @@ class EnhancedFilePrinter internal constructor(
                         writer.close()
                     }
                     cleanLogFilesIfNecessary()
-                    val file = folder.createFile(newFileName)
+                    val file = folder.findFile(newFileName) ?: folder.createFile(newFileName)
                     if (file == null || writer.open(file).not()) {
                         return
                     }
                 }
             } else if (!writer.isOpened) {
+                val fileName = fileNameGenerator.generateFileName(logLevel, timeMillis) ?: return
                 val file = writer.file
-                    ?: folder.createFile(
-                        fileNameGenerator.generateFileName(logLevel, timeMillis) ?: return,
-                    ) ?: return
+                    ?: folder.findFile(fileName)
+                    ?: folder.createFile(fileName)
+                    ?: return
                 if (writer.open(file).not()) {
                     return
                 }
