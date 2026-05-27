@@ -304,6 +304,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     override fun onStart(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStart()
 
+        if (logFilePrinter == null) {
+            setupExhLogging()
+        }
+
         val syncPreferences: SyncPreferences = Injekt.get()
         val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
         if (syncPreferences.isSyncEnabled() && syncTriggerOpt.syncOnAppResume) {
@@ -318,6 +322,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     override fun onStop(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStopped()
         logFilePrinter?.releaseFileHandle()
+        logFilePrinter = null
 
         // AM (DISCORD) -->
         DiscordRPCService.stop(applicationContext)
