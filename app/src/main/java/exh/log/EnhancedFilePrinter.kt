@@ -82,7 +82,10 @@ class EnhancedFilePrinter internal constructor(
                     }
                 }
             } else if (!writer.isOpened) {
-                val file = writer.file ?: return
+                val file = writer.file
+                    ?: folder.createFile(
+                        fileNameGenerator.generateFileName(logLevel, timeMillis) ?: return
+                    ) ?: return
                 if (writer.open(file).not()) {
                     return
                 }

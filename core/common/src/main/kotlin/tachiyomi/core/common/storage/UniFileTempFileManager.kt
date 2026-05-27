@@ -17,16 +17,15 @@ class UniFileTempFileManager(
     fun createTempFile(file: UniFile): File {
         dir.mkdirs()
 
-        val tempFile = File.createTempFile(
-            file.nameWithoutExtension.orEmpty().padEnd(3),
-            null,
-            dir,
-        )
-
         (
             context.contentResolver.openInputStream(file.uri)
                 ?: throw IOException("Cannot open input stream for ${file.uri}")
             ).use { input ->
+            val tempFile = File.createTempFile(
+                file.nameWithoutExtension.orEmpty().padEnd(3),
+                null,
+                dir,
+            )
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tempFile.outputStream().use { out ->
                     FileUtils.copy(input, out)
@@ -40,9 +39,8 @@ class UniFileTempFileManager(
                     }
                 }
             }
+            return tempFile
         }
-
-        return tempFile
     }
 
     fun deleteTempFiles() {
