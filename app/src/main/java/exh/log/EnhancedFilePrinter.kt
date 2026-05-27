@@ -81,6 +81,11 @@ class EnhancedFilePrinter internal constructor(
                         return
                     }
                 }
+            } else if (!writer.isOpened) {
+                val file = writer.file ?: return
+                if (writer.open(file).not()) {
+                    return
+                }
             }
             val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
             writer.appendLog(flattenedLog)
