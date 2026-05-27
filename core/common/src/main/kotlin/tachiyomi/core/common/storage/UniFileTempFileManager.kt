@@ -26,7 +26,7 @@ class UniFileTempFileManager(
         (
             context.contentResolver.openInputStream(file.uri)
                 ?: throw IOException("Cannot open input stream for ${file.uri}")
-        ).use { input ->
+            ).use { input ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tempFile.outputStream().use { out ->
                     FileUtils.copy(input, out)
