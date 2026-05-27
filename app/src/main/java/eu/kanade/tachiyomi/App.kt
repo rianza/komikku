@@ -375,7 +375,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (logFolder != null) {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
-            logFilePrinter = EnhancedFilePrinter.Builder(logFolder) {
+            val printer = EnhancedFilePrinter.Builder(logFolder) {
                 fileNameGenerator = object : DateFileNameGenerator() {
                     override fun generateFileName(logLevel: Int, timestamp: Long): String {
                         return super.generateFileName(
@@ -389,7 +389,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 }
                 backupStrategy = NeverBackupStrategy()
             }
-            printers += logFilePrinter!!
+            logFilePrinter = printer
+            printers += printer
         }
 
         // Install Crashlytics in prod

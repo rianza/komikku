@@ -62,7 +62,7 @@ class EnhancedFilePrinter internal constructor(
         synchronized(writeLock) {
             val lastFileName = writer.lastFileName
             if (fileNameGenerator.isFileNameChangeable) {
-                val newFileName = fileNameGenerator.generateFileName(logLevel, System.currentTimeMillis())
+                val newFileName = fileNameGenerator.generateFileName(logLevel, timeMillis)
                 require(
                     !(
                         newFileName == null ||
@@ -82,6 +82,7 @@ class EnhancedFilePrinter internal constructor(
                     }
                 }
             }
+            if (!writer.isOpened) return
             val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
             writer.appendLog(flattenedLog)
         }
