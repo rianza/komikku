@@ -61,18 +61,18 @@ class EnhancedFilePrinter internal constructor(
     private fun doPrintln(timeMillis: Long, logLevel: Int, tag: String, msg: String) {
         val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
 
+        val newFileName = if (fileNameGenerator.isFileNameChangeable) {
+            fileNameGenerator.generateFileName(logLevel, timeMillis)
+        } else {
+            null
+        }
+
         synchronized(writeLock) {
             val lastFileName = writer.lastFileName
             if (fileNameGenerator.isFileNameChangeable) {
-                val newFileName = fileNameGenerator.generateFileName(logLevel, timeMillis)
-                require(
-                    !(
-                        newFileName == null ||
-                            newFileName.trim {
-                                it <= ' '
-                            }.isEmpty()
-                        ),
-                ) { "File name should not be empty." }
+                requireNotNull(newFileName) { "File name should not be empty." }
+                require(newFileName.trim { it <= ' ' }.isNotEmpty()) { "File name should not be empty." }
+
                 if (!writer.isOpened || newFileName != lastFileName) {
                     if (writer.isOpened) {
                         writer.close()
@@ -85,8 +85,7 @@ class EnhancedFilePrinter internal constructor(
                 }
             } else if (!writer.isOpened) {
                 val fileName = fileNameGenerator.generateFileName(logLevel, timeMillis) ?: return
-                val file = writer.file
-                    ?: folder.findFile(fileName)
+                val file = folder.findFile(fileName)
                     ?: folder.createFile(fileName)
                     ?: return
                 if (writer.open(file).not()) {
