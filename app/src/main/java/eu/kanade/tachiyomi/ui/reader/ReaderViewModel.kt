@@ -423,10 +423,12 @@ class ReaderViewModel @JvmOverloads constructor(
                 val manga = getManga.await(mangaId)
                 if (manga != null) {
                     // SY -->
-                    if (!sourceManager.isInitialized.value && sourceManager.get(manga.source) == null) {
-                        sourceManager.isInitialized.first { it }
+                    val source = sourceManager.get(manga.source) ?: run {
+                        if (!sourceManager.isInitialized.value) {
+                            sourceManager.isInitialized.first { it }
+                        }
+                        sourceManager.get(manga.source) ?: sourceManager.getOrStub(manga.source)
                     }
-                    val source = sourceManager.get(manga.source) ?: sourceManager.getOrStub(manga.source)
                     val metadataSource = source.getMainSource<MetadataSource<*, *>>()
                     val metadata = if (metadataSource != null) {
                         getFlatMetadataById.await(mangaId)?.raise(metadataSource.metaClass)

@@ -97,22 +97,27 @@ class StorageManager(
     }
 
     fun getAutomaticBackupsDirectory(): UniFile? {
-        return backupDir ?: baseDir?.createDirectory(AUTOMATIC_BACKUPS_PATH).also { backupDir = it }
+        return backupDir ?: getDirectory(AUTOMATIC_BACKUPS_PATH).also { backupDir = it }
     }
 
     fun getDownloadsDirectory(): UniFile? {
-        return downloadsDir ?: baseDir?.createDirectory(DOWNLOADS_PATH).also { downloadsDir = it }
+        return downloadsDir ?: getDirectory(DOWNLOADS_PATH).also { downloadsDir = it }
     }
 
     fun getLocalSourceDirectory(): UniFile? {
-        return localSourceDir ?: baseDir?.createDirectory(LOCAL_SOURCE_PATH).also { localSourceDir = it }
+        return localSourceDir ?: getDirectory(LOCAL_SOURCE_PATH).also { localSourceDir = it }
     }
 
     // SY -->
     fun getLogsDirectory(): UniFile? {
-        return logsDir ?: baseDir?.createDirectory(LOGS_PATH).also { logsDir = it }
+        return logsDir ?: getDirectory(LOGS_PATH).also { logsDir = it }
     }
     // SY <--
+
+    private fun getDirectory(path: String): UniFile? {
+        val baseDir = baseDir ?: return null
+        return baseDir.findFile(path) ?: baseDir.createDirectory(path)
+    }
 
     companion object {
         // KMK -->

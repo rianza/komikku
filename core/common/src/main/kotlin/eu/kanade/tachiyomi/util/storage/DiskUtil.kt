@@ -110,6 +110,8 @@ object DiskUtil {
      * Resolve the file path from a URI
      */
     fun getFilePathFromUri(uri: Uri): String? {
+        if (uri.scheme == "file") return uri.path
+
         if (uri.scheme != "content" || uri.authority != "com.android.externalstorage.documents") {
             return null
         }

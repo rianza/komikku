@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS merged_manga_id_index ON merged(manga_id);

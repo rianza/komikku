@@ -14,6 +14,14 @@ class UniFileTempFileManager(
     private val dir = File(context.externalCacheDir, "tmp")
 
     fun createTempFile(file: UniFile): File {
+        val filePath = file.uri.path
+        if (filePath != null && filePath.startsWith("/")) {
+            val f = File(filePath)
+            if (f.exists() && f.canRead()) {
+                return f
+            }
+        }
+
         dir.mkdirs()
 
         val inputStream = context.contentResolver.openInputStream(file.uri)!!
