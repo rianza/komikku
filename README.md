@@ -178,7 +178,7 @@ See [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
 Thank you to all the people who have contributed!
 
 <a href="https://github.com/rianza/komikku/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=komikku-app/komikku" alt="Komikku app contributors" title="Komikku app contributors" width="800"/>
+    <img src="https://contrib.rocks/image?repo=rianza/komikku" alt="Komikku app contributors" title="Komikku app contributors" width="800"/>
 </a>
 
 ![Visitor Count](https://count.getloli.com/get/@komikku-app?theme=capoo-2)
