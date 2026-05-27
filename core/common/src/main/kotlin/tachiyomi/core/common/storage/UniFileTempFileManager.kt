@@ -26,20 +26,25 @@ class UniFileTempFileManager(
                 null,
                 dir,
             )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tempFile.outputStream().use { out ->
-                    FileUtils.copy(input, out)
-                }
-            } else {
-                BufferedOutputStream(tempFile.outputStream()).use { out ->
-                    val buffer = ByteArray(8192)
-                    var count: Int
-                    while (input.read(buffer).also { count = it } > 0) {
-                        out.write(buffer, 0, count)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    tempFile.outputStream().use { out ->
+                        FileUtils.copy(input, out)
+                    }
+                } else {
+                    BufferedOutputStream(tempFile.outputStream()).use { out ->
+                        val buffer = ByteArray(8192)
+                        var count: Int
+                        while (input.read(buffer).also { count = it } > 0) {
+                            out.write(buffer, 0, count)
+                        }
                     }
                 }
+                return@use tempFile
+            } catch (e: IOException) {
+                tempFile.delete()
+                throw e
             }
-            tempFile
         }
     }
 
