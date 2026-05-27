@@ -293,7 +293,7 @@ class EnhancedFilePrinter internal constructor(
          */
         fun open(file: UniFile): Boolean {
             return try {
-                bufferedWriter = file.openOutputStream().bufferedWriter()
+                bufferedWriter = file.openOutputStream(true).bufferedWriter()
                 lastFileName = file.name
                 this.file = file
                 true

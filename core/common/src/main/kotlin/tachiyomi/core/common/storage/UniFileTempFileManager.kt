@@ -15,7 +15,7 @@ class UniFileTempFileManager(
     private val dir = File(context.externalCacheDir ?: context.cacheDir, "tmp")
 
     fun createTempFile(file: UniFile): File {
-        if (!dir.exists() && !dir.mkdirs()) {
+        if (!dir.isDirectory && !dir.mkdirs()) {
             throw IOException("Failed to create temp directory: $dir")
         }
 
@@ -23,11 +23,19 @@ class UniFileTempFileManager(
             ?: throw IOException("Failed to open source file: ${file.uri}")
 
         return inputStream.use { input ->
-            val tempFile = File.createTempFile(
-                file.nameWithoutExtension.orEmpty().take(50).padEnd(3, '_'),
-                null,
-                dir,
-            )
+            val rawPrefix = file.nameWithoutExtension.orEmpty()
+            val safePrefix = rawPrefix
+                .map { ch ->
+                    when {
+                        ch.isLetterOrDigit() || ch == '-' || ch == '_' || ch == '.' -> ch
+                        else -> '_'
+                    }
+                }
+                .joinToString("")
+                .take(50)
+                .padEnd(3, '_')
+
+            val tempFile = File.createTempFile(safePrefix, null, dir)
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     tempFile.outputStream().use { out ->
