@@ -11,28 +11,29 @@ class UniFileTempFileManager(
     private val context: Context,
 ) {
 
-    private val dir = File(context.externalCacheDir, "tmp")
+    private val dir = File(context.externalCacheDir ?: context.cacheDir, "tmp")
 
     fun createTempFile(file: UniFile): File {
         dir.mkdirs()
 
         val tempFile = File.createTempFile(
-            file.nameWithoutExtension.orEmpty().padEnd(3), // Prefix must be 3+ chars
+            file.nameWithoutExtension.orEmpty().padEnd(3),
             null,
             dir,
         )
 
-        context.contentResolver.openInputStream(file.uri)!!.use { input ->
-            tempFile.outputStream().use { out ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        (context.contentResolver.openInputStream(file.uri)
+            ?: throw java.io.IOException("Cannot open input stream for ${file.uri}")).use { input ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                tempFile.outputStream().use { out ->
                     FileUtils.copy(input, out)
-                } else {
-                    BufferedOutputStream(out).use { tmpOut ->
-                        val buffer = ByteArray(8192)
-                        var count: Int
-                        while (input.read(buffer).also { count = it } > 0) {
-                            tmpOut.write(buffer, 0, count)
-                        }
+                }
+            } else {
+                BufferedOutputStream(tempFile.outputStream()).use { out ->
+                    val buffer = ByteArray(8192)
+                    var count: Int
+                    while (input.read(buffer).also { count = it } > 0) {
+                        out.write(buffer, 0, count)
                     }
                 }
             }
