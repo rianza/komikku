@@ -39,6 +39,14 @@ class StorageManager(
 
     private var baseDir: UniFile? = getBaseDir(storagePreferences.baseStorageDirectory().get())
 
+    private var downloadsDir: UniFile? = null
+    private var localSourceDir: UniFile? = null
+    private var backupDir: UniFile? = null
+
+    // SY -->
+    private var logsDir: UniFile? = null
+    // SY <--
+
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
     val changes = _changes.receiveAsFlow()
         .shareIn(scope, SharingStarted.Lazily, 1)
@@ -49,6 +57,7 @@ class StorageManager(
             .distinctUntilChanged()
             .onEach { uri ->
                 baseDir = getBaseDir(uri)
+                invalidateCache()
                 baseDir?.let { parent ->
                     parent.createDirectory(AUTOMATIC_BACKUPS_PATH)
                     parent.createDirectory(LOCAL_SOURCE_PATH)
@@ -61,8 +70,27 @@ class StorageManager(
             .launchIn(scope)
     }
 
+    private fun invalidateCache() {
+        downloadsDir = null
+        localSourceDir = null
+        backupDir = null
+        // SY -->
+        logsDir = null
+        // SY <--
+    }
+
     private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
+        // KMK -->
+        val u = uri.toUri()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            val path = DiskUtil.getFilePathFromUri(u)
+            if (path != null) {
+                return UniFile.fromFile(File(path))
+                    .takeIf { it?.isAccessibleDirectory == true }
+            }
+        }
+        // KMK <--
+        return UniFile.fromUri(context, u)
             .takeIf {
                 // KMK -->
                 it?.isAccessibleDirectory == true
@@ -71,20 +99,20 @@ class StorageManager(
     }
 
     fun getAutomaticBackupsDirectory(): UniFile? {
-        return baseDir?.createDirectory(AUTOMATIC_BACKUPS_PATH)
+        return backupDir ?: baseDir?.createDirectory(AUTOMATIC_BACKUPS_PATH).also { backupDir = it }
     }
 
     fun getDownloadsDirectory(): UniFile? {
-        return baseDir?.createDirectory(DOWNLOADS_PATH)
+        return downloadsDir ?: baseDir?.createDirectory(DOWNLOADS_PATH).also { downloadsDir = it }
     }
 
     fun getLocalSourceDirectory(): UniFile? {
-        return baseDir?.createDirectory(LOCAL_SOURCE_PATH)
+        return localSourceDir ?: baseDir?.createDirectory(LOCAL_SOURCE_PATH).also { localSourceDir = it }
     }
 
     // SY -->
     fun getLogsDirectory(): UniFile? {
-        return baseDir?.createDirectory(LOGS_PATH)
+        return logsDir ?: baseDir?.createDirectory(LOGS_PATH).also { logsDir = it }
     }
     // SY <--
 

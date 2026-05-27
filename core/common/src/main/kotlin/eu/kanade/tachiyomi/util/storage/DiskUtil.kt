@@ -3,8 +3,10 @@ package eu.kanade.tachiyomi.util.storage
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.provider.DocumentsContract
 import androidx.core.content.ContextCompat
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.util.lang.Hash
@@ -102,6 +104,31 @@ object DiskUtil {
      */
     fun scanMedia(context: Context, uri: Uri) {
         MediaScannerConnection.scanFile(context, arrayOf(uri.path), null, null)
+    }
+
+    /**
+     * Resolve the file path from a URI
+     */
+    fun getFilePathFromUri(uri: Uri): String? {
+        if (uri.scheme != "content" || uri.authority != "com.android.externalstorage.documents") {
+            return null
+        }
+
+        val docId = try {
+            DocumentsContract.getTreeDocumentId(uri)
+        } catch (e: Exception) {
+            null
+        } ?: return null
+
+        val split = docId.split(":")
+        val type = split[0]
+        val relativePath = if (split.size > 1) split[1] else ""
+
+        return if ("primary".equals(type, ignoreCase = true)) {
+            "${Environment.getExternalStorageDirectory()}/$relativePath"
+        } else {
+            "/storage/$type/$relativePath"
+        }
     }
 
     /**

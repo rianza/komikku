@@ -77,6 +77,7 @@ import exh.log.EHLogLevel
 import exh.log.EnhancedFilePrinter
 import exh.log.XLogLogcatLogger
 import exh.log.xLogD
+import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -365,42 +366,63 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .disableBorder()
             .build()
 
-        val printers = mutableListOf<Printer>(AndroidPrinter())
+        val androidPrinter = AndroidPrinter()
+        val deferredPrinter = object : Printer {
+            private val printers = mutableListOf<Printer>(androidPrinter)
 
-        val logFolder = Injekt.get<StorageManager>().getLogsDirectory()
-
-        if (logFolder != null) {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-
-            printers += EnhancedFilePrinter
-                .Builder(logFolder) {
-                    fileNameGenerator = object : DateFileNameGenerator() {
-                        override fun generateFileName(logLevel: Int, timestamp: Long): String {
-                            return super.generateFileName(
-                                logLevel,
-                                timestamp,
-                            ) + "-${BuildConfig.BUILD_TYPE}.txt"
-                        }
-                    }
-                    flattener { timeMillis, level, tag, message ->
-                        "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
-                    }
-                    backupStrategy = NeverBackupStrategy()
+            fun add(printer: Printer) {
+                synchronized(printers) {
+                    printers.add(printer)
                 }
-        }
+            }
 
-        // Install Crashlytics in prod
-        if (telemetryIncluded) {
-            printers += CrashlyticsPrinter(LogLevel.ERROR)
+            override fun println(logLevel: Int, tag: String, msg: String) {
+                val currentPrinters = synchronized(printers) {
+                    printers.toList()
+                }
+                currentPrinters.forEach { it.println(logLevel, tag, msg) }
+            }
         }
 
         XLog.init(
             logConfig,
-            *printers.toTypedArray(),
+            deferredPrinter,
         )
 
         xLogD("Application booting...")
         xLogD(CrashLogUtil(applicationContext).getDebugInfo())
+
+        // Defer file-based and crashlytics logging
+        thread(start = true, name = "LogInit") {
+            val logFolder = Injekt.get<StorageManager>().getLogsDirectory()
+
+            if (logFolder != null) {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+
+                deferredPrinter.add(
+                    EnhancedFilePrinter
+                        .Builder(logFolder) {
+                            fileNameGenerator = object : DateFileNameGenerator() {
+                                override fun generateFileName(logLevel: Int, timestamp: Long): String {
+                                    return super.generateFileName(
+                                        logLevel,
+                                        timestamp,
+                                    ) + "-${BuildConfig.BUILD_TYPE}.txt"
+                                }
+                            }
+                            flattener { timeMillis, level, tag, message ->
+                                "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
+                            }
+                            backupStrategy = NeverBackupStrategy()
+                        },
+                )
+            }
+
+            // Install Crashlytics in prod
+            if (telemetryIncluded) {
+                deferredPrinter.add(CrashlyticsPrinter(LogLevel.ERROR))
+            }
+        }
     }
 
     private inner class DisableIncognitoReceiver : BroadcastReceiver() {
