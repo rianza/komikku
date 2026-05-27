@@ -77,7 +77,6 @@ import exh.log.EHLogLevel
 import exh.log.EnhancedFilePrinter
 import exh.log.XLogLogcatLogger
 import exh.log.xLogD
-import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -103,6 +102,7 @@ import uy.kohesive.injekt.injectLazy
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.concurrent.thread
 
 class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
 
