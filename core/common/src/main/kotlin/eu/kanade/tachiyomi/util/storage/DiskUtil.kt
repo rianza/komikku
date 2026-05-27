@@ -115,7 +115,11 @@ object DiskUtil {
         }
 
         val docId = try {
-            DocumentsContract.getTreeDocumentId(uri)
+            if (DocumentsContract.isTreeUri(uri)) {
+                DocumentsContract.getTreeDocumentId(uri)
+            } else {
+                DocumentsContract.getDocumentId(uri)
+            }
         } catch (e: Exception) {
             null
         } ?: return null
@@ -127,7 +131,12 @@ object DiskUtil {
         return if ("primary".equals(type, ignoreCase = true)) {
             "${Environment.getExternalStorageDirectory()}/$relativePath"
         } else {
-            "/storage/$type/$relativePath"
+            val internalPath = "/storage/$type/$relativePath"
+            if (File(internalPath).exists()) {
+                internalPath
+            } else {
+                "/mnt/media_rw/$type/$relativePath"
+            }
         }
     }
 

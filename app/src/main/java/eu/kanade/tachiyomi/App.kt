@@ -220,7 +220,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode().get())
 
         // KMK -->
-        MangaCoverMetadata.load()
+        // MangaCoverMetadata.load()
         // KMK <--
 
         // Updates widget update
@@ -389,11 +389,15 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             deferredPrinter,
         )
 
-        xLogD("Application booting...")
-        xLogD(CrashLogUtil(applicationContext).getDebugInfo())
-
         // Defer file-based and crashlytics logging
         thread(start = true, name = "LogInit") {
+            // KMK -->
+            MangaCoverMetadata.load()
+            // KMK <--
+
+            xLogD("Application booting...")
+            xLogD(CrashLogUtil(applicationContext).getDebugInfo())
+
             val logFolder = Injekt.get<StorageManager>().getLogsDirectory()
 
             if (logFolder != null) {

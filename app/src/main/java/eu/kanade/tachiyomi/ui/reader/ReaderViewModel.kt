@@ -284,6 +284,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 chapterUrl = chapter.url,
                 mangaTitle = chapterManga.ogTitle,
                 sourceId = chapterManga.source,
+                skipCache = false,
             )
         }
         // SY <--
@@ -425,7 +426,7 @@ class ReaderViewModel @JvmOverloads constructor(
                     if (!sourceManager.isInitialized.value && sourceManager.get(manga.source) == null) {
                         sourceManager.isInitialized.first { it }
                     }
-                    val source = sourceManager.getOrStub(manga.source)
+                    val source = sourceManager.get(manga.source) ?: sourceManager.getOrStub(manga.source)
                     val metadataSource = source.getMainSource<MetadataSource<*, *>>()
                     val metadata = if (metadataSource != null) {
                         getFlatMetadataById.await(mangaId)?.raise(metadataSource.metaClass)
@@ -602,7 +603,10 @@ class ReaderViewModel @JvmOverloads constructor(
 
         logcat { "Loading adjacent ${chapter.chapter.url}" }
 
-        mutableState.update { it.copy(isLoadingAdjacentChapter = true) }
+        val isChapterLoaded = chapter.state is ReaderChapter.State.Loaded
+        if (!isChapterLoaded) {
+            mutableState.update { it.copy(isLoadingAdjacentChapter = true) }
+        }
         try {
             withIOContext {
                 loadChapter(loader, chapter)
@@ -613,7 +617,9 @@ class ReaderViewModel @JvmOverloads constructor(
             }
             logcat(LogPriority.ERROR, e)
         } finally {
-            mutableState.update { it.copy(isLoadingAdjacentChapter = false) }
+            if (!isChapterLoaded) {
+                mutableState.update { it.copy(isLoadingAdjacentChapter = false) }
+            }
         }
     }
 
@@ -729,6 +735,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 nextChapterManga.ogTitle,
                 nextChapterManga.source,
                 // KMK <--
+                skipCache = false,
             )
             if (!isNextChapterDownloaded) return@launchIO
 
