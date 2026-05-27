@@ -59,6 +59,8 @@ class EnhancedFilePrinter internal constructor(
      * Do the real job of writing log to file.
      */
     private fun doPrintln(timeMillis: Long, logLevel: Int, tag: String, msg: String) {
+        val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
+
         synchronized(writeLock) {
             val lastFileName = writer.lastFileName
             if (fileNameGenerator.isFileNameChangeable) {
@@ -90,7 +92,6 @@ class EnhancedFilePrinter internal constructor(
                     return
                 }
             }
-            val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
             writer.appendLog(flattenedLog)
         }
     }

@@ -17,10 +17,10 @@ class UniFileTempFileManager(
     fun createTempFile(file: UniFile): File {
         dir.mkdirs()
 
-        (
-            context.contentResolver.openInputStream(file.uri)
-                ?: throw IOException("Cannot open input stream for ${file.uri}")
-            ).use { input ->
+        val inputStream = context.contentResolver.openInputStream(file.uri)
+            ?: throw IOException("Failed to open source file: ${file.uri}")
+
+        return inputStream.use { input ->
             val tempFile = File.createTempFile(
                 file.nameWithoutExtension.orEmpty().padEnd(3),
                 null,
@@ -39,7 +39,7 @@ class UniFileTempFileManager(
                     }
                 }
             }
-            return tempFile
+            tempFile
         }
     }
 
