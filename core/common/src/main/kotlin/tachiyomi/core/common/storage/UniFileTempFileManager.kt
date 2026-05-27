@@ -6,6 +6,7 @@ import android.os.FileUtils
 import com.hippo.unifile.UniFile
 import java.io.BufferedOutputStream
 import java.io.File
+import java.io.IOException
 
 class UniFileTempFileManager(
     private val context: Context,
@@ -22,8 +23,10 @@ class UniFileTempFileManager(
             dir,
         )
 
-        (context.contentResolver.openInputStream(file.uri)
-            ?: throw java.io.IOException("Cannot open input stream for ${file.uri}")).use { input ->
+        (
+            context.contentResolver.openInputStream(file.uri)
+                ?: throw IOException("Cannot open input stream for ${file.uri}")
+        ).use { input ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tempFile.outputStream().use { out ->
                     FileUtils.copy(input, out)
