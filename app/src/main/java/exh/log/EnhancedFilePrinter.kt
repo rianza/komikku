@@ -71,7 +71,7 @@ class EnhancedFilePrinter internal constructor(
                             }.isEmpty()
                         ),
                 ) { "File name should not be empty." }
-                if (newFileName != lastFileName) {
+                if (!writer.isOpened || newFileName != lastFileName) {
                     if (writer.isOpened) {
                         writer.close()
                     }
@@ -82,7 +82,6 @@ class EnhancedFilePrinter internal constructor(
                     }
                 }
             }
-            if (!writer.isOpened) return
             val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
             writer.appendLog(flattenedLog)
         }
