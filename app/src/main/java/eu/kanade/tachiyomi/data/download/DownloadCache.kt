@@ -6,6 +6,7 @@ import androidx.core.net.toUri
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.util.storage.toDirectFileUriIfPossible
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -558,7 +559,10 @@ private object UniFileAsStringSerializer : KSerializer<UniFile?> {
 
     override fun deserialize(decoder: Decoder): UniFile? {
         return if (decoder.decodeNotNullMark()) {
-            UniFile.fromUri(Injekt.get<Application>(), decoder.decodeString().toUri())
+            // Convert SAF URI → direct file:// URI to avoid ExternalStorageProvider dependency
+            val uri = decoder.decodeString().toUri()
+                .toDirectFileUriIfPossible()
+            UniFile.fromUri(Injekt.get<Application>(), uri)
         } else {
             decoder.decodeNull()
         }

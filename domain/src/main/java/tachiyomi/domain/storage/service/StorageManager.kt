@@ -6,8 +6,10 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
@@ -62,7 +64,11 @@ class StorageManager(
     }
 
     private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
+        // Convert SAF URI → direct file:// URI if MANAGE_EXTERNAL_STORAGE is granted.
+        // Avoids a persistent connection to ExternalStorageProvider, which the system
+        // can kill under memory pressure — taking this app down with it.
+        val resolvedUri = uri.toUri().toDirectFileUri()
+        return UniFile.fromUri(context, resolvedUri)
             .takeIf {
                 // KMK -->
                 it?.isAccessibleDirectory == true
@@ -216,6 +222,45 @@ class StorageManager(
             }
         }
         // KMK <--
+    }
+}
+
+/**
+ * Converts a SAF content:// URI to a direct file:// URI when
+ * MANAGE_EXTERNAL_STORAGE is granted on Android 11+.
+ */
+private fun Uri.toDirectFileUri(): Uri {
+    if (scheme == "file") return this
+    if (scheme != "content") return this
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return this
+    if (!Environment.isExternalStorageManager()) return this
+
+    return try {
+        val docId = try {
+            DocumentsContract.getDocumentId(this)
+        } catch (_: Exception) {
+            DocumentsContract.getTreeDocumentId(this)
+        }
+
+        val split = docId.split(":")
+        val type = split[0]
+        val relativePath = split.getOrNull(1)?.trimEnd('/').orEmpty()
+
+        val absolutePath = when {
+            type.equals("primary", ignoreCase = true) -> {
+                val base = Environment.getExternalStorageDirectory().absolutePath
+                if (relativePath.isEmpty()) base else "$base/$relativePath"
+            }
+            else -> {
+                val base = "/storage/$type"
+                if (relativePath.isEmpty()) base else "$base/$relativePath"
+            }
+        }
+
+        val file = File(absolutePath)
+        if (file.canRead()) file.toUri() else this
+    } catch (_: Exception) {
+        this
     }
 }
 
