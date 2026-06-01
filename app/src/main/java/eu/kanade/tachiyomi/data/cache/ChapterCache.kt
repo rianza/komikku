@@ -146,7 +146,11 @@ class ChapterCache(
      */
     fun isImageInCache(imageUrl: String): Boolean {
         return try {
-            diskCache.get(DiskUtil.hashKeyForDisk(imageUrl)).use { it != null }
+            val key = DiskUtil.hashKeyForDisk(imageUrl)
+            diskCache.get(key).use { snapshot ->
+                snapshot != null &&
+                    File(diskCache.directory, "$key.0").exists()
+            }
         } catch (_: IOException) {
             false
         }
