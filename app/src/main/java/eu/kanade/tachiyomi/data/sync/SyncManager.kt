@@ -90,7 +90,7 @@ class SyncManager(
             chapters = syncOptions.chapters,
             tracking = syncOptions.tracking,
             history = syncOptions.history,
-            extensionRepoSettings = syncOptions.extensionRepoSettings,
+            extensionStores = syncOptions.extensionStores,
             appSettings = syncOptions.appSettings,
             sourceSettings = syncOptions.sourceSettings,
             privateSettings = syncOptions.privateSettings,
@@ -109,8 +109,13 @@ class SyncManager(
             backupCategories = backupCreator.backupCategories(backupOptions),
             backupSources = backupCreator.backupSources(backupManga),
             backupPreferences = backupCreator.backupAppPreferences(backupOptions),
+<<<<<<< HEAD
             backupExtensionRepo = backupCreator.backupExtensionRepos(backupOptions),
             backupSourcePreferences = backupCreator.backupSourcePreferences(backupOptions),
+=======
+            backupSourcePreferences = backupCreator.backupSourcePreferences(backupOptions),
+            backupExtensionStores = backupCreator.backupExtensionStores(backupOptions),
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
 
             // SY -->
             backupSavedSearches = backupCreator.backupSavedSearches(backupOptions),
@@ -194,7 +199,7 @@ class SyncManager(
             backupSources = remoteBackup.backupSources,
             backupPreferences = remoteBackup.backupPreferences,
             backupSourcePreferences = remoteBackup.backupSourcePreferences,
-            backupExtensionRepo = remoteBackup.backupExtensionRepo,
+            backupExtensionStores = remoteBackup.backupExtensionStores,
 
             // SY -->
             backupSavedSearches = remoteBackup.backupSavedSearches,
@@ -210,7 +215,7 @@ class SyncManager(
         val hasSourceChanges = remoteBackup.backupSources != backup.backupSources
         val hasPreferenceChanges = remoteBackup.backupPreferences != backup.backupPreferences
         val hasSourcePreferenceChanges = remoteBackup.backupSourcePreferences != backup.backupSourcePreferences
-        val hasExtensionRepoChanges = remoteBackup.backupExtensionRepo != backup.backupExtensionRepo
+        val hasExtensionRepoChanges = remoteBackup.backupExtensionStores != backup.backupExtensionStores
         val hasSavedSearchChanges = remoteBackup.backupSavedSearches != backup.backupSavedSearches
 
         if (!hasMangaChanges && !hasCategoryChanges && !hasSourceChanges &&
@@ -251,7 +256,7 @@ class SyncManager(
                     sourceSettings = syncOptions.sourceSettings,
                     libraryEntries = syncOptions.libraryEntries,
                     categories = syncOptions.categories,
-                    extensionRepoSettings = syncOptions.extensionRepoSettings,
+                    extensionStores = syncOptions.extensionStores,
                     // SY -->
                     savedSearches = syncOptions.savedSearches,
                     // SY <--

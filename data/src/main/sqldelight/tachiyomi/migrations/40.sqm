@@ -1,3 +1,5 @@
+import kotlin.Boolean;
+
 DROP VIEW IF EXISTS historyView;
 
 CREATE VIEW historyView AS
@@ -145,3 +147,18 @@ ON M._id = C.merge_id  -- ON ME.merge_id = C.merge_id
 LEFT JOIN mangas_categories AS MC
 ON MC.manga_id = M._id
 WHERE M.source = 6969;
+
+CREATE TABLE extension_store(
+    index_url TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    badge_label TEXT NOT NULL,
+    signing_key TEXT NOT NULL,
+    contact_website TEXT NOT NULL,
+    contact_discord TEXT,
+    is_legacy INTEGER AS Boolean NOT NULL
+);
+
+INSERT INTO extension_store(index_url, name, badge_label, signing_key, contact_website, contact_discord, is_legacy)
+SELECT base_url || '/repo.json', name, coalesce(short_name, name), signing_key_fingerprint, website, NULL, 1 FROM extension_repos;
+
+DROP TABLE extension_repos;

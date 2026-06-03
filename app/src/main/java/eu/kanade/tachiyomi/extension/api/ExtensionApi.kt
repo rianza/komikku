@@ -17,39 +17,45 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import logcat.LogPriority
-import mihon.domain.extensionrepo.interactor.GetExtensionRepo
-import mihon.domain.extensionrepo.interactor.UpdateExtensionRepo
-import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extension.interactor.UpdateExtensionStores
+import mihon.domain.extension.repository.ExtensionStoreRepository
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.lang.withIOContext
+<<<<<<< HEAD
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+=======
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
 import uy.kohesive.injekt.injectLazy
 import java.time.Instant
 import kotlin.time.Duration.Companion.days
 
 internal class ExtensionApi {
 
-    private val networkService: NetworkHelper by injectLazy()
+    private val repository: ExtensionStoreRepository by injectLazy()
+
     private val preferenceStore: PreferenceStore by injectLazy()
-    private val getExtensionRepo: GetExtensionRepo by injectLazy()
-    private val updateExtensionRepo: UpdateExtensionRepo by injectLazy()
+    private val updateExtensionStores: UpdateExtensionStores by injectLazy()
     private val extensionManager: ExtensionManager by injectLazy()
 
     // SY -->
     private val sourcePreferences: SourcePreferences by injectLazy()
 
     // SY <--
+<<<<<<< HEAD
 
     private val json: Json by injectLazy()
+=======
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
 
     private val lastExtCheck: Preference<Long> by lazy {
         preferenceStore.getLong(Preference.appStateKey("last_ext_check"), 0)
     }
 
     suspend fun findExtensions(): List<Extension.Available> {
+<<<<<<< HEAD
         // KMK -->
         val disabledRepos = sourcePreferences.disabledRepos().get()
         // KMK <--
@@ -86,6 +92,9 @@ internal class ExtensionApi {
             logcat(LogPriority.ERROR, e) { "Failed to get extensions from $repoBaseUrl" }
             emptyList()
         }
+=======
+        return withIOContext { repository.fetchExtensions() }
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
     }
 
     suspend fun checkForUpdates(
@@ -99,8 +108,7 @@ internal class ExtensionApi {
             return null
         }
 
-        // Update extension repo details
-        updateExtensionRepo.awaitAll()
+        updateExtensionStores()
 
         val extensions = if (fromAvailableExtensionList) {
             extensionManager.availableExtensionsFlow.value
@@ -138,6 +146,7 @@ internal class ExtensionApi {
         return extensionsWithUpdate
     }
 
+<<<<<<< HEAD
     private fun List<ExtensionJsonObject>.toExtensions(
         repoUrl: String,
         // KMK -->
@@ -179,6 +188,8 @@ internal class ExtensionApi {
         return version.substringBeforeLast('.').toDouble()
     }
 
+=======
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
     // SY -->
     private fun Extension.isBlacklisted(
         blacklistEnabled: Boolean = sourcePreferences.enableSourceBlacklist.get(),
@@ -193,33 +204,4 @@ internal class ExtensionApi {
         // KMK <--
     }
     // SY <--
-}
-
-@Serializable
-private data class ExtensionJsonObject(
-    val name: String,
-    val pkg: String,
-    val apk: String,
-    val lang: String,
-    val code: Long,
-    val version: String,
-    val nsfw: Int,
-    val sources: List<ExtensionSourceJsonObject>?,
-)
-
-@Serializable
-private data class ExtensionSourceJsonObject(
-    val id: Long,
-    val lang: String,
-    val name: String,
-    val baseUrl: String,
-)
-
-private val extensionSourceMapper: (ExtensionSourceJsonObject) -> Extension.Available.Source = {
-    Extension.Available.Source(
-        id = it.id,
-        lang = it.lang,
-        name = it.name,
-        baseUrl = it.baseUrl,
-    )
 }

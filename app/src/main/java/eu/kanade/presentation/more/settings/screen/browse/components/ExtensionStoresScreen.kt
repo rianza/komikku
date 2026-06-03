@@ -1,5 +1,3 @@
-@file:JvmName("ExtensionReposScreenKt")
-
 package eu.kanade.presentation.more.settings.screen.browse.components
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import eu.kanade.presentation.category.components.CategoryFloatingActionButton
 import eu.kanade.presentation.components.AppBar
+<<<<<<< HEAD:app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionReposScreen.kt
 import eu.kanade.presentation.more.settings.screen.browse.RepoScreenState
 import eu.kanade.tachiyomi.util.system.openInBrowser
 import kotlinx.collections.immutable.persistentSetOf
@@ -28,6 +27,10 @@ import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.KOMIK
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_HELP
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_SIGNATURE
 import mihon.domain.extensionrepo.model.ExtensionRepo
+=======
+import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoreScreenState
+import mihon.domain.extension.model.ExtensionStore
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349)):app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresScreen.kt
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
@@ -37,15 +40,22 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.util.plus
 
 @Composable
-fun ExtensionReposScreen(
-    state: RepoScreenState.Success,
+fun ExtensionStoresScreen(
+    state: ExtensionStoreScreenState.Success,
     onClickCreate: () -> Unit,
+<<<<<<< HEAD:app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionReposScreen.kt
     onOpenWebsite: (ExtensionRepo) -> Unit,
     onClickDelete: (String) -> Unit,
     // KMK -->
     onClickEnable: (String) -> Unit,
     onClickDisable: (String) -> Unit,
     // KMK <--
+=======
+    onCopy: (ExtensionStore) -> Unit,
+    onOpenWebsite: (ExtensionStore) -> Unit,
+    onOpenDiscord: (ExtensionStore) -> Unit,
+    onClickDelete: (ExtensionStore) -> Unit,
+>>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349)):app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresScreen.kt
     onClickRefresh: () -> Unit,
     navigateUp: () -> Unit,
 ) {
@@ -54,7 +64,7 @@ fun ExtensionReposScreen(
         topBar = { scrollBehavior ->
             AppBar(
                 navigateUp = navigateUp,
-                title = stringResource(MR.strings.label_extension_repos),
+                title = stringResource(MR.strings.extensionStores),
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = onClickRefresh) {
@@ -76,7 +86,7 @@ fun ExtensionReposScreen(
         if (state.isEmpty) {
             val context = LocalContext.current
             EmptyScreen(
-                MR.strings.information_empty_repos,
+                MR.strings.extensionStoresScreen_emptyLabel,
                 modifier = Modifier.padding(paddingValues),
                 // KMK -->
                 help = {
@@ -94,12 +104,14 @@ fun ExtensionReposScreen(
             return@Scaffold
         }
 
-        ExtensionReposContent(
-            repos = state.repos,
+        ExtensionStoresContent(
+            repos = state.stores,
             lazyListState = lazyListState,
             paddingValues = paddingValues + topSmallPaddingValues +
                 PaddingValues(horizontal = MaterialTheme.padding.medium),
+            onCopy = onCopy,
             onOpenWebsite = onOpenWebsite,
+            onOpenDiscord = onOpenDiscord,
             onClickDelete = onClickDelete,
             // KMK -->
             onClickEnable = onClickEnable,
