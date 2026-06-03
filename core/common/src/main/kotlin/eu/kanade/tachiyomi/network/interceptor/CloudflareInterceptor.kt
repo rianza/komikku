@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.network.interceptor
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -90,22 +92,46 @@ class CloudflareInterceptor(
             webview = createWebView(originalRequest)
 
             webview.webViewClient = object : WebViewClient() {
+                private var lastError: Int? = null
+
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    lastError = null
+                }
+
                 override fun onPageFinished(view: WebView, url: String) {
                     fun isCloudFlareBypassed(): Boolean {
                         return cookieManager.get(origRequestUrl.toHttpUrl())
-                            .firstOrNull { it.name == "cf_clearance" }
-                            .let { it != null && it != oldCookie }
+                            .any { it.name == "cf_clearance" && it != oldCookie }
                     }
 
                     if (isCloudFlareBypassed()) {
                         cloudflareBypassed = true
                         latch.countDown()
+                        return
                     }
 
-                    if (url == origRequestUrl && !challengeFound) {
-                        // The first request didn't return the challenge, it means we passed through!
-                        cloudflareBypassed = true
-                        latch.countDown()
+                    if (lastError == null && (url.contains(origRequestUrl) || url.contains(origRequestUrl.toHttpUrl().host))) {
+                        // The page finished loading successfully and we didn't detect a hard error.
+                        // For silent challenges, the title might change to the site title.
+                        val title = view.title
+                        if (title != null &&
+                            title.isNotBlank() &&
+                            title != "Just a moment..." &&
+                            !title.contains("Cloudflare", ignoreCase = true)
+                        ) {
+                            cloudflareBypassed = true
+                            latch.countDown()
+                        }
+                    }
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?,
+                ) {
+                    if (request?.isForMainFrame == true) {
+                        lastError = error?.errorCode
                     }
                 }
 
@@ -119,6 +145,7 @@ class CloudflareInterceptor(
                             // Found the Cloudflare challenge page.
                             challengeFound = true
                         } else {
+                            lastError = errorResponse?.statusCode
                             // Unlock thread, the challenge wasn't found.
                             latch.countDown()
                         }
