@@ -4,12 +4,12 @@ import android.content.pm.PackageInfo
 import androidx.core.content.pm.PackageInfoCompat
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
+import mihon.domain.extension.repository.ExtensionStoreRepository
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo
-import mihon.domain.extensionrepo.repository.ExtensionRepoRepository
 import tachiyomi.core.common.preference.getAndSet
 
 class TrustExtension(
-    private val extensionRepoRepository: ExtensionRepoRepository,
+    private val repository: ExtensionStoreRepository,
     private val preferences: SourcePreferences,
 ) {
 
@@ -18,7 +18,7 @@ class TrustExtension(
         if (isDebugBuildType) return true
         if (fingerprints.contains(CreateExtensionRepo.KOMIKKU_SIGNATURE)) return true
         // KMK <--
-        val trustedFingerprints = extensionRepoRepository.getAll().map { it.signingKeyFingerprint }.toHashSet()
+        val trustedFingerprints = repository.getAll().map { it.signingKey }.toHashSet()
         val key = "${pkgInfo.packageName}:${PackageInfoCompat.getLongVersionCode(pkgInfo)}:${fingerprints.last()}"
         return trustedFingerprints.any { fingerprints.contains(it) } || key in preferences.trustedExtensions.get()
     }

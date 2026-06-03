@@ -273,14 +273,24 @@ class ExtensionManager(
                 // Ext found: Update installed extensions with new information from repo
                 // Also clear isObsolete and set new repo Name if needed
                 val hasUpdate = extension.updateExists(availableExt)
-                installedExtensionsMap[pkgName] = extension.copy(
-                    hasUpdate = hasUpdate,
-                    repoUrl = availableExt.repoUrl,
-                    // KMK -->
-                    isObsolete = false,
-                    repoName = extension.repoName ?: availableExt.repoName,
-                    // KMK <--
-                )
+                if (extension.hasUpdate != hasUpdate) {
+                    installedExtensionsMap[pkgName] = extension.copy(
+                        hasUpdate = hasUpdate,
+                        store = availableExt.store,
+                        // KMK -->
+                        isObsolete = false,
+                        repoName = extension.repoName ?: availableExt.repoName,
+                        // KMK <--
+                    )
+                } else {
+                    installedExtensionsMap[pkgName] = extension.copy(
+                        store = availableExt.store,
+                        // KMK -->
+                        isObsolete = false,
+                        repoName = extension.repoName ?: availableExt.repoName,
+                        // KMK <--
+                    )
+                }
                 changed = true
             }
         }
@@ -298,7 +308,7 @@ class ExtensionManager(
      * @param extension The extension to be installed.
      */
     fun installExtension(extension: Extension.Available): Flow<InstallStep> {
-        return installer.downloadAndInstall(api.getApkUrl(extension), extension)
+        return installer.downloadAndInstall(extension.apkUrl, extension)
     }
 
     /**

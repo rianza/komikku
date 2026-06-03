@@ -91,6 +91,11 @@ insert:
 INSERT INTO categories(name, sort, flags, manga_order, hidden, version, uid, last_modified_at)
 VALUES (:name, :order, :flags, "", :hidden, :version, :uid, :last_modified_at);
 
+insertReturningId:
+INSERT INTO categories(name, sort, flags, manga_order, hidden, version, uid, last_modified_at)
+VALUES (:name, :order, :flags, "", :hidden, :version, :uid, :last_modified_at)
+RETURNING _id;
+
 delete:
 DELETE FROM categories
 WHERE _id = :categoryId;
