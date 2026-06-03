@@ -38,7 +38,6 @@ import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.toast
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import mihon.feature.migration.dialog.MigrateMangaDialog
 import mihon.feature.migration.list.MigrationListScreen
@@ -121,7 +120,7 @@ data class MigrateSourceSearchScreen(
                         // KMK -->
                         actions = {
                             AppBarActions(
-                                actions = persistentListOf(
+                                actions = listOf(
                                     bulkSelectionButton(
                                         isRunning = bulkFavoriteState.isRunning,
                                         toggleSelectionMode = bulkFavoriteScreenModel::toggleSelectionMode,

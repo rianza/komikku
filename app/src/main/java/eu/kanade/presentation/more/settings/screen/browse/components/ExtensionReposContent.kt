@@ -34,8 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.util.system.copyToClipboard
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentSetOf
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.KOMIKKU_SIGNATURE
 import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_SIGNATURE
 import mihon.domain.extensionrepo.model.ExtensionRepo
@@ -45,7 +43,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun ExtensionReposContent(
-    repos: ImmutableSet<ExtensionRepo>,
+    repos: Set<ExtensionRepo>,
     lazyListState: LazyListState,
     paddingValues: PaddingValues,
     onOpenWebsite: (ExtensionRepo) -> Unit,
@@ -190,7 +188,7 @@ fun repoResId(signKey: String) = when (signKey) {
 @Preview
 @Composable
 fun ExtensionReposContentPreview() {
-    val repos = persistentSetOf(
+    val repos = setOf(
         ExtensionRepo("https://repo", "Komikku", "", "", KOMIKKU_SIGNATURE),
         ExtensionRepo("https://repo", "Repo", "", "", REPO_SIGNATURE),
         ExtensionRepo("https://repo", "Other", "", "", "key2"),

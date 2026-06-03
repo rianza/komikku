@@ -39,8 +39,6 @@ import eu.kanade.presentation.components.SourcesSearchBox
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.ui.browse.feed.FeedScreenState
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.manga.model.Manga
@@ -185,7 +183,7 @@ fun FeedItem(
 
 @Composable
 fun FeedAddDialog(
-    sources: ImmutableList<CatalogueSource>,
+    sources: List<CatalogueSource>,
     onDismiss: () -> Unit,
     onClickAdd: (CatalogueSource?) -> Unit,
 ) {
@@ -248,7 +246,7 @@ fun FeedAddDialog(
 @Composable
 fun FeedAddSearchDialog(
     source: CatalogueSource,
-    savedSearches: ImmutableList<SavedSearch?>,
+    savedSearches: List<SavedSearch?>,
     onDismiss: () -> Unit,
     onClickAdd: (CatalogueSource, SavedSearch?) -> Unit,
 ) {
@@ -271,7 +269,7 @@ fun FeedAddSearchDialog(
                             context.stringResource(MR.strings.popular)
                         }
                     // KMK <--
-                }.toImmutableList()
+                }
             }
             RadioSelectorSearchable(
                 options = savedSearches,
@@ -297,8 +295,8 @@ fun FeedAddSearchDialog(
 
 @Composable
 fun <T> RadioSelectorSearchable(
-    options: ImmutableList<T>,
-    optionStrings: ImmutableList<String> = remember { options.map { it.toString() }.toImmutableList() },
+    options: List<T>,
+    optionStrings: List<String> = remember { options.map { it.toString() } },
     selected: Int?,
     onSelectOption: (Int) -> Unit = {},
 ) {

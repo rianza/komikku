@@ -14,7 +14,6 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.RadioMenuItem
-import kotlinx.collections.immutable.persistentListOf
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -39,7 +38,7 @@ fun BrowseSourceSimpleToolbar(
             var selectingDisplayMode by remember { mutableStateOf(false) }
             // KMK -->
             AppBarActions(
-                actions = persistentListOf<AppBar.AppBarAction>().builder().apply {
+                actions = buildList {
                     displayMode?.let { mode ->
                         add(
                             AppBar.Action(
@@ -58,8 +57,7 @@ fun BrowseSourceSimpleToolbar(
                             bulkSelectionButton(isRunning, mode),
                         )
                     }
-                }
-                    .build(),
+                },
             )
             // KMK <--
             DropdownMenu(

@@ -8,9 +8,6 @@ import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.model.installedExtension
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
@@ -71,7 +68,7 @@ class MigrateSourceScreenModel(
                     mutableState.update {
                         it.copy(
                             isLoading = false,
-                            items = sources.toImmutableList(),
+                            items = sources,
                         )
                     }
                 }
@@ -119,7 +116,7 @@ class MigrateSourceScreenModel(
     @Immutable
     data class State(
         val isLoading: Boolean = true,
-        val items: ImmutableList<Pair<Source, Long>> = persistentListOf(),
+        val items: List<Pair<Source, Long>> = listOf(),
         val sortingMode: SetMigrateSorting.Mode = SetMigrateSorting.Mode.ALPHABETICAL,
         val sortingDirection: SetMigrateSorting.Direction = SetMigrateSorting.Direction.ASCENDING,
         // KMK -->

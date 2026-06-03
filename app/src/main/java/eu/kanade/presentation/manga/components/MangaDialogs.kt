@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
-import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.i18n.MR
@@ -192,7 +191,6 @@ fun SetIntervalDialog(
                                             }
                                         }
                                 )
-                                .toImmutableList()
                         WheelTextPicker(
                             items = items,
                             size = size,

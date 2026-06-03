@@ -6,8 +6,6 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.launchIn
@@ -46,7 +44,7 @@ class ExtensionReposScreenModel(
                 .collectLatest { repos ->
                     mutableState.update {
                         RepoScreenState.Success(
-                            repos = repos.toImmutableSet(),
+                            repos = repos.toSet(),
                             // KMK -->
                             disabledRepos = sourcePreferences.disabledRepos().get(),
                             // KMK <--
@@ -191,8 +189,8 @@ sealed class RepoScreenState {
 
     @Immutable
     data class Success(
-        val repos: ImmutableSet<ExtensionRepo>,
-        val oldRepos: ImmutableSet<String>? = null,
+        val repos: Set<ExtensionRepo>,
+        val oldRepos: Set<String>? = null,
         val dialog: RepoDialog? = null,
         // KMK -->
         val disabledRepos: Set<String> = emptySet(),

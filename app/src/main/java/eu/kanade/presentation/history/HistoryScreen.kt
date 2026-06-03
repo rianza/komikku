@@ -30,7 +30,6 @@ import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
 import eu.kanade.tachiyomi.ui.history.HistoryScreenModel.HistorySelectionOptions
-import kotlinx.collections.immutable.persistentListOf
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
@@ -83,7 +82,7 @@ fun HistoryScreen(
                     onChangeSearchQuery = onSearchQueryChange,
                     actions = {
                         AppBarActions(
-                            persistentListOf(
+                            listOf(
                                 // KMK -->
                                 AppBar.Action(
                                     title = stringResource(MR.strings.action_filter),
@@ -152,7 +151,7 @@ fun HistoryScreen(
 private fun HistoryScreenContent(
     // KMK -->
     state: HistoryScreenModel.State,
-
+    // KMK <--
     history: List<HistoryUiModel>,
     contentPadding: PaddingValues,
     onClickCover: (HistoryWithRelations) -> Unit,
@@ -259,7 +258,7 @@ private fun HistorySelectionToolbar(
         titleContent = { Text(text = "$selectedCount") },
         actions = {
             AppBarActions(
-                persistentListOf(
+                listOf(
                     AppBar.Action(
                         title = stringResource(MR.strings.action_select_all),
                         icon = Icons.Outlined.SelectAll,

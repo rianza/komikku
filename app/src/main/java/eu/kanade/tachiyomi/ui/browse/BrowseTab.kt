@@ -30,7 +30,6 @@ import eu.kanade.tachiyomi.ui.browse.migration.sources.migrateSourceTab
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.sourcesTab
 import eu.kanade.tachiyomi.ui.main.MainActivity
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -85,39 +84,36 @@ data object BrowseTab : Tab {
         // KMK <--
 
         // SY -->
-        val tabs = when {
-            hideFeedTab ->
-                persistentListOf(
-                    sourcesTab(),
-                    extensionsTab(extensionsScreenModel),
-                    migrateSourceTab(),
-                )
-
-            feedTabInFront ->
-                persistentListOf(
-                    feedTab(
-                        // KMK -->
-                        feedScreenModel,
-                        bulkFavoriteScreenModel,
-                        // KMK <--
-                    ),
-                    sourcesTab(),
-                    extensionsTab(extensionsScreenModel),
-                    migrateSourceTab(),
-                )
-
-            else ->
-                persistentListOf(
-                    sourcesTab(),
-                    feedTab(
-                        // KMK -->
-                        feedScreenModel,
-                        bulkFavoriteScreenModel,
-                        // KMK <--
-                    ),
-                    extensionsTab(extensionsScreenModel),
-                    migrateSourceTab(),
-                )
+        val tabs = if (hideFeedTab) {
+            listOf(
+                sourcesTab(),
+                extensionsTab(extensionsScreenModel),
+                migrateSourceTab(),
+            )
+        } else if (feedTabInFront) {
+            listOf(
+                feedTab(
+                    // KMK -->
+                    feedScreenModel,
+                    bulkFavoriteScreenModel,
+                    // KMK <--
+                ),
+                sourcesTab(),
+                extensionsTab(extensionsScreenModel),
+                migrateSourceTab(),
+            )
+        } else {
+            listOf(
+                sourcesTab(),
+                feedTab(
+                    // KMK -->
+                    feedScreenModel,
+                    bulkFavoriteScreenModel,
+                    // KMK <--
+                ),
+                extensionsTab(extensionsScreenModel),
+                migrateSourceTab(),
+            )
         }
         // SY <--
 

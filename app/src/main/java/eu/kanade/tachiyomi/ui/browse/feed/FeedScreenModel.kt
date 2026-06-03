@@ -13,9 +13,6 @@ import eu.kanade.presentation.browse.FeedItemUI
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -94,10 +91,7 @@ open class FeedScreenModel(
                 }
                 mutableState.update { state ->
                     state.copy(
-                        items = items
-                            // KMK -->
-                            .toImmutableList(),
-                        // KMK <--
+                        items = items,
                     )
                 }
                 getFeed(items)
@@ -112,10 +106,7 @@ open class FeedScreenModel(
             val newItems = state.value.items?.map { it.copy(results = null) } ?: return@launchIO
             mutableState.update { state ->
                 state.copy(
-                    items = newItems
-                        // KMK -->
-                        .toImmutableList(),
-                    // KMK <--
+                    items = newItems,
                 )
             }
             getFeed(newItems)
@@ -144,11 +135,11 @@ open class FeedScreenModel(
                         source,
                         (
                             // KMK -->
-                            // (if (source.supportsLatest) persistentListOf(null) else persistentListOf()) +
-                            persistentListOf(null) +
-                                // KMK <-->
+                            // (if (source.supportsLatest) listOf(null) else emptyList()) +
+                            listOf(null) +
+                                // KMK <--
                                 getSourceSavedSearches(source.id)
-                            ).toImmutableList(),
+                            ),
                     ),
                 )
             }
@@ -185,7 +176,7 @@ open class FeedScreenModel(
         return countFeedSavedSearchGlobal.await() > MaxFeedItems
     }
 
-    private fun getEnabledSources(): ImmutableList<CatalogueSource> {
+    private fun getEnabledSources(): List<CatalogueSource> {
         val languages = sourcePreferences.enabledLanguages.get()
         val pinnedSources = sourcePreferences.pinnedSources.get()
         val disabledSources = sourcePreferences.disabledSources.get()
@@ -196,11 +187,11 @@ open class FeedScreenModel(
             .filterNot { it.id in disabledSources }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { "(${it.lang}) ${it.name}" })
 
-        return list.sortedBy { it.id.toString() !in pinnedSources }.toImmutableList()
+        return list.sortedBy { it.id.toString() !in pinnedSources }
     }
 
-    private suspend fun getSourceSavedSearches(sourceId: Long): ImmutableList<SavedSearch> {
-        return getSavedSearchBySourceId.await(sourceId).toImmutableList()
+    private suspend fun getSourceSavedSearches(sourceId: Long): List<SavedSearch> {
+        return getSavedSearchBySourceId.await(sourceId)
     }
 
     fun createFeed(source: CatalogueSource, savedSearch: SavedSearch?) {
@@ -314,10 +305,7 @@ open class FeedScreenModel(
 
                     mutableState.update { state ->
                         state.copy(
-                            items = state.items?.map { if (it.feed.id == result.feed.id) result else it }
-                                // KMK -->
-                                ?.toImmutableList(),
-                            // KMK <--
+                            items = state.items?.map { if (it.feed.id == result.feed.id) result else it },
                         )
                     }
                 }
@@ -369,8 +357,8 @@ open class FeedScreenModel(
     }
 
     sealed class Dialog {
-        data class AddFeed(val options: ImmutableList<CatalogueSource>) : Dialog()
-        data class AddFeedSearch(val source: CatalogueSource, val options: ImmutableList<SavedSearch?>) : Dialog()
+        data class AddFeed(val options: List<CatalogueSource>) : Dialog()
+        data class AddFeedSearch(val source: CatalogueSource, val options: List<SavedSearch?>) : Dialog()
         data class DeleteFeed(val feed: FeedSavedSearch) : Dialog()
 
         // KMK -->
@@ -388,7 +376,7 @@ open class FeedScreenModel(
 
 data class FeedScreenState(
     val dialog: FeedScreenModel.Dialog? = null,
-    val items: ImmutableList<FeedItemUI>? = null,
+    val items: List<FeedItemUI>? = null,
 ) {
     val isLoading
         get() = items == null

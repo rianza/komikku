@@ -39,9 +39,6 @@ import exh.source.ExhPreferences
 import exh.source.LOCAL_SOURCE_PACKAGE
 import exh.source.getMainSource
 import exh.source.isEhBasedSource
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -204,7 +201,7 @@ open class BrowseSourceScreenModel(
             getExhSavedSearch.subscribe(source.id, source::getFilterList)
                 .map { it.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name)) }
                 .onEach { savedSearches ->
-                    mutableState.update { it.copy(savedSearches = savedSearches.toImmutableList()) }
+                    mutableState.update { it.copy(savedSearches = savedSearches) }
                 }
                 .launchIn(screenModelScope)
             // SY <--
@@ -473,7 +470,7 @@ open class BrowseSourceScreenModel(
                     setDialog(
                         Dialog.ChangeMangaCategory(
                             manga,
-                            categories.mapAsCheckboxState { it.id in preselectedIds }.toImmutableList(),
+                            categories.mapAsCheckboxState { it.id in preselectedIds },
                         ),
                     )
                 }
@@ -556,13 +553,13 @@ open class BrowseSourceScreenModel(
         data class AddDuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class ChangeMangaCategory(
             val manga: Manga,
-            val initialSelection: ImmutableList<CheckboxState.State<Category>>,
+            val initialSelection: List<CheckboxState.State<Category>>,
         ) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
 
         // SY -->
         data class DeleteSavedSearch(val idToDelete: Long, val name: String) : Dialog
-        data class CreateSavedSearch(val currentSavedSearches: ImmutableList<String>) : Dialog
+        data class CreateSavedSearch(val currentSavedSearches: List<String>) : Dialog
         // SY <--
     }
 
@@ -573,7 +570,7 @@ open class BrowseSourceScreenModel(
         val toolbarQuery: String? = null,
         val dialog: Dialog? = null,
         // SY -->
-        val savedSearches: ImmutableList<EXHSavedSearch> = persistentListOf(),
+        val savedSearches: List<EXHSavedSearch> = emptyList(),
         val filterable: Boolean = true,
         // SY <--
     ) {
@@ -586,7 +583,7 @@ open class BrowseSourceScreenModel(
             getExhSavedSearch.await(source.id, (source as CatalogueSource)::getFilterList)
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name))
                 .let { savedSearches ->
-                    mutableState.update { it.copy(savedSearches = savedSearches.toImmutableList()) }
+                    mutableState.update { it.copy(savedSearches = savedSearches) }
                 }
         }
     }
@@ -596,7 +593,7 @@ open class BrowseSourceScreenModel(
     /** Show a dialog to enter name for new saved search */
     fun onSaveSearch() {
         screenModelScope.launchIO {
-            val names = state.value.savedSearches.map { it.name }.toImmutableList()
+            val names = state.value.savedSearches.map { it.name }
             mutableState.update { it.copy(dialog = Dialog.CreateSavedSearch(names)) }
         }
     }

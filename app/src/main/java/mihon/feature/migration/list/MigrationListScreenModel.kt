@@ -12,10 +12,6 @@ import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.online.all.EHentai
 import exh.source.MERGED_SOURCE_ID
 import exh.util.ThrottleManager
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -112,7 +108,7 @@ class MigrationListScreenModel(
                 }
                 .awaitAll()
                 .filterNotNull()
-            mutableState.update { it.copy(items = manga.toImmutableList()) }
+            mutableState.update { it.copy(items = manga) }
             // KMK -->
             if (runManually) return@launchIO
             // KMK <--
@@ -397,7 +393,7 @@ class MigrationListScreenModel(
     }
 
     private fun removeManga(item: MigratingManga) {
-        mutableState.update { it.copy(items = items.toPersistentList().remove(item)) }
+        mutableState.update { it.copy(items = items.toMutableList().apply { remove(item) }) }
     }
 
     override fun onDispose() {
@@ -462,7 +458,7 @@ class MigrationListScreenModel(
     }
 
     data class State(
-        val items: ImmutableList<MigratingManga> = persistentListOf(),
+        val items: List<MigratingManga> = listOf(),
         val finishedCount: Int = 0,
         val migrationComplete: Boolean = false,
         val dialog: Dialog? = null,
