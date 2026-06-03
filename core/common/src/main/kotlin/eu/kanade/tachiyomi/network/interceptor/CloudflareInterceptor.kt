@@ -31,6 +31,8 @@ class CloudflareInterceptor(
 
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
+        if (response.header("cf-mitigated") == "challenge") return true
+
         return if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
             val document = Jsoup.parse(
                 response.peekBody(Long.MAX_VALUE).string(),
@@ -39,7 +41,9 @@ class CloudflareInterceptor(
 
             // solve with webview only on captcha, not on geo block
             document.getElementById("challenge-error-title") != null ||
-                document.getElementById("challenge-error-text") != null
+                document.getElementById("challenge-error-text") != null ||
+                document.title() == "Just a moment..." ||
+                document.select("script[src*='challenges.cloudflare.com']").isNotEmpty()
         } else {
             false
         }
@@ -99,7 +103,8 @@ class CloudflareInterceptor(
                     }
 
                     if (url == origRequestUrl && !challengeFound) {
-                        // The first request didn't return the challenge, abort.
+                        // The first request didn't return the challenge, it means we passed through!
+                        cloudflareBypassed = true
                         latch.countDown()
                     }
                 }
