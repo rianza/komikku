@@ -35,24 +35,7 @@ class CloudflareInterceptor(
         // Check if Cloudflare anti-bot is on
         if (response.header("cf-mitigated") == "challenge") return true
 
-        if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
-            val body = response.peekBody(Long.MAX_VALUE).string()
-            if (body.contains("challenges.cloudflare.com") ||
-                body.contains("cf-challenge") ||
-                body.contains("Just a moment...")
-            ) {
-                return true
-            }
-
-            val document = Jsoup.parse(body, response.request.url.toString())
-            // solve with webview only on captcha, not on geo block
-            return document.getElementById("challenge-error-title") != null ||
-                document.getElementById("challenge-error-text") != null ||
-                document.title() == "Just a moment..." ||
-                document.select("script[src*='challenges.cloudflare.com']").isNotEmpty()
-        }
-
-        return false
+        return response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK
     }
 
     override fun intercept(
@@ -163,7 +146,7 @@ class CloudflareInterceptor(
             webview.loadUrl(origRequestUrl, headers)
         }
 
-        latch.awaitFor30Seconds()
+        latch.await(45, java.util.concurrent.TimeUnit.SECONDS)
 
         if (!cloudflareBypassed) {
             if (cookieManager.get(origRequestUrl.toHttpUrl()).any { it.name == "cf_clearance" }) {
