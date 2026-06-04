@@ -35,6 +35,7 @@ class CloudflareInterceptor(
     private val executor = ContextCompat.getMainExecutor(context)
 
     private val resolveLocks = mutableMapOf<String, Any>()
+    private val lastSolveTime = mutableMapOf<String, Long>()
 
     private fun getLock(host: String): Any {
         synchronized(resolveLocks) {
@@ -76,10 +77,10 @@ class CloudflareInterceptor(
     ): Response {
         try {
             response.close()
-            cookieManager.remove(request.url, COOKIE_NAMES, 0)
-            val oldCookie = cookieManager.get(request.url)
-                .firstOrNull { it.name == "cf_clearance" }
-            resolveWithWebView(request, oldCookie)
+            val oldCookies = cookieManager.get(request.url)
+                .filter { it.name in COOKIE_NAMES }
+                .associate { it.name to it.value }
+            resolveWithWebView(request, oldCookies)
 
             return chain.proceed(request)
         }
@@ -93,13 +94,22 @@ class CloudflareInterceptor(
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun resolveWithWebView(originalRequest: Request, oldCookie: Cookie?) {
+    private fun resolveWithWebView(originalRequest: Request, oldCookies: Map<String, String?>) {
         val host = originalRequest.url.host
         synchronized(getLock(host)) {
-            // Re-check cookie after acquiring lock
-            if (isCloudFlareBypassed(originalRequest.url.toString(), oldCookie)) {
+            // KMK -->
+            val lastSolve = lastSolveTime[host] ?: 0L
+            if (System.currentTimeMillis() - lastSolve < 5000) {
+                Log.i("WebViewCF", "RATE LIMIT: solve terakhir ${System.currentTimeMillis() - lastSolve}ms lalu, skip")
                 return
             }
+
+            // Re-check cookies after acquiring lock
+            if (isCloudFlareBypassed(originalRequest.url.toString(), oldCookies)) {
+                Log.i("WebViewCF", "LOCK waited host=$host — cookies already updated")
+                return
+            }
+            // KMK <--
 
             // We need to lock this thread until the WebView finds the challenge solution url, because
             // OkHttp doesn't support asynchronous interceptors.
@@ -128,10 +138,11 @@ class CloudflareInterceptor(
 
                 webview?.webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView, url: String) {
-                        if (isCloudFlareBypassed(url, oldCookie)) {
+                        if (isCloudFlareBypassed(url, oldCookies)) {
                             cloudflareBypassed = true
                             Log.i("WebViewCF", "SOLVE success host=$host via clearance cookie")
                             CookieManager.getInstance().flush()
+                            lastSolveTime[host] = System.currentTimeMillis()
                             latch.countDown()
                         }
 
@@ -142,6 +153,7 @@ class CloudflareInterceptor(
                                 Log.i("WebViewCF", "SOLVE success host=$host via title shift: $title")
                                 cloudflareBypassed = true
                                 CookieManager.getInstance().flush()
+                                lastSolveTime[host] = System.currentTimeMillis()
                                 latch.countDown()
                             }
                         }
@@ -186,6 +198,7 @@ class CloudflareInterceptor(
                             Log.i("WebViewCF", "SOLVE success host=$host via title shift (Chrome): $title")
                             cloudflareBypassed = true
                             CookieManager.getInstance().flush()
+                            lastSolveTime[host] = System.currentTimeMillis()
                             latch.countDown()
                         }
                     }
@@ -221,9 +234,13 @@ class CloudflareInterceptor(
         }
     }
 
-    private fun isCloudFlareBypassed(url: String, oldCookie: Cookie?): Boolean {
-        return cookieManager.get(url.toHttpUrl())
-            .any { it.name == "cf_clearance" && it != oldCookie }
+    private fun isCloudFlareBypassed(url: String, oldCookies: Map<String, String?>): Boolean {
+        val currentCookies = cookieManager.get(url.toHttpUrl()).associate { it.name to it.value }
+        return COOKIE_NAMES.any { name ->
+            val current = currentCookies[name]
+            val old = oldCookies[name]
+            current != null && current != old
+        }
     }
 
     private fun isTitleSuccess(title: String): Boolean {
@@ -237,13 +254,14 @@ class CloudflareInterceptor(
             title.contains("Attention Required", ignoreCase = true) ||
             title.contains("Cloudflare", ignoreCase = true) ||
             title.contains("Checking your browser", ignoreCase = true) ||
-            title.contains("Menunggu", ignoreCase = true)
+            title.contains("Menunggu", ignoreCase = true) ||
+            title.contains("Ditunggu", ignoreCase = true)
     }
 
     companion object {
         private val ERROR_CODES = listOf(403, 503)
         private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
-        private val COOKIE_NAMES = listOf("cf_clearance")
+        private val COOKIE_NAMES = listOf("cf_clearance", "cf_bm", "_cfuvid")
         private const val BODY_PEEK_SIZE = 1024L * 10
     }
 }
