@@ -10,6 +10,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import eu.kanade.tachiyomi.network.AndroidCookieJar
 import eu.kanade.tachiyomi.util.system.isOutdated
 import eu.kanade.tachiyomi.util.system.toast
@@ -34,18 +36,32 @@ class CloudflareInterceptor(
 
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
-        if (response.header("cf-mitigated") == "challenge") return true
+        val isChallenge = response.header("cf-mitigated") == "challenge"
+        val isCloudflare = response.header("Server")?.contains("cloudflare", ignoreCase = true) == true
+        val isError = response.code in ERROR_CODES
 
-        if (response.header("Server")?.contains("cloudflare", ignoreCase = true) == true) {
-            if (response.code in ERROR_CODES) return true
+        if (isChallenge) {
+            logcat(LogPriority.INFO) { "Cloudflare challenge detected via header" }
+            return true
+        }
+
+        if (isCloudflare) {
+            if (isError) {
+                logcat(LogPriority.INFO) { "Cloudflare challenge detected via status code ${response.code}" }
+                return true
+            }
 
             // Sometimes it returns 200 but it's a challenge page
             if (response.code == 200) {
                 val body = response.peekBody(1024).string()
-                return body.contains("challenges.cloudflare.com") ||
+                val hasSignature = body.contains("challenges.cloudflare.com") ||
                     body.contains("_cf_chl_opt") ||
                     body.contains("cf-challenge") ||
                     body.contains("Just a moment...")
+                if (hasSignature) {
+                    logcat(LogPriority.INFO) { "Cloudflare challenge detected via body signature" }
+                    return true
+                }
             }
         }
 
@@ -100,10 +116,12 @@ class CloudflareInterceptor(
                 private var lastError: Int? = null
 
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    logcat(LogPriority.DEBUG) { "WebView started loading: $url" }
                     lastError = null
                 }
 
                 override fun onPageFinished(view: WebView, url: String) {
+                    logcat(LogPriority.DEBUG) { "WebView finished loading: $url" }
                     checkSuccess(view)
                 }
 
@@ -113,6 +131,7 @@ class CloudflareInterceptor(
                     error: WebResourceError?,
                 ) {
                     if (request?.isForMainFrame == true) {
+                        logcat(LogPriority.ERROR) { "WebView error: ${error?.errorCode} - ${error?.description}" }
                         lastError = error?.errorCode
                         if (error?.errorCode == WebViewClient.ERROR_HOST_LOOKUP ||
                             error?.errorCode == WebViewClient.ERROR_CONNECT ||
@@ -129,6 +148,7 @@ class CloudflareInterceptor(
                     errorResponse: WebResourceResponse?,
                 ) {
                     if (request?.isForMainFrame == true) {
+                        logcat(LogPriority.ERROR) { "WebView HTTP error: ${errorResponse?.statusCode}" }
                         if (errorResponse?.statusCode in ERROR_CODES) {
                             // Found the Cloudflare challenge page.
                             challengeFound = true
@@ -141,26 +161,30 @@ class CloudflareInterceptor(
                 }
 
                 private fun checkSuccess(view: WebView) {
+                    val url = view.url ?: ""
+                    val title = view.title ?: ""
+                    logcat(LogPriority.DEBUG) { "Checking success: $url (Title: $title)" }
+
                     fun isCloudFlareBypassed(): Boolean {
                         return cookieManager.get(origRequestUrl.toHttpUrl())
                             .any { it.name == "cf_clearance" && it.value != oldCookie?.value }
                     }
 
                     if (isCloudFlareBypassed()) {
+                        logcat(LogPriority.INFO) { "Cloudflare bypassed: cf_clearance cookie found/updated" }
                         cloudflareBypassed = true
                         latch.countDown()
                         return
                     }
 
-                    val url = view.url ?: return
                     if (lastError == null && url.contains(origRequestUrl.toHttpUrl().host)) {
-                        val title = view.title
-                        if (title != null && title.isNotBlank() &&
+                        if (title.isNotBlank() &&
                             !title.contains("Just a moment", ignoreCase = true) &&
                             !title.contains("Cloudflare", ignoreCase = true) &&
                             !title.contains("Attention Required", ignoreCase = true) &&
                             !title.contains("Ditunggu sebentar", ignoreCase = true)
                         ) {
+                            logcat(LogPriority.INFO) { "Cloudflare bypassed: site title detected" }
                             cloudflareBypassed = true
                             latch.countDown()
                         }
@@ -170,20 +194,19 @@ class CloudflareInterceptor(
 
             webview.webChromeClient = object : WebChromeClient() {
                 override fun onReceivedTitle(view: WebView?, title: String?) {
+                    logcat(LogPriority.DEBUG) { "WebView title: $title" }
                     view?.let {
-                        (it.webViewClient as? WebViewClient)?.let { client ->
-                            // Use reflection or just copy logic since we are in the same block
-                            val url = it.url ?: return
-                            if (url.contains(origRequestUrl.toHttpUrl().host)) {
-                                if (title != null && title.isNotBlank() &&
-                                    !title.contains("Just a moment", ignoreCase = true) &&
-                                    !title.contains("Cloudflare", ignoreCase = true) &&
-                                    !title.contains("Attention Required", ignoreCase = true) &&
-                                    !title.contains("Ditunggu sebentar", ignoreCase = true)
-                                ) {
-                                    cloudflareBypassed = true
-                                    latch.countDown()
-                                }
+                        val url = it.url ?: return
+                        if (url.contains(origRequestUrl.toHttpUrl().host)) {
+                            if (title != null && title.isNotBlank() &&
+                                !title.contains("Just a moment", ignoreCase = true) &&
+                                !title.contains("Cloudflare", ignoreCase = true) &&
+                                !title.contains("Attention Required", ignoreCase = true) &&
+                                !title.contains("Ditunggu sebentar", ignoreCase = true)
+                            ) {
+                                logcat(LogPriority.INFO) { "Cloudflare bypassed: site title detected (real-time)" }
+                                cloudflareBypassed = true
+                                latch.countDown()
                             }
                         }
                     }
