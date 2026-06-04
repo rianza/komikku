@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.network.interceptor
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -35,7 +36,20 @@ class CloudflareInterceptor(
         // Check if Cloudflare anti-bot is on
         if (response.header("cf-mitigated") == "challenge") return true
 
-        return response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK
+        if (response.header("Server")?.contains("cloudflare", ignoreCase = true) == true) {
+            if (response.code in ERROR_CODES) return true
+
+            // Sometimes it returns 200 but it's a challenge page
+            if (response.code == 200) {
+                val body = response.peekBody(1024).string()
+                return body.contains("challenges.cloudflare.com") ||
+                    body.contains("_cf_chl_opt") ||
+                    body.contains("cf-challenge") ||
+                    body.contains("Just a moment...")
+            }
+        }
+
+        return false
     }
 
     override fun intercept(
@@ -90,29 +104,7 @@ class CloudflareInterceptor(
                 }
 
                 override fun onPageFinished(view: WebView, url: String) {
-                    fun isCloudFlareBypassed(): Boolean {
-                        return cookieManager.get(origRequestUrl.toHttpUrl())
-                            .any { it.name == "cf_clearance" && it.value != oldCookie?.value }
-                    }
-
-                    if (isCloudFlareBypassed()) {
-                        cloudflareBypassed = true
-                        latch.countDown()
-                        return
-                    }
-
-                    if (lastError == null && url.contains(origRequestUrl.toHttpUrl().host)) {
-                        val title = view.title
-                        if (title != null &&
-                            title.isNotBlank() &&
-                            !title.contains("Just a moment", ignoreCase = true) &&
-                            !title.contains("Cloudflare", ignoreCase = true) &&
-                            !title.contains("Attention Required", ignoreCase = true)
-                        ) {
-                            cloudflareBypassed = true
-                            latch.countDown()
-                        }
-                    }
+                    checkSuccess(view)
                 }
 
                 override fun onReceivedError(
@@ -122,6 +114,12 @@ class CloudflareInterceptor(
                 ) {
                     if (request?.isForMainFrame == true) {
                         lastError = error?.errorCode
+                        if (error?.errorCode == WebViewClient.ERROR_HOST_LOOKUP ||
+                            error?.errorCode == WebViewClient.ERROR_CONNECT ||
+                            error?.errorCode == WebViewClient.ERROR_TIMEOUT
+                        ) {
+                            latch.countDown()
+                        }
                     }
                 }
 
@@ -138,6 +136,55 @@ class CloudflareInterceptor(
                             lastError = errorResponse?.statusCode
                             // Unlock thread, the challenge wasn't found.
                             latch.countDown()
+                        }
+                    }
+                }
+
+                private fun checkSuccess(view: WebView) {
+                    fun isCloudFlareBypassed(): Boolean {
+                        return cookieManager.get(origRequestUrl.toHttpUrl())
+                            .any { it.name == "cf_clearance" && it.value != oldCookie?.value }
+                    }
+
+                    if (isCloudFlareBypassed()) {
+                        cloudflareBypassed = true
+                        latch.countDown()
+                        return
+                    }
+
+                    val url = view.url ?: return
+                    if (lastError == null && url.contains(origRequestUrl.toHttpUrl().host)) {
+                        val title = view.title
+                        if (title != null && title.isNotBlank() &&
+                            !title.contains("Just a moment", ignoreCase = true) &&
+                            !title.contains("Cloudflare", ignoreCase = true) &&
+                            !title.contains("Attention Required", ignoreCase = true) &&
+                            !title.contains("Ditunggu sebentar", ignoreCase = true)
+                        ) {
+                            cloudflareBypassed = true
+                            latch.countDown()
+                        }
+                    }
+                }
+            }
+
+            webview.webChromeClient = object : WebChromeClient() {
+                override fun onReceivedTitle(view: WebView?, title: String?) {
+                    view?.let {
+                        (it.webViewClient as? WebViewClient)?.let { client ->
+                            // Use reflection or just copy logic since we are in the same block
+                            val url = it.url ?: return
+                            if (url.contains(origRequestUrl.toHttpUrl().host)) {
+                                if (title != null && title.isNotBlank() &&
+                                    !title.contains("Just a moment", ignoreCase = true) &&
+                                    !title.contains("Cloudflare", ignoreCase = true) &&
+                                    !title.contains("Attention Required", ignoreCase = true) &&
+                                    !title.contains("Ditunggu sebentar", ignoreCase = true)
+                                ) {
+                                    cloudflareBypassed = true
+                                    latch.countDown()
+                                }
+                            }
                         }
                     }
                 }
