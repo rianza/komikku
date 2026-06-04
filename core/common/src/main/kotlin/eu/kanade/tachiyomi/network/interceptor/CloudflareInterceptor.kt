@@ -218,9 +218,15 @@ class CloudflareInterceptor(
                             }
                         }
 
-                        if (url == resolveUrl && !challengeFound && !cloudflareBypassed && !isTitleChallenge(view.title.orEmpty())) {
-                            // The first request didn't return a challenge and the title doesn't look like one, abort.
-                            Log.i("WebViewCF", "ABORT: challenge not found on $url (title: ${view.title})")
+                        if (url == resolveUrl && !challengeFound && !cloudflareBypassed) {
+                            if (isTitleSuccess(view.title.orEmpty())) {
+                                Log.i("WebViewCF", "SOLVE success host=$host via title on finish: ${view.title}")
+                                cloudflareBypassed = true
+                                CookieManager.getInstance().flush()
+                                lastSolveTime[host] = System.currentTimeMillis()
+                            } else {
+                                Log.i("WebViewCF", "ABORT: challenge not found on $url (title: ${view.title})")
+                            }
                             latch.countDown()
                         }
                     }
