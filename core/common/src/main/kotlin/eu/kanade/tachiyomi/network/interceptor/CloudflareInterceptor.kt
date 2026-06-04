@@ -35,20 +35,24 @@ class CloudflareInterceptor(
         // Check if Cloudflare anti-bot is on
         if (response.header("cf-mitigated") == "challenge") return true
 
-        return if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
-            val document = Jsoup.parse(
-                response.peekBody(Long.MAX_VALUE).string(),
-                response.request.url.toString(),
-            )
+        if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
+            val body = response.peekBody(Long.MAX_VALUE).string()
+            if (body.contains("challenges.cloudflare.com") ||
+                body.contains("cf-challenge") ||
+                body.contains("Just a moment...")
+            ) {
+                return true
+            }
 
+            val document = Jsoup.parse(body, response.request.url.toString())
             // solve with webview only on captcha, not on geo block
-            document.getElementById("challenge-error-title") != null ||
+            return document.getElementById("challenge-error-title") != null ||
                 document.getElementById("challenge-error-text") != null ||
                 document.title() == "Just a moment..." ||
                 document.select("script[src*='challenges.cloudflare.com']").isNotEmpty()
-        } else {
-            false
         }
+
+        return false
     }
 
     override fun intercept(
@@ -59,6 +63,10 @@ class CloudflareInterceptor(
         try {
             response.close()
             cookieManager.remove(request.url, COOKIE_NAMES, 0)
+            try {
+                android.webkit.CookieManager.getInstance().flush()
+            } catch (_: Exception) {
+            }
             val oldCookie = cookieManager.get(request.url)
                 .firstOrNull { it.name == "cf_clearance" }
             resolveWithWebView(request, oldCookie)
@@ -101,7 +109,7 @@ class CloudflareInterceptor(
                 override fun onPageFinished(view: WebView, url: String) {
                     fun isCloudFlareBypassed(): Boolean {
                         return cookieManager.get(origRequestUrl.toHttpUrl())
-                            .any { it.name == "cf_clearance" && it != oldCookie }
+                            .any { it.name == "cf_clearance" && it.value != oldCookie?.value }
                     }
 
                     if (isCloudFlareBypassed()) {
@@ -110,14 +118,13 @@ class CloudflareInterceptor(
                         return
                     }
 
-                    if (lastError == null && (url.contains(origRequestUrl) || url.contains(origRequestUrl.toHttpUrl().host))) {
-                        // The page finished loading successfully and we didn't detect a hard error.
-                        // For silent challenges, the title might change to the site title.
+                    if (lastError == null && url.contains(origRequestUrl.toHttpUrl().host)) {
                         val title = view.title
                         if (title != null &&
                             title.isNotBlank() &&
-                            title != "Just a moment..." &&
-                            !title.contains("Cloudflare", ignoreCase = true)
+                            !title.contains("Just a moment", ignoreCase = true) &&
+                            !title.contains("Cloudflare", ignoreCase = true) &&
+                            !title.contains("Attention Required", ignoreCase = true)
                         ) {
                             cloudflareBypassed = true
                             latch.countDown()
@@ -157,6 +164,12 @@ class CloudflareInterceptor(
         }
 
         latch.awaitFor30Seconds()
+
+        if (!cloudflareBypassed) {
+            if (cookieManager.get(origRequestUrl.toHttpUrl()).any { it.name == "cf_clearance" }) {
+                cloudflareBypassed = true
+            }
+        }
 
         executor.execute {
             if (!cloudflareBypassed) {
