@@ -37,7 +37,8 @@ class CloudflareInterceptor(
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
         val isChallenge = response.header("cf-mitigated") == "challenge"
-        val isCloudflare = response.header("Server")?.contains("cloudflare", ignoreCase = true) == true
+        val isCloudflare = response.header("Server")?.contains("cloudflare", ignoreCase = true) == true ||
+            response.header("cf-ray") != null
         val isError = response.code in ERROR_CODES
 
         if (isChallenge) {
@@ -53,11 +54,12 @@ class CloudflareInterceptor(
 
             // Sometimes it returns 200 but it's a challenge page
             if (response.code == 200) {
-                val body = response.peekBody(1024).string()
+                val body = response.peekBody(1024 * 10).string()
                 val hasSignature = body.contains("challenges.cloudflare.com") ||
                     body.contains("_cf_chl_opt") ||
                     body.contains("cf-challenge") ||
-                    body.contains("Just a moment...")
+                    body.contains("Just a moment...") ||
+                    body.contains("chk_captcha")
                 if (hasSignature) {
                     logcat(LogPriority.INFO) { "Cloudflare challenge detected via body signature" }
                     return true
@@ -110,9 +112,13 @@ class CloudflareInterceptor(
         val headers = parseHeaders(originalRequest.headers)
 
         executor.execute {
-            webview = createWebView(originalRequest)
+            webview = createWebView(originalRequest).apply {
+                // Ensure the WebView has a size, some anti-bot scripts check for zero-sized windows
+                layout(0, 0, 1080, 1920)
+                settings.databaseEnabled = true
+            }
 
-            webview.webViewClient = object : WebViewClient() {
+            webview?.webViewClient = object : WebViewClient() {
                 private var lastError: Int? = null
 
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -182,7 +188,9 @@ class CloudflareInterceptor(
                             !title.contains("Just a moment", ignoreCase = true) &&
                             !title.contains("Cloudflare", ignoreCase = true) &&
                             !title.contains("Attention Required", ignoreCase = true) &&
-                            !title.contains("Ditunggu sebentar", ignoreCase = true)
+                            !title.contains("Ditunggu sebentar", ignoreCase = true) &&
+                            !title.contains("Sedang memverifikasi", ignoreCase = true) &&
+                            !title.contains("Verifikasi", ignoreCase = true)
                         ) {
                             logcat(LogPriority.INFO) { "Cloudflare bypassed: site title detected" }
                             cloudflareBypassed = true
@@ -192,7 +200,7 @@ class CloudflareInterceptor(
                 }
             }
 
-            webview.webChromeClient = object : WebChromeClient() {
+            webview?.webChromeClient = object : WebChromeClient() {
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     logcat(LogPriority.DEBUG) { "WebView title: $title" }
                     view?.let {
@@ -202,7 +210,9 @@ class CloudflareInterceptor(
                                 !title.contains("Just a moment", ignoreCase = true) &&
                                 !title.contains("Cloudflare", ignoreCase = true) &&
                                 !title.contains("Attention Required", ignoreCase = true) &&
-                                !title.contains("Ditunggu sebentar", ignoreCase = true)
+                                !title.contains("Ditunggu sebentar", ignoreCase = true) &&
+                                !title.contains("Sedang memverifikasi", ignoreCase = true) &&
+                                !title.contains("Verifikasi", ignoreCase = true)
                             ) {
                                 logcat(LogPriority.INFO) { "Cloudflare bypassed: site title detected (real-time)" }
                                 cloudflareBypassed = true
@@ -213,7 +223,7 @@ class CloudflareInterceptor(
                 }
             }
 
-            webview.loadUrl(origRequestUrl, headers)
+            webview?.loadUrl(origRequestUrl, headers)
         }
 
         latch.await(45, java.util.concurrent.TimeUnit.SECONDS)
