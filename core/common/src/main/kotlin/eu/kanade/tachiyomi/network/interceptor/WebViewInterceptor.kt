@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.network.interceptor
 
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.Toast
@@ -26,13 +25,23 @@ abstract class WebViewInterceptor(
     private val defaultUserAgentProvider: () -> String,
 ) : Interceptor {
 
+    /**
+     * When this is called, it initializes the WebView if it wasn't already. We use this to avoid
+     * blocking the main thread too much. If used too often we could consider moving it to the
+     * Application class.
+     */
     private val initWebView by lazy {
+        // Crashes on some devices. We skip this in some cases since the only impact is slower
+        // WebView init in those rare cases.
+        // See https://bugs.chromium.org/p/chromium/issues/detail?id=1279562
         if (DeviceUtil.isMiui || (Build.VERSION.SDK_INT == Build.VERSION_CODES.S && DeviceUtil.isSamsung)) {
             return@lazy
         }
+
         try {
             WebSettings.getDefaultUserAgent(context)
         } catch (_: Exception) {
+            // Avoid some crashes like when Chrome/WebView is being updated.
         }
     }
 
@@ -44,32 +53,24 @@ abstract class WebViewInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val response = chain.proceed(request)
-
         if (!shouldIntercept(response)) {
             return response
         }
 
-        Log.i(
-            TAG,
-            "INTERCEPT triggered url=${request.url} code=${response.code} " +
-                "server=${response.header("Server")}",
-        )
-
         if (!WebViewUtil.supportsWebView(context)) {
-            Log.w(TAG, "INTERCEPT WebView not supported on this device, abort")
             launchUI {
                 context.toast(MR.strings.information_webview_required, Toast.LENGTH_LONG)
             }
             return response
         }
-
         initWebView
-        Log.i(TAG, "INTERCEPT delegating to child (${this.javaClass.simpleName})")
+
         return intercept(chain, request, response)
     }
 
     fun parseHeaders(headers: Headers): Map<String, String> {
         return headers
+            // Keeping unsafe header makes webview throw [net::ERR_INVALID_ARGUMENT]
             .filter { (name, value) ->
                 isRequestHeaderSafe(name, value)
             }
@@ -84,90 +85,9 @@ abstract class WebViewInterceptor(
     fun createWebView(request: Request): WebView {
         return WebView(context).apply {
             setDefaultSettings()
-            // FIX: Selalu gunakan UA dari WebSettings (Chrome asli device),
-            // bukan UA statis dari preferences.
-            // Ini penting agar WebView dan OkHttp pakai UA yang sama,
-            // dan CF tidak bisa membedakan keduanya dari UA string.
-            val webViewUA = try {
-                WebSettings.getDefaultUserAgent(context)
-            } catch (_: Exception) {
-                request.header("User-Agent") ?: defaultUserAgentProvider()
-            }
-            settings.userAgentString = webViewUA
+            // Avoid sending empty User-Agent, Chromium WebView will reset to default if empty
+            settings.userAgentString = request.header("User-Agent") ?: defaultUserAgentProvider()
         }
-    }
-
-    /**
-     * Fetch halaman HTML menggunakan WebView dan return hasilnya sebagai String.
-     *
-     * Digunakan untuk CF BotManagement mode di mana OkHttp selalu diblock
-     * berdasarkan TLS fingerprint, tapi WebView (Chrome) diizinkan.
-     * Dalam kasus ini, cookie tidak membantu — kita perlu fetch konten
-     * langsung via WebView.
-     */
-    fun fetchHtmlWithWebView(
-        context: Context,
-        url: String,
-        userAgent: String,
-        executor: java.util.concurrent.Executor,
-    ): String? {
-        val latch = CountDownLatch(1)
-        var htmlResult: String? = null
-
-        executor.execute {
-            val wv = WebView(context).apply {
-                setDefaultSettings()
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.userAgentString = userAgent
-            }
-
-            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(wv, true)
-
-            wv.webViewClient = object : android.webkit.WebViewClient() {
-                override fun onPageFinished(view: WebView, pageUrl: String) {
-                    // Ambil HTML via JavaScript
-                    view.evaluateJavascript(
-                        "(function(){ return document.documentElement.outerHTML; })()",
-                    ) { html ->
-                        if (html != null && html != "null") {
-                            // JavaScript string result dibungkus quotes dan di-escape
-                            htmlResult = html
-                                .removeSurrounding("\"")
-                                .replace("\\n", "\n")
-                                .replace("\\t", "\t")
-                                .replace("\\\"", "\"")
-                                .replace("\\'", "'")
-                                .replace("\\\\", "\\")
-                            Log.i(TAG, "WV fetchHtml success url=$pageUrl len=${htmlResult?.length}")
-                        }
-                        latch.countDown()
-                        view.stopLoading()
-                        view.destroy()
-                    }
-                }
-
-                override fun onReceivedHttpError(
-                    view: android.webkit.WebView?,
-                    request: android.webkit.WebResourceRequest?,
-                    errorResponse: android.webkit.WebResourceResponse?,
-                ) {
-                    if (request?.isForMainFrame == true) {
-                        Log.w(TAG, "WV fetchHtml HTTP error ${errorResponse?.statusCode} url=${request.url}")
-                        // Tetap tunggu onPageFinished untuk mencoba ambil konten error page
-                    }
-                }
-            }
-
-            wv.loadUrl(url)
-        }
-
-        latch.await(30, TimeUnit.SECONDS)
-        return htmlResult
-    }
-
-    companion object {
-        private const val TAG = "WebViewCF"
     }
 }
 
@@ -180,8 +100,6 @@ private fun isRequestHeaderSafe(_name: String, _value: String): Boolean {
     if (name == "connection" && value == "upgrade") return false
     return true
 }
-
 private val unsafeHeaderNames = listOf(
-    "content-length", "host", "trailer", "te", "upgrade", "cookie2",
-    "keep-alive", "transfer-encoding", "set-cookie",
+    "content-length", "host", "trailer", "te", "upgrade", "cookie2", "keep-alive", "transfer-encoding", "set-cookie",
 )
