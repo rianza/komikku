@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -29,7 +30,7 @@ import java.util.concurrent.TimeUnit
 class CloudflareInterceptor(
     private val context: Context,
     private val cookieManager: AndroidCookieJar,
-    defaultUserAgentProvider: () -> String,
+    private val defaultUserAgentProvider: () -> String,
 ) : WebViewInterceptor(context, defaultUserAgentProvider) {
 
     private val executor = ContextCompat.getMainExecutor(context)
@@ -45,27 +46,29 @@ class CloudflareInterceptor(
 
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
-        if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
-            Log.i("WebViewCF", "DETECT code=${response.code} server=${response.header("Server")} url=${response.request.url}")
-            return true
-        }
-
-        // KMK -->
-        // Check for Turnstile/BotManagement even on 200 OK
-        if (response.code == 200 && response.header("cf-mitigated") == "challenge") {
-            Log.i("WebViewCF", "DETECT cf-mitigated=challenge url=${response.request.url}")
-            return true
-        }
-
-        val body = response.peekBody(BODY_PEEK_SIZE)
-        if (body.contentType()?.run { type == "text" && subtype == "html" } == true) {
-            val bodyString = body.string()
-            if (bodyString.contains("_cf_chl_opt") || bodyString.contains("/cdn-cgi/challenge-platform/")) {
-                Log.i("WebViewCF", "DETECT challenge markers in body url=${response.request.url}")
+        if (response.header("cf-ray") != null || response.header("Server") in SERVER_CHECK) {
+            if (response.code in ERROR_CODES) {
+                Log.i("WebViewCF", "DETECT code=${response.code} server=${response.header("Server")} url=${response.request.url}")
                 return true
             }
+
+            // KMK -->
+            // Check for Turnstile/BotManagement even on 200 OK
+            if (response.code == 200 && response.header("cf-mitigated") == "challenge") {
+                Log.i("WebViewCF", "DETECT cf-mitigated=challenge url=${response.request.url}")
+                return true
+            }
+
+            val body = response.peekBody(BODY_PEEK_SIZE)
+            if (body.contentType()?.run { type == "text" && subtype == "html" } == true) {
+                val bodyString = body.string()
+                if (bodyString.contains("_cf_chl_opt") || bodyString.contains("/cdn-cgi/challenge-platform/")) {
+                    Log.i("WebViewCF", "DETECT challenge markers in body url=${response.request.url}")
+                    return true
+                }
+            }
+            // KMK <--
         }
-        // KMK <--
 
         return false
     }
@@ -82,7 +85,59 @@ class CloudflareInterceptor(
                 .associate { it.name to it.value }
             resolveWithWebView(request, oldCookies)
 
-            return chain.proceed(request)
+            // KMK -->
+            val host = request.url.host
+            val isAjax = request.header("X-Requested-With") == "XMLHttpRequest" ||
+                request.url.encodedPath.contains("admin-ajax.php")
+
+            val newRequest = request.newBuilder()
+                .apply {
+                    val ua = request.header("User-Agent") ?: defaultUserAgentProvider()
+                    header("User-Agent", ua)
+
+                    // Add browser-like headers if they are likely missing
+                    if (request.header("Accept").isNullOrBlank()) {
+                        header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+                    }
+                    if (request.header("Accept-Language").isNullOrBlank()) {
+                        header("Accept-Language", "en-US,en;q=0.9,id;q=0.8")
+                    }
+
+                    // Cloudflare Bot Management specific headers
+                    if (isAjax) {
+                        header("Sec-Fetch-Dest", "empty")
+                        header("Sec-Fetch-Mode", "cors")
+                        header("Sec-Fetch-Site", "same-origin")
+                    } else {
+                        header("Sec-Fetch-Dest", "document")
+                        header("Sec-Fetch-Mode", "navigate")
+                        header("Sec-Fetch-Site", "none")
+                        header("Sec-Fetch-User", "?1")
+                    }
+
+                    header("Sec-Ch-Ua-Mobile", "?1")
+                    header("Sec-Ch-Ua-Platform", "\"Android\"")
+                    header("Upgrade-Insecure-Requests", "1")
+
+                    if (request.method == "POST" && request.header("Origin").isNullOrBlank()) {
+                        header("Origin", "https://$host")
+                    }
+
+                    if (request.header("Referer").isNullOrBlank()) {
+                        header("Referer", "https://$host/")
+                    }
+
+                    // Remove X-Requested-With if it's the app's package name
+                    val xrw = request.header("X-Requested-With")
+                    if (xrw != null && xrw != "XMLHttpRequest") {
+                        removeHeader("X-Requested-With")
+                    }
+                }
+                .build()
+
+            Log.d("WebViewCF", "RETRY request: ${newRequest.url} headers=${newRequest.headers.size}")
+            return chain.proceed(newRequest)
+            // KMK <--
         }
         // Because OkHttp's enqueue only handles IOExceptions, wrap the exception so that
         // we don't crash the entire app
@@ -109,6 +164,10 @@ class CloudflareInterceptor(
                 Log.i("WebViewCF", "LOCK waited host=$host — cookies already updated")
                 return
             }
+
+            // Clear cf_clearance to ensure we get a fresh one
+            cookieManager.remove(originalRequest.url, listOf("cf_clearance"), 0)
+            CookieManager.getInstance().flush()
             // KMK <--
 
             // We need to lock this thread until the WebView finds the challenge solution url, because
@@ -121,14 +180,15 @@ class CloudflareInterceptor(
             var cloudflareBypassed = false
             var isWebViewOutdated = false
 
-            // Use GET and a clean URL if it's a POST/other request
-            val resolveUrl = if (originalRequest.method == "GET") {
+            // Use root URL for non-GET or AJAX requests to increase solve success rate
+            val resolveUrl = if (originalRequest.method == "GET" && !originalRequest.url.encodedPath.contains("admin-ajax.php")) {
                 originalRequest.url.toString()
             } else {
-                originalRequest.url.newBuilder().apply {
-                    encodedPath("/")
-                    query(null)
-                }.build().toString()
+                originalRequest.url.newBuilder()
+                    .encodedPath("/")
+                    .query(null)
+                    .build()
+                    .toString()
             }
 
             val headers = parseHeaders(originalRequest.headers)
@@ -180,12 +240,23 @@ class CloudflareInterceptor(
                         }
                     }
 
+                    override fun onReceivedError(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        error: WebResourceError?,
+                    ) {
+                        if (request?.isForMainFrame == true) {
+                            Log.e("WebViewCF", "WV error: ${error?.errorCode} ${error?.description} url=${request.url}")
+                        }
+                    }
+
                     override fun shouldInterceptRequest(
                         view: WebView?,
                         request: WebResourceRequest?,
                     ): WebResourceResponse? {
                         val requestUrl = request?.url?.toString().orEmpty()
-                        if (requestUrl.contains("chk_jschl") || requestUrl.contains("challenge-platform")) {
+                        if (requestUrl.contains("chk_jschl") || requestUrl.contains("challenge-platform") || requestUrl.contains("turnstile")) {
+                            Log.i("WebViewCF", "CHALLENGE load: $requestUrl")
                             challengeFound = true
                         }
                         return super.shouldInterceptRequest(view, request)
@@ -231,6 +302,9 @@ class CloudflareInterceptor(
                 Log.e("WebViewCF", "SOLVE failed host=$host")
                 throw CloudflareBypassException()
             }
+
+            // Small delay to allow cookies to settle in the client's jar
+            Thread.sleep(1000)
         }
     }
 
@@ -248,14 +322,19 @@ class CloudflareInterceptor(
     }
 
     private fun isTitleChallenge(title: String): Boolean {
-        return title.contains("Just a moment", ignoreCase = true) ||
-            title.contains("Ditunggu sebentar", ignoreCase = true) ||
-            title.contains("Please wait", ignoreCase = true) ||
-            title.contains("Attention Required", ignoreCase = true) ||
-            title.contains("Cloudflare", ignoreCase = true) ||
-            title.contains("Checking your browser", ignoreCase = true) ||
-            title.contains("Menunggu", ignoreCase = true) ||
-            title.contains("Ditunggu", ignoreCase = true)
+        val t = title.lowercase()
+        return t.contains("just a moment") ||
+            t.contains("ditunggu sebentar") ||
+            t.contains("please wait") ||
+            t.contains("attention required") ||
+            t.contains("cloudflare") ||
+            t.contains("checking your browser") ||
+            t.contains("menunggu") ||
+            t.contains("ditunggu") ||
+            t.contains("tunggu") ||
+            t.contains("verifying") ||
+            t.contains("checking") ||
+            t.contains("security check")
     }
 
     companion object {
