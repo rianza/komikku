@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.network.interceptor
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
+import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -31,18 +34,29 @@ class CloudflareInterceptor(
 
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
-        return if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
-            val document = Jsoup.parse(
-                response.peekBody(Long.MAX_VALUE).string(),
-                response.request.url.toString(),
-            )
-
-            // solve with webview only on captcha, not on geo block
-            document.getElementById("challenge-error-title") != null ||
-                document.getElementById("challenge-error-text") != null
-        } else {
-            false
+        if (response.code in ERROR_CODES && response.header("Server") in SERVER_CHECK) {
+            Log.i("WebViewCF", "DETECT code=${response.code} server=${response.header("Server")} url=${response.request.url}")
+            return true
         }
+
+        // KMK -->
+        // Check for Turnstile/BotManagement even on 200 OK
+        if (response.code == 200 && response.header("cf-mitigated") == "challenge") {
+            Log.i("WebViewCF", "DETECT cf-mitigated=challenge url=${response.request.url}")
+            return true
+        }
+
+        val body = response.peekBody(BODY_PEEK_SIZE)
+        if (body.contentType()?.run { type == "text" && subtype == "html" } == true) {
+            val bodyString = body.string()
+            if (bodyString.contains("_cf_chl_opt") || bodyString.contains("/cdn-cgi/challenge-platform/")) {
+                Log.i("WebViewCF", "DETECT challenge markers in body url=${response.request.url}")
+                return true
+            }
+        }
+        // KMK <--
+
+        return false
     }
 
     override fun intercept(
@@ -68,6 +82,7 @@ class CloudflareInterceptor(
         }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private fun resolveWithWebView(originalRequest: Request, oldCookie: Cookie?) {
         // We need to lock this thread until the WebView finds the challenge solution url, because
         // OkHttp doesn't support asynchronous interceptors.
@@ -85,7 +100,7 @@ class CloudflareInterceptor(
         executor.execute {
             webview = createWebView(originalRequest)
 
-            webview.webViewClient = object : WebViewClient() {
+            webview?.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) {
                     fun isCloudFlareBypassed(): Boolean {
                         return cookieManager.get(origRequestUrl.toHttpUrl())
@@ -95,11 +110,29 @@ class CloudflareInterceptor(
 
                     if (isCloudFlareBypassed()) {
                         cloudflareBypassed = true
+                        // KMK -->
+                        Log.i("WebViewCF", "SOLVE success host=${origRequestUrl.toHttpUrl().host} via clearance cookie")
+                        CookieManager.getInstance().flush()
+                        // KMK <--
                         latch.countDown()
                     }
 
-                    if (url == origRequestUrl && !challengeFound) {
+                    // KMK -->
+                    // Silent bypass for BotManagement
+                    if (!challengeFound && !cloudflareBypassed && url.toHttpUrl().host == origRequestUrl.toHttpUrl().host) {
+                        val title = view.title.orEmpty()
+                        if (title.isNotBlank() && !title.contains("Just a moment") && !title.contains("Ditunggu sebentar")) {
+                            Log.i("WebViewCF", "SOLVE success host=${origRequestUrl.toHttpUrl().host} via title shift: $title")
+                            cloudflareBypassed = true
+                            CookieManager.getInstance().flush()
+                            latch.countDown()
+                        }
+                    }
+                    // KMK <--
+
+                    if (url == origRequestUrl && !challengeFound && !cloudflareBypassed) {
                         // The first request didn't return the challenge, abort.
+                        Log.i("WebViewCF", "ABORT: challenge not found on $url")
                         latch.countDown()
                     }
                 }
@@ -110,8 +143,9 @@ class CloudflareInterceptor(
                     errorResponse: WebResourceResponse?,
                 ) {
                     if (request?.isForMainFrame == true) {
-                        if (errorResponse?.statusCode in ERROR_CODES) {
+                        if (errorResponse?.statusCode != null && errorResponse.statusCode in ERROR_CODES) {
                             // Found the Cloudflare challenge page.
+                            Log.i("WebViewCF", "INTERCEPT triggered url=${request.url} code=${errorResponse.statusCode}")
                             challengeFound = true
                         } else {
                             // Unlock thread, the challenge wasn't found.
@@ -119,9 +153,22 @@ class CloudflareInterceptor(
                         }
                     }
                 }
+
+                // KMK -->
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                ): WebResourceResponse? {
+                    if (request?.url?.toString()?.contains("chk_jschl") == true) {
+                        challengeFound = true
+                    }
+                    return super.shouldInterceptRequest(view, request)
+                }
+                // KMK <--
             }
 
-            webview.loadUrl(origRequestUrl, headers)
+            Log.i("WebViewCF", "SOLVE start host=${origRequestUrl.toHttpUrl().host} url=$origRequestUrl")
+            webview?.loadUrl(origRequestUrl, headers)
         }
 
         latch.awaitFor30Seconds()
@@ -144,13 +191,17 @@ class CloudflareInterceptor(
                 context.toast(MR.strings.information_webview_outdated, Toast.LENGTH_LONG)
             }
 
+            Log.e("WebViewCF", "SOLVE failed host=${origRequestUrl.toHttpUrl().host}")
             throw CloudflareBypassException()
         }
     }
-}
 
-private val ERROR_CODES = listOf(403, 503)
-private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
-private val COOKIE_NAMES = listOf("cf_clearance")
+    companion object {
+        private val ERROR_CODES = listOf(403, 503)
+        private val SERVER_CHECK = arrayOf("cloudflare-nginx", "cloudflare")
+        private val COOKIE_NAMES = listOf("cf_clearance")
+        private const val BODY_PEEK_SIZE = 1024L * 10
+    }
+}
 
 private class CloudflareBypassException : Exception()
