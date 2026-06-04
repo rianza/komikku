@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import android.webkit.CookieManager
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -23,6 +24,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class CloudflareInterceptor(
     private val context: Context,
@@ -31,6 +33,14 @@ class CloudflareInterceptor(
 ) : WebViewInterceptor(context, defaultUserAgentProvider) {
 
     private val executor = ContextCompat.getMainExecutor(context)
+
+    private val resolveLocks = mutableMapOf<String, Any>()
+
+    private fun getLock(host: String): Any {
+        synchronized(resolveLocks) {
+            return resolveLocks.getOrPut(host) { Any() }
+        }
+    }
 
     override fun shouldIntercept(response: Response): Boolean {
         // Check if Cloudflare anti-bot is on
@@ -84,116 +94,150 @@ class CloudflareInterceptor(
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun resolveWithWebView(originalRequest: Request, oldCookie: Cookie?) {
-        // We need to lock this thread until the WebView finds the challenge solution url, because
-        // OkHttp doesn't support asynchronous interceptors.
-        val latch = CountDownLatch(1)
+        val host = originalRequest.url.host
+        synchronized(getLock(host)) {
+            // Re-check cookie after acquiring lock
+            if (isCloudFlareBypassed(originalRequest.url.toString(), oldCookie)) {
+                return
+            }
 
-        var webview: WebView? = null
+            // We need to lock this thread until the WebView finds the challenge solution url, because
+            // OkHttp doesn't support asynchronous interceptors.
+            val latch = CountDownLatch(1)
 
-        var challengeFound = false
-        var cloudflareBypassed = false
-        var isWebViewOutdated = false
+            var webview: WebView? = null
 
-        val origRequestUrl = originalRequest.url.toString()
-        val headers = parseHeaders(originalRequest.headers)
+            var challengeFound = false
+            var cloudflareBypassed = false
+            var isWebViewOutdated = false
 
-        executor.execute {
-            webview = createWebView(originalRequest)
+            // Use GET and a clean URL if it's a POST/other request
+            val resolveUrl = if (originalRequest.method == "GET") {
+                originalRequest.url.toString()
+            } else {
+                originalRequest.url.newBuilder().apply {
+                    encodedPath("/")
+                    query(null)
+                }.build().toString()
+            }
 
-            webview?.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) {
-                    fun isCloudFlareBypassed(): Boolean {
-                        return cookieManager.get(origRequestUrl.toHttpUrl())
-                            .firstOrNull { it.name == "cf_clearance" }
-                            .let { it != null && it != oldCookie }
+            val headers = parseHeaders(originalRequest.headers)
+
+            executor.execute {
+                webview = createWebView(originalRequest)
+
+                webview?.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        if (isCloudFlareBypassed(url, oldCookie)) {
+                            cloudflareBypassed = true
+                            Log.i("WebViewCF", "SOLVE success host=$host via clearance cookie")
+                            CookieManager.getInstance().flush()
+                            latch.countDown()
+                        }
+
+                        // Silent bypass for BotManagement
+                        if (!challengeFound && !cloudflareBypassed && url.toHttpUrl().host == host) {
+                            val title = view.title.orEmpty()
+                            if (isTitleSuccess(title)) {
+                                Log.i("WebViewCF", "SOLVE success host=$host via title shift: $title")
+                                cloudflareBypassed = true
+                                CookieManager.getInstance().flush()
+                                latch.countDown()
+                            }
+                        }
+
+                        if (url == resolveUrl && !challengeFound && !cloudflareBypassed && !isTitleChallenge(view.title.orEmpty())) {
+                            // The first request didn't return a challenge and the title doesn't look like one, abort.
+                            Log.i("WebViewCF", "ABORT: challenge not found on $url (title: ${view.title})")
+                            latch.countDown()
+                        }
                     }
 
-                    if (isCloudFlareBypassed()) {
-                        cloudflareBypassed = true
-                        // KMK -->
-                        Log.i("WebViewCF", "SOLVE success host=${origRequestUrl.toHttpUrl().host} via clearance cookie")
-                        CookieManager.getInstance().flush()
-                        // KMK <--
-                        latch.countDown()
+                    override fun onReceivedHttpError(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                        errorResponse: WebResourceResponse?,
+                    ) {
+                        if (request?.isForMainFrame == true) {
+                            val statusCode = errorResponse?.statusCode ?: -1
+                            if (statusCode in ERROR_CODES) {
+                                // Found the Cloudflare challenge page.
+                                Log.i("WebViewCF", "INTERCEPT triggered url=${request.url} code=$statusCode")
+                                challengeFound = true
+                            }
+                        }
                     }
 
-                    // KMK -->
-                    // Silent bypass for BotManagement
-                    if (!challengeFound && !cloudflareBypassed && url.toHttpUrl().host == origRequestUrl.toHttpUrl().host) {
-                        val title = view.title.orEmpty()
-                        if (title.isNotBlank() && !title.contains("Just a moment") && !title.contains("Ditunggu sebentar")) {
-                            Log.i("WebViewCF", "SOLVE success host=${origRequestUrl.toHttpUrl().host} via title shift: $title")
+                    override fun shouldInterceptRequest(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                    ): WebResourceResponse? {
+                        val requestUrl = request?.url?.toString().orEmpty()
+                        if (requestUrl.contains("chk_jschl") || requestUrl.contains("challenge-platform")) {
+                            challengeFound = true
+                        }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+                }
+
+                webview?.webChromeClient = object : WebChromeClient() {
+                    override fun onReceivedTitle(view: WebView?, title: String?) {
+                        if (!cloudflareBypassed && isTitleSuccess(title.orEmpty()) && view?.url?.toHttpUrl()?.host == host) {
+                            Log.i("WebViewCF", "SOLVE success host=$host via title shift (Chrome): $title")
                             cloudflareBypassed = true
                             CookieManager.getInstance().flush()
                             latch.countDown()
                         }
                     }
-                    // KMK <--
-
-                    if (url == origRequestUrl && !challengeFound && !cloudflareBypassed) {
-                        // The first request didn't return the challenge, abort.
-                        Log.i("WebViewCF", "ABORT: challenge not found on $url")
-                        latch.countDown()
-                    }
                 }
 
-                override fun onReceivedHttpError(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                    errorResponse: WebResourceResponse?,
-                ) {
-                    if (request?.isForMainFrame == true) {
-                        if (errorResponse?.statusCode != null && errorResponse.statusCode in ERROR_CODES) {
-                            // Found the Cloudflare challenge page.
-                            Log.i("WebViewCF", "INTERCEPT triggered url=${request.url} code=${errorResponse.statusCode}")
-                            challengeFound = true
-                        } else {
-                            // Unlock thread, the challenge wasn't found.
-                            latch.countDown()
-                        }
-                    }
-                }
-
-                // KMK -->
-                override fun shouldInterceptRequest(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                ): WebResourceResponse? {
-                    if (request?.url?.toString()?.contains("chk_jschl") == true) {
-                        challengeFound = true
-                    }
-                    return super.shouldInterceptRequest(view, request)
-                }
-                // KMK <--
+                Log.i("WebViewCF", "SOLVE start host=$host method=${originalRequest.method} url=$resolveUrl")
+                webview?.loadUrl(resolveUrl, headers)
             }
 
-            Log.i("WebViewCF", "SOLVE start host=${origRequestUrl.toHttpUrl().host} url=$origRequestUrl")
-            webview?.loadUrl(origRequestUrl, headers)
-        }
+            latch.await(45, TimeUnit.SECONDS)
 
-        latch.awaitFor30Seconds()
+            executor.execute {
+                if (!cloudflareBypassed) {
+                    isWebViewOutdated = webview?.isOutdated() == true
+                }
 
-        executor.execute {
+                webview?.run {
+                    stopLoading()
+                    destroy()
+                }
+            }
+
+            // Throw exception if we failed to bypass Cloudflare
             if (!cloudflareBypassed) {
-                isWebViewOutdated = webview?.isOutdated() == true
-            }
+                // Prompt user to update WebView if it seems too outdated
+                if (isWebViewOutdated) {
+                    context.toast(MR.strings.information_webview_outdated, Toast.LENGTH_LONG)
+                }
 
-            webview?.run {
-                stopLoading()
-                destroy()
+                Log.e("WebViewCF", "SOLVE failed host=$host")
+                throw CloudflareBypassException()
             }
         }
+    }
 
-        // Throw exception if we failed to bypass Cloudflare
-        if (!cloudflareBypassed) {
-            // Prompt user to update WebView if it seems too outdated
-            if (isWebViewOutdated) {
-                context.toast(MR.strings.information_webview_outdated, Toast.LENGTH_LONG)
-            }
+    private fun isCloudFlareBypassed(url: String, oldCookie: Cookie?): Boolean {
+        return cookieManager.get(url.toHttpUrl())
+            .any { it.name == "cf_clearance" && it != oldCookie }
+    }
 
-            Log.e("WebViewCF", "SOLVE failed host=${origRequestUrl.toHttpUrl().host}")
-            throw CloudflareBypassException()
-        }
+    private fun isTitleSuccess(title: String): Boolean {
+        return title.isNotBlank() && !isTitleChallenge(title)
+    }
+
+    private fun isTitleChallenge(title: String): Boolean {
+        return title.contains("Just a moment", ignoreCase = true) ||
+            title.contains("Ditunggu sebentar", ignoreCase = true) ||
+            title.contains("Please wait", ignoreCase = true) ||
+            title.contains("Attention Required", ignoreCase = true) ||
+            title.contains("Cloudflare", ignoreCase = true) ||
+            title.contains("Checking your browser", ignoreCase = true) ||
+            title.contains("Menunggu", ignoreCase = true)
     }
 
     companion object {
