@@ -10,7 +10,7 @@ internal const val LOCAL_SOURCE_ID_ALIAS = "local"
 
 data class LibraryItem(
     val libraryManga: LibraryManga,
-    val downloadCount: Long = -1,
+    val downloadCount: Int = -1,
     val unreadCount: Long = -1,
     val isLocal: Boolean = false,
     val sourceLanguage: String = "",
@@ -19,6 +19,7 @@ data class LibraryItem(
     val source: Source? = null,
     // KMK <--
     private val sourceManager: SourceManager = Injekt.get(),
+    val badges: Badges,
 ) {
     val id: Long = libraryManga.id
 
@@ -71,4 +72,11 @@ data class LibraryItem(
     //         predicate(constraint)
     //     }
     // }
+
+    data class Badges(
+        val downloadCount: Int,
+        val unreadCount: Long,
+        val isLocal: Boolean,
+        val sourceLanguage: String,
+    )
 }

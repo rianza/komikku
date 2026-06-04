@@ -784,37 +784,23 @@ class LibraryScreenModel(
                 // KMK -->
                 val source = sourceManager.getOrStub(manga.manga.source)
                 // KMK <--
+                // SY -->
+                val downloadCount = if (manga.manga.source == MERGED_SOURCE_ID) {
+                    // FIXME: N+1 performance issues.
+                    //  Should include all the merged references in library query instead.
+                    getMergedMangaById.await(manga.manga.id).sumOf { downloadManager.getDownloadCount(it) }
+                } else {
+                    downloadManager.getDownloadCount(manga.manga)
+                }
+                // SY <--
                 LibraryItem(
                     libraryManga = manga,
-                    downloadCount = if (preferences.downloadBadge) {
-                        // SY -->
-                        if (manga.manga.source == MERGED_SOURCE_ID) {
-                            // FIXME: N+1 performance issues.
-                            //  Should include all the merged references in library query instead.
-                            getMergedMangaById.await(manga.manga.id)
-                                .sumOf { downloadManager.getDownloadCount(it) }.toLong()
-                        } else {
-                            // SY <--
-                            downloadManager.getDownloadCount(manga.manga).toLong()
-                        }
-                    } else {
-                        0
-                    },
-                    unreadCount = if (preferences.unreadBadge) {
-                        manga.unreadCount
-                    } else {
-                        0
-                    },
-                    isLocal = if (preferences.localBadge) {
-                        manga.manga.isLocal()
-                    } else {
-                        false
-                    },
-                    sourceLanguage = if (preferences.languageBadge) {
-                        sourceManager.getOrStub(manga.manga.source).lang
-                    } else {
-                        ""
-                    },
+                    // SY -->
+                    downloadCount = downloadCount,
+                    // SY <--
+                    unreadCount = manga.unreadCount,
+                    isLocal = manga.manga.isLocal(),
+                    sourceLanguage = source.lang,
                     // KMK -->
                     useLangIcon = preferences.useLangIcon,
                     source = if (preferences.sourceBadge) {
@@ -829,6 +815,30 @@ class LibraryScreenModel(
                         null
                     },
                     // KMK <--
+                    badges = LibraryItem.Badges(
+                        downloadCount = if (preferences.downloadBadge) {
+                            // SY -->
+                            downloadCount
+                            // SY <--
+                        } else {
+                            0
+                        },
+                        unreadCount = if (preferences.unreadBadge) {
+                            manga.unreadCount
+                        } else {
+                            0
+                        },
+                        isLocal = if (preferences.localBadge) {
+                            manga.manga.isLocal()
+                        } else {
+                            false
+                        },
+                        sourceLanguage = if (preferences.languageBadge) {
+                            source.lang
+                        } else {
+                            ""
+                        },
+                    ),
                 )
             }
         }
