@@ -9,7 +9,6 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
-import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updateMargins
@@ -19,10 +18,12 @@ import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.databinding.ReaderErrorBinding
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderPageImageView
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.util.system.dpToPx
+import eu.kanade.tachiyomi.util.system.isNightMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collectLatest
@@ -106,10 +107,11 @@ class WebtoonPageHolder(
         loadJob?.cancel()
 
         // KMK -->
-        val placeholderColor = if (seedColor != null && Injekt.get<UiPreferences>().themeCoverBased().get()) {
-            ColorUtils.setAlphaComponent(seedColor, 25)
+        val uiPreferences = Injekt.get<UiPreferences>()
+        val placeholderColor = if (seedColor != null && uiPreferences.themeCoverBased().get()) {
+            ColorUtils.setAlphaComponent(seedColor, 128)
         } else {
-            Color.TRANSPARENT
+            getReaderBackgroundColor()
         }
         frame.setBackgroundColor(placeholderColor)
         progressContainer.setBackgroundColor(placeholderColor)
@@ -146,10 +148,7 @@ class WebtoonPageHolder(
         // KMK <--
 
         progressIndicator.setProgress(0)
-
-        // KMK -->
-        progressContainer.isInvisible = true
-        // KMK <--
+        progressContainer.isVisible = true
     }
 
     /**
@@ -218,10 +217,13 @@ class WebtoonPageHolder(
 
         try {
             val (source, isAnimated) = withIOContext {
-                val source = if (viewer.config.dualPageRotateToFit || viewer.config.dualPageSplit) {
-                    streamFn().use { process(Buffer().readFrom(it)) }
-                } else {
-                    streamFn().use { Buffer().readFrom(it) }
+                val source = streamFn().use {
+                    val rawSource = Buffer().readFrom(it)
+                    if (viewer.config.dualPageRotateToFit || viewer.config.dualPageSplit) {
+                        process(rawSource)
+                    } else {
+                        rawSource
+                    }
                 }
                 val isAnimated = ImageUtil.isAnimatedAndSupported(source)
                 Pair(source, isAnimated)
@@ -280,7 +282,7 @@ class WebtoonPageHolder(
      */
     private fun setError(error: Throwable?) {
         // KMK -->
-        progressContainer.isInvisible = true
+        progressContainer.isVisible = false
         frame.background = null
         // KMK <--
 
@@ -292,7 +294,7 @@ class WebtoonPageHolder(
      */
     private fun onImageDecoded() {
         // KMK -->
-        progressContainer.isInvisible = true
+        progressContainer.isVisible = false
         frame.background = null
         // KMK <--
 
@@ -303,7 +305,11 @@ class WebtoonPageHolder(
      * Creates a new progress bar.
      */
     private fun createProgressIndicator(): ReaderProgressIndicator {
-        progressContainer = FrameLayout(context)
+        progressContainer = FrameLayout(context).apply {
+            // KMK -->
+            setBackgroundColor(getReaderBackgroundColor())
+            // KMK <--
+        }
         frame.addView(progressContainer, MATCH_PARENT, parentHeight)
 
         val progress = ReaderProgressIndicator(
@@ -319,6 +325,18 @@ class WebtoonPageHolder(
         progressContainer.addView(progress)
         return progress
     }
+
+    // KMK -->
+    private fun getReaderBackgroundColor(): Int {
+        val readerPreferences = Injekt.get<ReaderPreferences>()
+        return when (readerPreferences.readerTheme().get()) {
+            0 -> Color.WHITE
+            2 -> Color.rgb(0x20, 0x21, 0x25)
+            3 -> if (context.isNightMode()) Color.rgb(0x20, 0x21, 0x25) else Color.WHITE
+            else -> Color.BLACK
+        }
+    }
+    // KMK <--
 
     /**
      * Initializes a button to retry pages.
