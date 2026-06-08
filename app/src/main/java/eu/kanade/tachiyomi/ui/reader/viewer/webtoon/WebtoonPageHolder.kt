@@ -1,16 +1,19 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webtoon
 
 import android.content.res.Resources
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updateMargins
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.databinding.ReaderErrorBinding
 import eu.kanade.tachiyomi.source.model.Page
@@ -34,6 +37,8 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 /**
  * Holder of the webtoon reader for a single page of a chapter.
@@ -189,17 +194,22 @@ class WebtoonPageHolder(
      * Called when the page is ready.
      */
     private suspend fun setImage() {
-        progressIndicator.setProgress(0)
-
         val streamFn = page?.stream ?: return
 
         try {
             val (source, isAnimated) = withIOContext {
-                val source = streamFn().use { process(Buffer().readFrom(it)) }
-                val isAnimated = ImageUtil.isAnimatedAndSupported(source)
-                Pair(source, isAnimated)
+                if (viewer.config.dualPageRotateToFit || viewer.config.dualPageSplit) {
+                    val source = streamFn().use { process(Buffer().readFrom(it)) }
+                    val isAnimated = ImageUtil.isAnimatedAndSupported(source)
+                    Pair(source, isAnimated)
+                } else {
+                    val source = streamFn().use { Buffer().readFrom(it) }
+                    val isAnimated = ImageUtil.isAnimatedAndSupported(source)
+                    Pair(source, isAnimated)
+                }
             }
             withUIContext {
+                progressIndicator.setProgress(0)
                 frame.setImage(
                     source,
                     isAnimated,
@@ -267,7 +277,15 @@ class WebtoonPageHolder(
      * Creates a new progress bar.
      */
     private fun createProgressIndicator(): ReaderProgressIndicator {
-        progressContainer = FrameLayout(context)
+        progressContainer = FrameLayout(context).apply {
+            // KMK -->
+            if (seedColor != null && Injekt.get<UiPreferences>().themeCoverBased().get()) {
+                setBackgroundColor(ColorUtils.setAlphaComponent(seedColor, 25))
+            } else {
+                setBackgroundColor(Color.TRANSPARENT)
+            }
+            // KMK <--
+        }
         frame.addView(progressContainer, MATCH_PARENT, parentHeight)
 
         val progress = ReaderProgressIndicator(
