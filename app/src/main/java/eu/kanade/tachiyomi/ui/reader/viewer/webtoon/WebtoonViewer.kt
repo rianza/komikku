@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webtoon
 
 import android.graphics.PointF
+import android.os.Build
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -67,7 +68,9 @@ class WebtoonViewer(
     /**
      * Layout manager of the recycler view.
      */
-    private val layoutManager = WebtoonLayoutManager(activity, scrollDistance)
+    // KMK-FIX: extraLayoutSpace 2x scrollDistance so that the holder is bound
+    // earlier than scroll distance, decode completes before view visible
+    private val layoutManager = WebtoonLayoutManager(activity, scrollDistance * 2)
 
     /**
      * Configuration used by this viewer, like allow taps, or crop image borders.
@@ -450,4 +453,8 @@ class WebtoonViewer(
 }
 
 // Double the cache size to reduce rebinds/recycles incurred by the extra layout space on scroll direction changes
-private const val RECYCLER_VIEW_CACHE_SIZE = 4
+// KMK-FIX: kondisional - API >= 26 (Android 8+) = 6 (proportional extraLayoutSpace *2)
+// API <  26 (Android 7-) = 4 (safe, no OOM risk)
+// Ref: upstream Mihon warning mihonapp/mihon#1119
+private val RECYCLER_VIEW_CACHE_SIZE =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 6 else 4
