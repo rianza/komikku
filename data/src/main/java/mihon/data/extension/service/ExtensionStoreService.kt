@@ -26,36 +26,68 @@ class ExtensionStoreService(
     private val protoBuf: ProtoBuf,
 ) {
     suspend fun fetch(indexUrl: String): Result<ExtensionStore> {
-        var updatedIndexUrl: String = indexUrl
+        return fetch(indexUrl, forceV2 = false)
+    }
+
+    private suspend fun fetch(indexUrl: String, forceV2: Boolean): Result<ExtensionStore> {
+        var updatedIndexUrl = indexUrl
         return try {
-            val response = network.noCookiesClient.newCall(GET(updatedIndexUrl)).awaitSuccess()
-            val store = response.body.source().decompressIfGzipped().use { source ->
-                val networkStore = when (source.peek().readByte()) {
-                    // "[..."
-                    0x5B.toByte() -> run {
-                        if (!indexUrl.endsWith("/index.min.json")) {
-                            throw IllegalArgumentException("Provided legacy store url is not valid")
+            val store = network.noCookiesClient
+                .newCall(GET(indexUrl))
+                .awaitSuccess()
+                .body
+                .source()
+                .decompressIfGzipped()
+                .use { source ->
+                    try {
+                        protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.peek().readByteArray())
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        logcat(LogPriority.ERROR, e) {
+                            "Failed to parse extension store as protobuf '$updatedIndexUrl'"
                         }
-                        updatedIndexUrl = indexUrl.replace("/index.min.json", "/repo.json")
-                        network.noCookiesClient.newCall(GET(updatedIndexUrl)).awaitSuccess().body.source().use {
-                            json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(it)
+
+                        try {
+                            json.decodeFromBufferedSource<NetworkExtensionStore>(source.peek())
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            if (forceV2) throw e
+                            logcat(LogPriority.ERROR, e) {
+                                "Failed to parse extension store as v2 json '$updatedIndexUrl'"
+                            }
+
+                            val legacyIndex = try {
+                                json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(source.peek())
+                            } catch (e: IllegalArgumentException) {
+                                if (!indexUrl.endsWith("/index.min.json")) {
+                                    throw e
+                                }
+                                logcat(LogPriority.ERROR, e) {
+                                    "Failed to parse legacy extension repo from '$updatedIndexUrl'"
+                                }
+
+                                updatedIndexUrl = indexUrl.replace("/index.min.json", "/repo.json")
+                                network.noCookiesClient
+                                    .newCall(GET(updatedIndexUrl))
+                                    .awaitSuccess()
+                                    .body
+                                    .source()
+                                    .decompressIfGzipped()
+                                    .use {
+                                        json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(it)
+                                    }
+                            }
+
+                            if (legacyIndex.indexV2 != null) {
+                                return fetch(legacyIndex.indexV2, forceV2 = true)
+                            } else {
+                                legacyIndex
+                            }
                         }
                     }
-                    // "{..."
-                    0x7B.toByte() -> try {
-                        json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(source.peek())
-                    } catch (_: IllegalArgumentException) {
-                        json.decodeFromBufferedSource<NetworkExtensionStore>(source)
-                    }
-                    else -> protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.readByteArray())
+                        .toExtensionStore(updatedIndexUrl)
                 }
 
-                if (networkStore is NetworkLegacyExtensionRepo && networkStore.indexV2 != null) {
-                    return fetch(networkStore.indexV2)
-                }
-
-                networkStore.toExtensionStore(updatedIndexUrl)
-            }
             Result.success(store)
         } catch (e: CancellationException) {
             throw e
@@ -70,35 +102,49 @@ class ExtensionStoreService(
     suspend fun getExtensions(store: ExtensionStore): Result<List<Extension.Available>> {
         return try {
             val extensions = if (store.extensionListUrl != null) {
-                val response = network.noCookiesClient.newCall(GET(store.extensionListUrl!!)).awaitSuccess()
-                response.body.source().decompressIfGzipped().use { source ->
-                    when (source.peek().readByte()) {
-                        // "{..."
-                        0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore.ExtensionList>(source)
-                        else -> protoBuf.decodeFromByteArray<NetworkExtensionStore.ExtensionList>(
-                            source.readByteArray(),
-                        )
+                network.noCookiesClient
+                    .newCall(GET(store.extensionListUrl!!))
+                    .awaitSuccess()
+                    .body
+                    .source()
+                    .decompressIfGzipped()
+                    .use { source ->
+                        when (source.peek().readByte()) {
+                            // "{..."
+                            0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore.ExtensionList>(source)
+                            else -> protoBuf.decodeFromByteArray<NetworkExtensionStore.ExtensionList>(
+                                source.readByteArray(),
+                            )
+                        }
+                            .toAvailableExtensions(store)
                     }
-                        .toAvailableExtensions(store)
-                }
             } else if (!store.isLegacy) {
-                val response = network.noCookiesClient.newCall(GET(store.indexUrl)).awaitSuccess()
-                response.body.source().decompressIfGzipped().use { source ->
-                    when (source.peek().readByte()) {
-                        // "{..."
-                        0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore>(source)
-                        else -> protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.readByteArray())
+                network.noCookiesClient
+                    .newCall(GET(store.indexUrl))
+                    .awaitSuccess()
+                    .body
+                    .source()
+                    .decompressIfGzipped()
+                    .use { source ->
+                        when (source.peek().readByte()) {
+                            // "{..."
+                            0x7B.toByte() -> json.decodeFromBufferedSource<NetworkExtensionStore>(source)
+                            else -> protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.readByteArray())
+                        }
+                            .extensionList!!
+                            .toAvailableExtensions(store)
                     }
-                        .extensionList!!
-                        .toAvailableExtensions(store)
-                }
             } else {
                 val storeBaseUrl = store.indexUrl.removeSuffix("/repo.json")
-                val response = network.noCookiesClient.newCall(GET("$storeBaseUrl/index.min.json")).awaitSuccess()
-                response.body.source().use { source ->
-                    json.decodeFromBufferedSource<List<NetworkLegacyExtension>>(source)
-                        .map { it.toAvailableExtension(store, storeBaseUrl) }
-                }
+                network.noCookiesClient
+                    .newCall(GET("$storeBaseUrl/index.min.json"))
+                    .awaitSuccess()
+                    .body
+                    .source()
+                    .use { source ->
+                        json.decodeFromBufferedSource<List<NetworkLegacyExtension>>(source)
+                            .map { it.toAvailableExtension(store, storeBaseUrl) }
+                    }
             }
             Result.success(extensions)
         } catch (e: CancellationException) {
