@@ -269,7 +269,7 @@ private fun DetailsHeader(
                             appendLine(
                                 """
                                 Update available: ${extension.hasUpdate}
-                                Obsolete: ${extension.isObsolete}
+                                Orphaned: ${extension.isObsolete}
                                 Shared: ${extension.isShared}
                                 """.trimIndent(),
                             )
