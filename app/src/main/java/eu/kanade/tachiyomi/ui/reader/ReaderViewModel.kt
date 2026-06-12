@@ -598,7 +598,9 @@ class ReaderViewModel @JvmOverloads constructor(
 
         logcat { "Loading adjacent ${chapter.chapter.url}" }
 
-        mutableState.update { it.copy(isLoadingAdjacentChapter = true) }
+        if (chapter.state !is ReaderChapter.State.Loaded) {
+            mutableState.update { it.copy(isLoadingAdjacentChapter = true) }
+        }
         try {
             withIOContext {
                 loadChapter(loader, chapter)
