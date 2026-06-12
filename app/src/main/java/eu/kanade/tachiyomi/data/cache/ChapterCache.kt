@@ -161,7 +161,21 @@ class ChapterCache(
     fun getImageFile(imageUrl: String): File {
         // Get file from md5 key.
         val imageName = DiskUtil.hashKeyForDisk(imageUrl) + ".0"
-        return File(diskCache.directory, imageName)
+        val file = File(diskCache.directory, imageName)
+        return if (file.exists()) {
+            file
+        } else {
+            // KMK -->
+            // Try to find the file in the cache directory even if it's not strictly according to DiskLruCache's journal
+            // This can happen after a crash or process restoration where the journal might be slightly out of sync
+            val fallbackFile = File(context.cacheDir, "chapter_disk_cache/$imageName")
+            if (fallbackFile.exists()) {
+                fallbackFile
+            } else {
+                file
+            }
+            // KMK <--
+        }
     }
 
     /**

@@ -61,8 +61,16 @@ class StorageManager(
             .launchIn(scope)
     }
 
-    private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
+    private fun getBaseDir(uriStr: String): UniFile? {
+        val uri = uriStr.toUri()
+        return DiskUtil.getFilePathFromUri(uri)?.let {
+            val file = File(it)
+            if (file.exists() && file.canRead()) {
+                UniFile.fromFile(file)
+            } else {
+                null
+            }
+        } ?: UniFile.fromUri(context, uri)
             .takeIf {
                 // KMK -->
                 it?.isAccessibleDirectory == true

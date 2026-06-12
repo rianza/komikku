@@ -267,7 +267,16 @@ class WebtoonPageHolder(
      * Creates a new progress bar.
      */
     private fun createProgressIndicator(): ReaderProgressIndicator {
-        progressContainer = FrameLayout(context)
+        progressContainer = FrameLayout(context).apply {
+            // KMK -->
+            if (seedColor != null) {
+                setBackgroundColor(seedColor)
+                background.alpha = 100
+            } else {
+                setBackgroundColor(context.getColor(android.R.color.background_dark))
+            }
+            // KMK <--
+        }
         frame.addView(progressContainer, MATCH_PARENT, parentHeight)
 
         val progress = ReaderProgressIndicator(

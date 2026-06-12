@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.os.StatFs
 import androidx.core.content.ContextCompat
 import com.hippo.unifile.UniFile
@@ -46,6 +47,37 @@ object DiskUtil {
             size = f.length()
         }
         return size
+    }
+
+    /**
+     * Returns the physical path of a SAF uri.
+     *
+     * @param uri the uri to resolve.
+     */
+    fun getFilePathFromUri(uri: Uri): String? {
+        if (uri.scheme == "file") {
+            return uri.path
+        }
+
+        if (uri.scheme != "content" || "com.android.externalstorage.documents" != uri.authority) {
+            return null
+        }
+
+        val docId = if (DocumentsContract.isTreeUri(uri)) {
+            DocumentsContract.getTreeDocumentId(uri)
+        } else {
+            DocumentsContract.getDocumentId(uri)
+        }
+
+        val split = docId.split(":")
+        val type = split[0]
+        val path = split.getOrNull(1) ?: ""
+
+        return if ("primary".equals(type, ignoreCase = true)) {
+            File(Environment.getExternalStorageDirectory(), path).absolutePath
+        } else {
+            "/storage/$type/$path"
+        }
     }
 
     /**
