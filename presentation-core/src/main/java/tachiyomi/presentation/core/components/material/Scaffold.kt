@@ -335,6 +335,34 @@ private fun ScaffoldLayout(
 }
 
 /**
+ * The possible positions for a [FloatingActionButton] attached to a [Scaffold].
+ */
+@ExperimentalMaterial3Api
+@JvmInline
+value class FabPosition internal constructor(private val value: Int) {
+    companion object {
+        /**
+         * Position FAB at the bottom of the screen in the center, above the [NavigationBar] (if it
+         * exists)
+         */
+        val Center = FabPosition(0)
+
+        /**
+         * Position FAB at the bottom of the screen at the end, above the [NavigationBar] (if it
+         * exists)
+         */
+        val End = FabPosition(1)
+    }
+
+    override fun toString(): String {
+        return when (this) {
+            Center -> "FabPosition.Center"
+            else -> "FabPosition.End"
+        }
+    }
+}
+
+/**
  * Placement information for a [FloatingActionButton] inside a [Scaffold].
  *
  * @property left the FAB's offset from the left edge of the bottom bar, already adjusted for RTL

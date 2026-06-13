@@ -472,3 +472,4 @@ fun Manga.isLocal(): Boolean = source == LocalSource.ID
 fun Source.isLocal(): Boolean = id == LocalSource.ID
 
 fun DomainSource.isLocal(): Boolean = id == LocalSource.ID
+
