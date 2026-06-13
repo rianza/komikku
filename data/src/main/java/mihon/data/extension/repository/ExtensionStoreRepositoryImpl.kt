@@ -40,10 +40,10 @@ class ExtensionStoreRepositoryImpl(
         try {
             database.extension_storeQueries.getAll().awaitAsList().forEach { store ->
                 service.fetch(store.index_url)
-                    .mapCatching {
+                    .mapCatching { newStore ->
                         database.transaction {
-                            upsert(it)
-                            if (store.index_url != it.indexUrl) {
+                            upsert(newStore)
+                            if (store.index_url != newStore.indexUrl) {
                                 database.extension_storeQueries.delete(store.index_url)
                             }
                         }
@@ -59,7 +59,7 @@ class ExtensionStoreRepositoryImpl(
         }
     }
 
-    private suspend fun upsert(store: ExtensionStore) {
+    private fun upsert(store: ExtensionStore) {
         database.extension_storeQueries.upsert(
             indexUrl = store.indexUrl,
             name = store.name,
