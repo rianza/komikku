@@ -82,25 +82,8 @@ import kotlin.random.Random
         }
     }
 
-    val nonCloudflareClient /* KMK --> */ by lazy /* KMK <-- */ { clientBuilder().build() }
-
-    /* SY --> */ open /* SY <-- */ val client /* KMK --> */ by lazy /* KMK <-- */ {
-        clientBuilder()
-            .addInterceptor(
-                CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
-            )
-            .build()
-    }
-
-    // KMK -->
-    /**
-     * Timeout in unit of seconds.
-     */
-    private fun clientWithTimeOut(
-        connectTimeout: Long = 30,
-        readTimeout: Long = 30,
-        callTimeout: Long = 120,
-    ) = clientBuilder(connectTimeout, readTimeout, callTimeout)
+    /* SY --> */
+    open /* SY <-- */ val client = clientBuilder
         .addInterceptor(
             CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
         )
