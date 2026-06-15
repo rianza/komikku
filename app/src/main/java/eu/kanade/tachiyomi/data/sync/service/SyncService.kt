@@ -121,19 +121,19 @@ abstract class SyncService(
         val remoteCategoriesMapByOrder = remoteCategories.associateBy { it.order }
         val mergedCategoriesMapByName = mergedCategories.associateBy { it.name }
 
-        fun updateCategories(theManga: BackupManga, theMap: Map<Long, BackupCategory>): BackupManga {
-            return theManga.copy(
-                categories = theManga.categories.mapNotNull {
-                    theMap[it]?.let { category ->
-                        mergedCategoriesMapByName[category.name]?.order
-                    }
-                },
-            )
+        fun updateCategories(theManga: BackupManga, theMap: Map<Long, BackupCategory>) {
+            theManga.categories = theManga.categories.mapNotNull {
+                theMap[it]?.let { category ->
+                    mergedCategoriesMapByName[category.name]?.order
+                }
+            }
         }
 
         logcat(LogPriority.DEBUG, logTag) {
             "Starting merge. Local list size: ${localMangaListSafe.size}, Remote list size: ${remoteMangaListSafe.size}"
         }
+
+        val lastSyncTime = syncPreferences.lastSyncTimestamp.get()
 
         val mergedList = (localMangaMap.keys + remoteMangaMap.keys).distinct().mapNotNull { compositeKey ->
             val local = localMangaMap[compositeKey]
@@ -141,26 +141,40 @@ abstract class SyncService(
 
             // New version comparison logic
             when {
-                local != null && remote == null -> updateCategories(local, localCategoriesMapByOrder)
-                local == null && remote != null -> updateCategories(remote, remoteCategoriesMapByOrder)
+                local != null && remote == null -> {
+                    if (lastSyncTime == 0L || local.lastModifiedAt > lastSyncTime) {
+                        updateCategories(local, localCategoriesMapByOrder)
+                        local
+                    } else {
+                        logcat(LogPriority.DEBUG, logTag) { "Dropping local manga deleted on remote: ${local.title}." }
+                        null
+                    }
+                }
+                local == null && remote != null -> {
+                    if (lastSyncTime == 0L || remote.lastModifiedAt > lastSyncTime) {
+                        updateCategories(remote, remoteCategoriesMapByOrder)
+                        remote
+                    } else {
+                        logcat(LogPriority.DEBUG, logTag) { "Dropping deleted remote manga: ${remote.title}." }
+                        null
+                    }
+                }
                 local != null && remote != null -> {
                     // Compare versions to decide which manga to keep
                     if (local.version >= remote.version) {
                         logcat(LogPriority.DEBUG, logTag) {
                             "Keeping local version of ${local.title} with merged chapters."
                         }
-                        updateCategories(
-                            local.copy(chapters = mergeChapters(local.chapters, remote.chapters)),
-                            localCategoriesMapByOrder,
-                        )
+                        local.chapters = mergeChapters(local.chapters, remote.chapters)
+                        updateCategories(local, localCategoriesMapByOrder)
+                        local
                     } else {
                         logcat(LogPriority.DEBUG, logTag) {
                             "Keeping remote version of ${remote.title} with merged chapters."
                         }
-                        updateCategories(
-                            remote.copy(chapters = mergeChapters(local.chapters, remote.chapters)),
-                            remoteCategoriesMapByOrder,
-                        )
+                        remote.chapters = mergeChapters(local.chapters, remote.chapters)
+                        updateCategories(remote, remoteCategoriesMapByOrder)
+                        remote
                     }
                 }
                 else -> null // No manga found for key
@@ -236,7 +250,8 @@ abstract class SyncService(
                     val chosenChapter = if (localChapter.version >= remoteChapter.version) {
                         // If there mare more chapter on remote, local sourceOrder will need to be updated to maintain correct source order.
                         if (localChapters.size < remoteChapters.size) {
-                            localChapter.copy(sourceOrder = remoteChapter.sourceOrder)
+                            localChapter.sourceOrder = remoteChapter.sourceOrder
+                            localChapter
                         } else {
                             localChapter
                         }

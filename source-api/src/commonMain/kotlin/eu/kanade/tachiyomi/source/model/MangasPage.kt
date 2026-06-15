@@ -19,20 +19,25 @@ import exh.metadata.metadata.RaisedSearchMetadata
         result = 31 * result + hasNextPage.hashCode()
         return result
     }
-    // SY <--
-
-    fun copy(mangas: List<SManga> = this.mangas, hasNextPage: Boolean = this.hasNextPage): MangasPage {
-        return MangasPage(mangas, hasNextPage)
-    }
 
     override fun toString(): String {
         return "MangasPage(mangas=$mangas, hasNextPage=$hasNextPage)"
     }
 
+    // SY <--
+
     // KMK -->
     // Additional methods to mimic data class behavior
     operator fun component1() = mangas
     operator fun component2() = hasNextPage
+
+    fun copy(
+        mangas: List<SManga> = this.mangas,
+        hasNextPage: Boolean = this.hasNextPage,
+    ): MangasPage = MangasPage(
+        mangas = mangas,
+        hasNextPage = hasNextPage,
+    )
     // KMK <--
 }
 
