@@ -505,6 +505,8 @@ class MangaScreenModel(
                 // KMK -->
                 launch { syncTrackers() }
                 // KMK <--
+            }
+            if ((needRefreshInfo || needRefreshChapter) && screenModelScope.isActive) {
                 fetchAllFromSource(
                     manualFetch = false,
                     fetchDetails = needRefreshInfo,
