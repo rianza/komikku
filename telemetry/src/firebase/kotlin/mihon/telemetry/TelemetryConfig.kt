@@ -40,6 +40,6 @@ object TelemetryConfig {
     }
 }
 
-private val MIHON_PACKAGES = hashSetOf("app.komikku", "app.komikku.beta")
+private val MIHON_PACKAGES = hashSetOf("app.moon", "app.moon.beta")
 private const val MIHON_CERTIFICATE_FINGERPRINT =
-    "CB:EC:12:1A:A8:2E:BB:02:AA:A7:38:06:99:2E:03:68:A9:7D:47:B5:45:1E:D6:52:48:16:D0:30:84:C4:59:05"
+    "FA:46:E6:A2:B5:4C:F5:05:F2:7B:CA:75:F5:C8:85:AE:D4:C9:BE:56:77:CB:C1:8D:8B:21:E9:BE:45:9B:8E:AF"
