@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -55,6 +56,7 @@ internal class PermissionStep : OnboardingStep {
 
     // KMK -->
     private var externalStoragePermissionGranted by mutableStateOf(false)
+    private var manageExternalStoragePermissionGranted by mutableStateOf(false)
     // KMK <--
 
     override val isComplete: Boolean = true
@@ -87,6 +89,11 @@ internal class PermissionStep : OnboardingStep {
                     } else {
                         context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
                             PackageManager.PERMISSION_GRANTED
+                    }
+                    manageExternalStoragePermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Environment.isExternalStorageManager()
+                    } else {
+                        true
                     }
                     // KMK <--
                 }
@@ -136,6 +143,21 @@ internal class PermissionStep : OnboardingStep {
             )
 
             // KMK -->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                PermissionCheckbox(
+                    title = stringResource(KMR.strings.onboarding_permission_manage_external_storage),
+                    subtitle = stringResource(KMR.strings.onboarding_permission_manage_external_storage_description),
+                    granted = manageExternalStoragePermissionGranted,
+                    onButtonClick = {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                            data = "package:${context.packageName}".toUri()
+                        }
+                        runCatching { context.startActivity(intent) }
+                            .onFailure { context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
+                    },
+                )
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val permissionRequester = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestPermission(),

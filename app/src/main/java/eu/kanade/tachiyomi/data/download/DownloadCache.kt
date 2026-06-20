@@ -117,8 +117,17 @@ class DownloadCache(
                         val diskCache = diskCacheFile.inputStream().use {
                             ProtoBuf.decodeFromByteArray<RootDirectory>(it.readBytes())
                         }
-                        rootDownloadsDir = diskCache
-                        lastRenew = System.currentTimeMillis()
+                        val currentDownloadsDirUri = storageManager.getDownloadsDirectory()?.uri?.toString()
+                        val diskCacheDirUri = diskCache.dir?.uri?.toString()
+                        if (diskCacheDirUri == currentDownloadsDirUri) {
+                            rootDownloadsDir = diskCache
+                            lastRenew = System.currentTimeMillis()
+                        } else {
+                            // Storage backend changed (e.g. SAF ExternalStorageProvider URI was
+                            // converted to direct file:// public storage). Do not restore stale
+                            // UniFile entries that would keep depending on the old provider.
+                            diskCacheFile.delete()
+                        }
                     }
                 } catch (e: Throwable) {
                     logcat(LogPriority.ERROR, e) { "Failed to initialize from disk cache" }

@@ -1,20 +1,16 @@
 package tachiyomi.domain.storage.service
 
-import android.Manifest
-import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.Settings
+import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.util.storage.DiskUtil
-import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -25,9 +21,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.shareIn
-import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
-import tachiyomi.i18n.MR
 import java.io.File
 
 class StorageManager(
@@ -62,12 +56,18 @@ class StorageManager(
     }
 
     private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
-            .takeIf {
-                // KMK -->
-                it?.isAccessibleDirectory == true
-                // KMK <--
+        val selected = runCatching {
+            val parsedUri = uri.toUri()
+            if (parsedUri.scheme == "file") {
+                parsedUri.toAccessibleFileDirectory()?.let { UniFile.fromFile(it) }
+            } else {
+                parsedUri.toDirectFileDirectoryIfPossible()?.let { UniFile.fromFile(it) }
+                    ?: UniFile.fromUri(context, parsedUri)
+                        ?.takeIf { it.isAccessibleDirectory }
             }
+        }.getOrNull()
+
+        return selected
     }
 
     fun getAutomaticBackupsDirectory(): UniFile? {
@@ -89,22 +89,86 @@ class StorageManager(
     // SY <--
 
     companion object {
-        // KMK -->
         /**
-         * Extension property to check if a UniFile is an accessible directory
+         * Extension property to check if a UniFile is an accessible directory.
+         * Wrapped in runCatching because some OEM DocumentsProviders throw while
+         * resolving stale/revoked SAF URIs.
          */
         val UniFile.isAccessibleDirectory: Boolean
-            get() = exists() && isDirectory && canWrite() && canRead()
+            get() = runCatching { exists() && isDirectory && canWrite() && canRead() }
+                .getOrDefault(false)
 
         /**
-         * Check if a directory is accessible
+         * Check if a directory is accessible.
+         *
+         * For direct file:// storage (/storage/emulated/0/<app_name>), create the
+         * folder if possible. This keeps the default public storage path usable on
+         * Android 11+ when All files access is granted.
          */
         fun directoryAccessible(context: Context, uri: String): Boolean {
-            return UniFile.fromUri(context, uri.toUri())?.isAccessibleDirectory == true
+            return runCatching {
+                val parsedUri = uri.toUri()
+                if (parsedUri.scheme == "file") {
+                    parsedUri.toAccessibleFileDirectory() != null
+                } else {
+                    parsedUri.toDirectFileDirectoryIfPossible() != null ||
+                        UniFile.fromUri(context, parsedUri)?.isAccessibleDirectory == true
+                }
+            }.getOrDefault(false)
+        }
+
+        private fun Uri.toAccessibleFileDirectory(): File? {
+            if (scheme != "file") return null
+            val file = File(path ?: return null)
+            if (!file.exists()) {
+                file.mkdirs()
+            }
+
+            return file.takeIf { it.exists() && it.isDirectory && it.canRead() && it.canWrite() }
         }
 
         /**
-         * Call FilePicker to allow access to storage or request All Files Access Permission if not available.
+         * Existing installs may already have a SAF ExternalStorageProvider URI saved.
+         * On Android 11+ with All files access, use the equivalent direct file path
+         * at runtime to avoid holding a dependency on ExternalStorageProvider.
+         */
+        private fun Uri.toDirectFileDirectoryIfPossible(): File? {
+            if (scheme != "content" || authority != "com.android.externalstorage.documents") {
+                return null
+            }
+            if (!hasManageExternalStoragePermission()) {
+                return null
+            }
+
+            val treeDocumentId = runCatching { DocumentsContract.getTreeDocumentId(this) }.getOrNull()
+                ?: return null
+            val split = treeDocumentId.split(":", limit = 2)
+            val volume = split.getOrNull(0).orEmpty()
+            val relativePath = split.getOrNull(1).orEmpty()
+
+            val root = when {
+                volume.equals("primary", ignoreCase = true) -> Environment.getExternalStorageDirectory()
+                volume.isNotBlank() -> File("/storage", volume)
+                else -> return null
+            }
+            val file = if (relativePath.isBlank()) root else File(root, relativePath)
+            if (!file.exists()) {
+                file.mkdirs()
+            }
+
+            return file.takeIf { it.exists() && it.isDirectory && it.canRead() && it.canWrite() }
+        }
+
+        fun hasManageExternalStoragePermission(): Boolean {
+            return Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
+        }
+
+        /**
+         * Call FilePicker to allow access to storage.
+         *
+         * Open SAF picker when available. If unavailable, keep the public default
+         * storage path; do not silently create Android/data/<package>/files/<app>
+         * fallback folders.
          */
         fun allowAccessStorage(
             context: Context,
@@ -116,91 +180,23 @@ class StorageManager(
                 if (isIntentAvailable(context, documentTreeIntent)) {
                     pickStorageLocation()
                 } else {
-                    handleStoragePermission(context, storageDirPref)
+                    fallbackToDefaultStorage(storageDirPref)
                 }
-            } catch (e: ActivityNotFoundException) {
-                fallbackToScopedStorage(context, storageDirPref)
+            } catch (_: ActivityNotFoundException) {
+                fallbackToDefaultStorage(storageDirPref)
             }
         }
 
         /**
-         * Handle storage permissions for Android R and above
+         * If SAF is unavailable (Android TV, broken file picker implementations,
+         * etc.), keep the public default storage preference instead of silently
+         * creating an app-specific Android/data fallback directory.
          */
-        private fun handleStoragePermission(
-            context: Context,
+        private fun fallbackToDefaultStorage(
             storageDirPref: Preference<String>,
         ) {
-            if (hasManageExternalStoragePermission(context)) {
-                updateStoragePreference(context, storageDirPref)
-            } else {
-                requestManageExternalStoragePermission(context)
-            }
-        }
-
-        private fun hasManageExternalStoragePermission(context: Context): Boolean {
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                Environment.isExternalStorageManager()
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ==
-                    PackageManager.PERMISSION_GRANTED
-            } else {
-                context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
-                    PackageManager.PERMISSION_GRANTED
-            }
-        }
-
-        private fun requestManageExternalStoragePermission(context: Context) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                try {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                        data = "package:${context.packageName}".toUri()
-                    }
-                    context.startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                    context.startActivity(intent)
-                }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ActivityCompat.requestPermissions(
-                    context as Activity,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                    1001,
-                )
-            } else {
-                ActivityCompat.requestPermissions(
-                    context as Activity,
-                    arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                    1001,
-                )
-            }
-        }
-
-        /**
-         * Update storage preference with the selected directory
-         */
-        private fun updateStoragePreference(
-            context: Context,
-            storageDirPref: Preference<String>,
-        ) {
-            UniFile.fromUri(context, storageDirPref.get().toUri())?.let {
-                it.mkdir()
-                storageDirPref.set("") // Trigger recompose
-                storageDirPref.set(it.uri.toString())
-            }
-        }
-
-        /**
-         * Fallback to scoped storage if no other options are available
-         */
-        private fun fallbackToScopedStorage(
-            context: Context,
-            storageDirPref: Preference<String>,
-        ) {
-            val fallbackDir = File(context.getExternalFilesDir(null), context.stringResource(MR.strings.app_name))
-            if (!fallbackDir.exists()) fallbackDir.mkdirs()
             storageDirPref.set("") // Trigger recompose
-            storageDirPref.set(fallbackDir.toUri().toString())
-            context.toast("Using default directory: ${fallbackDir.absolutePath}")
+            storageDirPref.set(storageDirPref.defaultValue())
         }
 
         /**
@@ -210,12 +206,11 @@ class StorageManager(
         private fun isIntentAvailable(context: Context, intent: Intent): Boolean {
             val packageManager = context.packageManager
             // Android TV: ResolveInfo{c236166 com.android.tv.frameworkpackagestubs/.Stubs$DocumentsStub m=0x108000 userHandle=UserHandle{0}}
-            val resolveInfo = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            val resolveInfo = packageManager.queryIntentActivities(intent, 0)
             return resolveInfo.any {
                 it.activityInfo.packageName != null && it.activityInfo.packageName != "com.android.tv.frameworkpackagestubs"
             }
         }
-        // KMK <--
     }
 }
 

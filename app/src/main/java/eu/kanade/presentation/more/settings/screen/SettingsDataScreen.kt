@@ -3,6 +3,9 @@ package eu.kanade.presentation.more.settings.screen
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.DocumentsContract
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -95,6 +98,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.io.File
 
 object SettingsDataScreen : SearchableSettings {
     @Suppress("unused")
@@ -164,12 +168,49 @@ object SettingsDataScreen : SearchableSettings {
                     context.toast(MR.strings.file_picker_uri_permission_unsupported)
                 }
 
-                UniFile.fromUri(context, uri)?.let {
+                val storageUri = uri.toDirectFileUriIfAccessible(context)
+                    ?: UniFile.fromUri(context, uri)?.uri
+
+                storageUri?.let {
                     storageDirPref.set("") // Trigger recompose
-                    storageDirPref.set(it.uri.toString())
+                    storageDirPref.set(it.toString())
                 }
             }
         }
+    }
+
+    /**
+     * If the user selected a regular ExternalStorageProvider folder and All files
+     * access is granted, store it as a direct file:// path instead of a SAF
+     * content:// URI. This keeps /storage/emulated/0/<app_name> support while
+     * avoiding a long-lived dependency on com.android.externalstorage.
+     */
+    private fun Uri.toDirectFileUriIfAccessible(context: Context): Uri? {
+        if (scheme != "content" || authority != "com.android.externalstorage.documents") {
+            return null
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            return null
+        }
+
+        val treeDocumentId = runCatching { DocumentsContract.getTreeDocumentId(this) }.getOrNull()
+            ?: return null
+        val split = treeDocumentId.split(":", limit = 2)
+        val volume = split.getOrNull(0).orEmpty()
+        val relativePath = split.getOrNull(1).orEmpty()
+
+        val root = when {
+            volume.equals("primary", ignoreCase = true) -> Environment.getExternalStorageDirectory()
+            volume.isNotBlank() -> File("/storage", volume)
+            else -> return null
+        }
+        val file = if (relativePath.isBlank()) root else File(root, relativePath)
+        if (!file.exists()) {
+            file.mkdirs()
+        }
+
+        return file.takeIf { it.exists() && it.isDirectory && it.canRead() && it.canWrite() }
+            ?.toUri()
     }
 
     @Composable

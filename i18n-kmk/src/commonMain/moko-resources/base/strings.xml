@@ -137,6 +137,8 @@
     <string name="auto_update_app">Auto-update app</string>
     <string name="auto_update_app_disable_auto_download">Don't auto download update</string>
     <!-- Onboarding section -->
+    <string name="onboarding_permission_manage_external_storage">All files access permission</string>
+    <string name="onboarding_permission_manage_external_storage_description">Allow saving downloads, backups, logs, and local manga to the selected storage folder</string>
     <string name="onboarding_permission_external_storage">Access media files permission</string>
     <string name="onboarding_permission_external_storage_description">Allow using custom covers in entry's Edit Info</string>
     <string name="onboarding_permission_writing_external_storage_description">Allow saving covers &amp; using custom covers in entry's Edit Info</string>

@@ -44,6 +44,7 @@
     <string name="pref_show_updating_progress_banner">Tampilkan progres pembaruan</string>
     <string name="pref_show_restoring_progress_banner">Tampilkan progres pemulihan</string>
     <string name="saved_searches_feeds">Penelusuran Disimpan &amp; Feeds</string>
+    <string name="onboarding_permission_manage_external_storage">Izin kelola semua file</string>
     <string name="onboarding_permission_external_storage">Izin akses file media</string>
     <string name="action_move_up">Naik Keatas</string>
     <string name="action_move_down">Pindah ke bawah</string>
@@ -130,6 +131,7 @@
     <string name="pref_show_syncing_progress_banner">Tampilkan spanduk kemajuan sinkronisasi</string>
     <string name="preload_library_cover_color">Warna sampul perpustakaan pramuat</string>
     <string name="auto_update_app">Aplikasi diperbarui otomatis</string>
+    <string name="onboarding_permission_manage_external_storage_description">Izinkan menyimpan unduhan, cadangan, log, dan manga lokal ke folder penyimpanan yang dipilih</string>
     <string name="onboarding_permission_external_storage_description">Izinkan penggunaan sampul khusus di Edit Info entri</string>
     <string name="onboarding_permission_writing_external_storage_description">Izinkan menyimpan sampul &amp; menggunakan sampul khusus di Edit Info entri</string>
     <string name="permission_writing_external_storage_succeed">Izin diberikan. Coba tindakan lagi.</string>
