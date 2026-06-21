@@ -95,6 +95,7 @@ import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.more.WhatsNewScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
+import eu.kanade.tachiyomi.util.system.isBenchmarkBuildType
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
@@ -387,8 +388,10 @@ class MainActivity : BaseActivity() {
                 // KMK -->
                 RearmJobs()
                 // KMK <--
-                CheckForUpdates()
-                ShowOnboarding()
+                if (!isBenchmarkBuildType) {
+                    CheckForUpdates()
+                    ShowOnboarding()
+                }
             }
 
             // SY -->
@@ -419,7 +422,7 @@ class MainActivity : BaseActivity() {
                     // KMK <--
                 )
             }
-            if (showChangelog) {
+            if (showChangelog && !isBenchmarkBuildType) {
                 // KMK -->
                 WhatsNewDialog(
                     onDismissRequest = { showChangelog = false },
@@ -713,22 +716,6 @@ class MainActivity : BaseActivity() {
         return true
     }
 
-<<<<<<< HEAD
-=======
-    private fun Intent.isAddExtensionStoreIntent(): Boolean {
-        return (scheme == "tachiyomi" && data?.host == "add-repo") ||
-            (scheme == "mihon" && data?.host == "extension-store")
-    }
-
-    // SY -->
-    private fun addAnalytics() {
-        if (!BuildConfig.DEBUG && isPreviewBuildType) {
-            Firebase.analytics.setUserProperty("preview_version", syDebugVersion)
-        }
-    }
-    // SY <--
-
->>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
     companion object {
         const val INTENT_SEARCH = "eu.kanade.tachiyomi.SEARCH"
         const val INTENT_SEARCH_QUERY = "query"

@@ -13,6 +13,7 @@ plugins {
     id("com.github.ben-manes.versions")
 
     alias(libs.plugins.aboutLibraries)
+    alias(libs.plugins.androidx.baselineProfile)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -50,6 +51,7 @@ android {
         val release by getting {
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
+            isProfileable = true
 
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
 
@@ -179,7 +181,14 @@ kotlin {
     }
 }
 
+baselineProfile {
+    baselineProfileOutputDir = "baselineProfiles"
+    mergeIntoMain = true
+}
+
 dependencies {
+    baselineProfile(projects.baselineProfile)
+
     implementation(projects.i18n)
     // KMK -->
     implementation(projects.i18nKmk)
