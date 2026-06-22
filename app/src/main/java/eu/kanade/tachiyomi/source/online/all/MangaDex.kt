@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import eu.kanade.domain.track.service.TrackPreferences
+import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.database.models.Track
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.mdlist.MdList
@@ -46,6 +47,7 @@ import exh.md.utils.MdLang
 import exh.md.utils.MdUtil
 import exh.metadata.metadata.MangaDexSearchMetadata
 import exh.source.DelegatedHttpSource
+import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import rx.Observable
@@ -81,6 +83,11 @@ class MangaDex(delegate: HttpSource, val context: Context) :
 
     private val loginHelper = MangaDexLoginHelper(network.client, trackPreferences, mdList, mdList.interceptor)
 
+    override val headers: Headers = delegate.headers.newBuilder()
+        .removeAll("User-Agent")
+        .add("User-Agent", "Komikku/Komikkurnz v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
+        .build()
+
     override val baseHttpClient: OkHttpClient = delegate.client.newBuilder()
         .addInterceptor(mdList.interceptor)
         .build()
@@ -96,7 +103,7 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     private fun preferExtensionLangTitle() = sourcePreferences.getBoolean(getPreferExtensionLangTitlePrefKey(mdLang.extLang), true)
 
     private val mangadexService by lazy {
-        MangaDexService(client)
+        MangaDexService(client, headers)
     }
     private val mangadexAuthService by lazy {
         MangaDexAuthService(baseHttpClient, headers)
@@ -136,7 +143,6 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     }
     private val pageHandler by lazy {
         PageHandler(
-            headers,
             mangadexService,
             mangaPlusHandler,
             comikeyHandler,
