@@ -143,14 +143,12 @@ class MergedSource : HttpSource() {
                                 try {
                                     val (source, loadedManga, reference) = it.load()
                                     if (loadedManga != null && reference.getChapterUpdates) {
-                                        val chapterList = source.getMangaUpdate(
-                                            loadedManga.toSManga(),
-                                            emptyList(),
+                                        val results = updateMangaFromRemote(
+                                            source,
+                                            loadedManga,
                                             fetchDetails = false,
                                             fetchChapters = true,
-                                        ).chapters
-                                        val results =
-                                            syncChaptersWithSource.await(chapterList, loadedManga, source)
+                                        ).getOrThrow().newChapters
 
                                         if (downloadChapters && reference.downloadChapters) {
                                             val chaptersToDownload = filterChaptersForDownload.await(manga, results)
@@ -191,17 +189,12 @@ class MergedSource : HttpSource() {
                     url = mangaUrl,
                 ),
             )
-            updateMangaFromRemote.awaitUpdateFromSource(
+            manga = updateMangaFromRemote(
+                source,
                 newManga,
-                source.getMangaUpdate(
-                    manga = newManga.toSManga(),
-                    chapters = emptyList(),
-                    fetchDetails = true,
-                    fetchChapters = false,
-                ).manga,
-                false,
-            )
-            manga = getManga.await(newManga.id)!!
+                fetchDetails = true,
+                fetchChapters = false,
+            ).getOrThrow().manga
         }
         return LoadedMangaSource(source, manga, this)
     }
