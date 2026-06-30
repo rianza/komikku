@@ -34,10 +34,13 @@ class StorageManager(
     private val context: Context,
     storagePreferences: StoragePreferences,
 ) {
-
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private var baseDir: UniFile? = getBaseDir(storagePreferences.baseStorageDirectory().get())
+
+    private var cachedBaseDir: UniFile? = null
+    private var lastAccessTime: Long = 0
+    private val cacheDurationMs = 5000L
 
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
     val changes = _changes.receiveAsFlow()
@@ -48,6 +51,7 @@ class StorageManager(
             .drop(1)
             .distinctUntilChanged()
             .onEach { uri ->
+                cachedBaseDir = null
                 baseDir = getBaseDir(uri)
                 baseDir?.let { parent ->
                     parent.createDirectory(AUTOMATIC_BACKUPS_PATH)
@@ -62,12 +66,17 @@ class StorageManager(
     }
 
     private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
-            .takeIf {
-                // KMK -->
-                it?.isAccessibleDirectory == true
-                // KMK <--
-            }
+        val now = System.currentTimeMillis()
+        if (cachedBaseDir != null && (now - lastAccessTime) < cacheDurationMs) {
+            return cachedBaseDir
+        }
+
+        val dir = UniFile.fromUri(context, uri.toUri())
+            .takeIf { it?.isAccessibleDirectory == true }
+
+        cachedBaseDir = dir
+        lastAccessTime = now
+        return dir
     }
 
     fun getAutomaticBackupsDirectory(): UniFile? {
@@ -90,22 +99,13 @@ class StorageManager(
 
     companion object {
         // KMK -->
-        /**
-         * Extension property to check if a UniFile is an accessible directory
-         */
         val UniFile.isAccessibleDirectory: Boolean
             get() = exists() && isDirectory && canWrite() && canRead()
 
-        /**
-         * Check if a directory is accessible
-         */
         fun directoryAccessible(context: Context, uri: String): Boolean {
             return UniFile.fromUri(context, uri.toUri())?.isAccessibleDirectory == true
         }
 
-        /**
-         * Call FilePicker to allow access to storage or request All Files Access Permission if not available.
-         */
         fun allowAccessStorage(
             context: Context,
             storageDirPref: Preference<String>,
@@ -123,9 +123,6 @@ class StorageManager(
             }
         }
 
-        /**
-         * Handle storage permissions for Android R and above
-         */
         private fun handleStoragePermission(
             context: Context,
             storageDirPref: Preference<String>,
@@ -141,11 +138,9 @@ class StorageManager(
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 Environment.isExternalStorageManager()
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ==
-                    PackageManager.PERMISSION_GRANTED
+                context.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
             } else {
-                context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
-                    PackageManager.PERMISSION_GRANTED
+                context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
             }
         }
 
@@ -175,44 +170,34 @@ class StorageManager(
             }
         }
 
-        /**
-         * Update storage preference with the selected directory
-         */
         private fun updateStoragePreference(
             context: Context,
             storageDirPref: Preference<String>,
         ) {
             UniFile.fromUri(context, storageDirPref.get().toUri())?.let {
                 it.mkdir()
-                storageDirPref.set("") // Trigger recompose
+                storageDirPref.set("")
                 storageDirPref.set(it.uri.toString())
             }
         }
 
-        /**
-         * Fallback to scoped storage if no other options are available
-         */
         private fun fallbackToScopedStorage(
             context: Context,
             storageDirPref: Preference<String>,
         ) {
             val fallbackDir = File(context.getExternalFilesDir(null), context.stringResource(MR.strings.app_name))
             if (!fallbackDir.exists()) fallbackDir.mkdirs()
-            storageDirPref.set("") // Trigger recompose
+            storageDirPref.set("")
             storageDirPref.set(fallbackDir.toUri().toString())
             context.toast("Using default directory: ${fallbackDir.absolutePath}")
         }
 
-        /**
-         * Used to check if system is able to open contract [ActivityResultContracts.OpenDocumentTree]
-         * by checking if intent [Intent.ACTION_OPEN_DOCUMENT_TREE] is available and not being stub (on Android TV)
-         */
         private fun isIntentAvailable(context: Context, intent: Intent): Boolean {
             val packageManager = context.packageManager
-            // Android TV: ResolveInfo{c236166 com.android.tv.frameworkpackagestubs/.Stubs$DocumentsStub m=0x108000 userHandle=UserHandle{0}}
             val resolveInfo = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
             return resolveInfo.any {
-                it.activityInfo.packageName != null && it.activityInfo.packageName != "com.android.tv.frameworkpackagestubs"
+                it.activityInfo.packageName != null &&
+                    it.activityInfo.packageName != "com.android.tv.frameworkpackagestubs"
             }
         }
         // KMK <--
@@ -222,7 +207,6 @@ class StorageManager(
 private const val AUTOMATIC_BACKUPS_PATH = "autobackup"
 private const val DOWNLOADS_PATH = "downloads"
 private const val LOCAL_SOURCE_PATH = "local"
-
 // SY -->
 private const val LOGS_PATH = "logs"
 // SY <--
