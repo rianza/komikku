@@ -393,11 +393,6 @@ class Downloader(
                 DataSaver.NoOp
             }
 
-            // Delete all temporary (unfinished) files
-            tmpDir.listFiles()
-                ?.filter { it.extension == "tmp" }
-                ?.forEach { it.delete() }
-
             download.status = Download.State.DOWNLOADING
 
             // Start downloading images, consider we can have downloaded images already
@@ -472,14 +467,12 @@ class Downloader(
 
         val digitCount = (download.pages?.size ?: 0).toString().length.coerceAtLeast(3)
         val filename = "%0${digitCount}d".format(Locale.ENGLISH, page.number)
-        val tmpFile = tmpDir.findFile("$filename.tmp")
-
-        // Delete temp file if it exists
-        tmpFile?.delete()
 
         // Try to find the image file
         val imageFile = tmpDir.listFiles()?.firstOrNull {
-            it.name!!.startsWith("$filename.") || it.name!!.startsWith("${filename}__001")
+            val filename = it.name
+            if (filename == null || filename.endsWith(".tmp")) return@firstOrNull false
+            filename.startsWith("$filename.") || filename.startsWith("${filename}__001")
         }
 
         try {
@@ -524,15 +517,27 @@ class Downloader(
         page.status = Page.State.DownloadImage
         page.progress = 0
         return flow {
-            val response = source.getImage(page, dataSaver)
-            val file = tmpDir.createFile("$filename.tmp")!!
+            val file = tmpDir.findFile("$filename.tmp")
+                ?: tmpDir.createFile("$filename.tmp")!!
+
+            val response = source.getImage(page, dataSaver, file.length())
+
             try {
-                response.body.source().saveTo(file.openOutputStream())
+                response.body
+                    .source()
+                    .saveTo(
+                        // If the server supports partial downloads (HTTP 206),
+                        // append to the existing file.
+                        // Otherwise, start from scratch and overwrite the file.
+                        file.openOutputStream(response.code == 206),
+                    )
                 val extension = getImageExtension(response, file)
                 file.renameTo("$filename.$extension")
             } catch (e: Exception) {
                 response.close()
-                file.delete()
+                if (response.code == 416) {
+                    file.delete()
+                }
                 throw e
             }
             emit(file)
@@ -560,6 +565,8 @@ class Downloader(
      * @param filename the filename of the image.
      */
     private fun copyImageFromCache(cacheFile: File, tmpDir: UniFile, filename: String): UniFile {
+        // Delete temp file if it exists
+        tmpDir.findFile("$filename.tmp")?.delete()
         val tmpFile = tmpDir.createFile("$filename.tmp")!!
         cacheFile.inputStream().use { input ->
             tmpFile.openOutputStream().use { output ->
