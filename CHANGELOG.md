@@ -12,6 +12,79 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 ### Added
+- Support resumable image downloads if supported by source ([@xMohnad](https://github.com/xMohnad)) ([#3167](https://github.com/mihonapp/mihon/pull/3167))
+
+### Fixed
+- Fix Shikimori tracking not working ([@MajorTanya](https://github.com/MajorTanya)) ([#3497](https://github.com/mihonapp/mihon/pull/3497))
+
+- 2026-06-27
+### Added
+- Add support for `tachiyomix` 1.6 extensions ([@AntsyLich](https://github.com/AntsyLich))
+- Add support for `tachiyomix` extension index format ([@AntsyLich](https://github.com/AntsyLich)) ([#3349](https://github.com/mihonapp/mihon/pull/3349))
+- Add vertical chapter navigator for long strip mode ([@AntsyLich](https://github.com/AntsyLich)) ([#3377](https://github.com/mihonapp/mihon/pull/3377))
+- Add option to open app settings from system settings ([@JFronny](https://github.com/JFronny)) ([#3180](https://github.com/mihonapp/mihon/pull/3180))
+
+### Changed
+- Change the term "extension repo" to "extension store" ([@AntsyLich](https://github.com/AntsyLich)) ([#3349](https://github.com/mihonapp/mihon/pull/3349))
+- Change the term "Obsolete" to "Orphaned" for extensions ([@AntsyLich](https://github.com/AntsyLich)) ([#3383](https://github.com/mihonapp/mihon/pull/3383))
+- Remove text limit of manga notes ([@AntsyLich](https://github.com/AntsyLich)) ([#3410](https://github.com/mihonapp/mihon/pull/3410))
+- Tweak Catppuccin color scheme for clarity ([@xenitane](https://github.com/xenitane)) ([#3436](https://github.com/mihonapp/mihon/pull/3436))
+- Update app shortcuts to use app icon color scheme ([@NGB-Was-Taken](https://github.com/NGB-Was-Taken)) ([#2835](https://github.com/mihonapp/mihon/pull/2835))
+
+### Improved
+- Batch database operations during backup restore for improved performance ([@Lolle2000la](https://github.com/Lolle2000la)) ([#3267](https://github.com/mihonapp/mihon/pull/3267))
+
+### Fixed
+- Add missing `outlineVariant` color to Nord theme ([@CompileConnected](https://github.com/CompileConnected)) ([#3184](https://github.com/mihonapp/mihon/pull/3184))
+- Continue reading button missing when unread filter is off ([@AntsyLich](https://github.com/AntsyLich)) ([#3382](https://github.com/mihonapp/mihon/pull/3382))
+- Fix random `FileNotFoundException` when reading chapters ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3154](https://github.com/mihonapp/mihon/pull/3154))
+
+- 2026-04-11
+### Fixed
+- Regression with installing/updating extension ([@AntsyLich](https://github.com/AntsyLich))
+
+- 2026-04-11
+### Added
+- Add dedicated "Support Us" screen ([@AntsyLich](https://github.com/AntsyLich)) ([#3200](https://github.com/mihonapp/mihon/pull/3200))
+- Add a one time popup asking for donation from long time users ([@AntsyLich](https://github.com/AntsyLich)) ([#3203](https://github.com/mihonapp/mihon/pull/3203))
+
+### Changed
+- Don't prompt users to enable Google Play services if disabled or unavailable ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3152](https://github.com/mihonapp/mihon/pull/3152))
+- Make "Support Us" more prominent in More screen ([@AntsyLich](https://github.com/AntsyLich)) ([#3196](https://github.com/mihonapp/mihon/pull/3196))
+
+### Improved
+- Show informative error when trying to add unapproved titles to list on MAL ([@MajorTanya](https://github.com/MajorTanya)) ([#3155](https://github.com/mihonapp/mihon/pull/3155))
+- Show AniList publishing type based on country of origin ([@zweimach](https://github.com/zweimach)) ([#3100](https://github.com/mihonapp/mihon/pull/3100))
+
+### Fixed
+- Fix app trying to split long strip when not needed ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3121](https://github.com/mihonapp/mihon/pull/3121))
+
+### Removed
+- Remove the empty "Updated to X.Y.Z" popup after app update ([@AntsyLich](https://github.com/AntsyLich)) ([#3203](https://github.com/mihonapp/mihon/pull/3203))
+
+- 2026-03-23
+Same as v0.19.6
+
+- 2026-03-23
+### Fixed
+- Fix app crashing when trying to add extension repo with existing signature ([@AntsyLich](https://github.com/AntsyLich)) ([`cb0e329`](https://github.com/mihonapp/mihon/commit/cb0e329))
+- Potentially fix 'database is locked' crash ([@AntsyLich](https://github.com/AntsyLich)) ([`f8e82b9`](https://github.com/mihonapp/mihon/commit/f8e82b9))
+- Fix occasional crash when mass installing/uninstalling extension using `PackageManager` ([@AntsyLich](https://github.com/AntsyLich)) ([`42daa3f`](https://github.com/mihonapp/mihon/commit/42daa3f))
+- Fix app crash on startup on some Android TV ([@AntsyLich](https://github.com/AntsyLich)) ([`b40f1d3`](https://github.com/mihonapp/mihon/commit/b40f1d3))
+
+- 2026-03-20
+### Changed
+- Retry in reader now redownloads image ([@AntsyLich](https://github.com/AntsyLich)) ([#3089](https://github.com/mihonapp/mihon/pull/3089))
+
+### Fixed
+- Fix performance regression introduced in v0.19.4 ([@AntsyLich](https://github.com/AntsyLich)) ([#3082](https://github.com/mihonapp/mihon/pull/3082))
+- Fix duplicate key crash in duplicate detection ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3040](https://github.com/mihonapp/mihon/pull/3040))
+- Fix MangaUpdates HTTP 4XX errors ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3021](https://github.com/mihonapp/mihon/pull/3021))
+- Fix WebView JavaScript dialogs popup after screen is closed ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3041](https://github.com/mihonapp/mihon/pull/3041))
+- Fix extension actions disappearing after installing and uninstalling in same session ([@leodyversemilla07](https://github.com/leodyversemilla07)) ([#3049](https://github.com/mihonapp/mihon/pull/3049))
+
+- 2026-02-25
+### Added
 - Automatically remove downloads on Suwayomi after reading, configurable via extension settings ([@cpiber](https://github.com/cpiber)) ([#2673](https://github.com/mihonapp/mihon/pull/2673))
 - Display author & artist name in MAL search results ([@MajorTanya](https://github.com/MajorTanya)) ([#2833](https://github.com/mihonapp/mihon/pull/2833))
 - Add filter options to Updates tab ([@MajorTanya](https://github.com/MajorTanya)) ([#2851](https://github.com/mihonapp/mihon/pull/2851))
@@ -49,7 +122,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 ### Other
 - Enable logcat logging on stable and debug builds without enabling verbose logging ([@NGB-Was-Taken](https://github.com/NGB-Was-Taken)) ([#2836](https://github.com/mihonapp/mihon/pull/2836))
 
-## [v0.19.3] - 2025-11-07
+- 2025-11-07
 ### Improved
 - Improved various aspects of the WebView multi window support ([@TheUnlocked](https://github.com/TheUnlocked)) ([#2662](https://github.com/mihonapp/mihon/pull/2662))
 
@@ -61,7 +134,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix extra padding appearing in reader after user interactions ([@AntsyLich](https://github.com/AntsyLich)) ([#2669](https://github.com/mihonapp/mihon/pull/2669))
 - Fix long strip reader not scrolling on consecutive taps ([@AntsyLich](https://github.com/AntsyLich)) ([#2670](https://github.com/mihonapp/mihon/pull/2670))
 
-## [v0.19.2] - 2025-11-02
+- 2025-11-02
 ### Added
 - Advanced setting to limit download filenames to ASCII characters. This is provided only as a workaround for OSes that do not properly handle standard Unicode filenames. This setting is generally not recommended and should only be used as a last resort ([@raxod502](https://github.com/radian-software)) ([#2305](https://github.com/mihonapp/mihon/pull/2305))
 - Option to customize the number of concurrent source and page downloads ([@AntsyLich](https://github.com/AntsyLich)) ([#2637](https://github.com/mihonapp/mihon/pull/2637))
@@ -97,7 +170,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix Kitsu tracker to conform to tracker data structure properly ([@cpiber](https://github.com/cpiber)) ([#2609](https://github.com/mihonapp/mihon/pull/2609))
 - Update Suwayomi tracker to use GraphQL API instead of REST API ([@cpiber](https://github.com/cpiber)) ([#2585](https://github.com/mihonapp/mihon/pull/2585))
 
-## [v0.19.1] - 2025-08-07
+- 2025-08-07
 ### Changed
 - LocalSource now reads ComicInfo.xml file for chapter (if available) to display chapter title, number and scanlator ([@raxod502](https://github.com/radian-software)) ([#2332](https://github.com/mihonapp/mihon/pull/2332))
 
@@ -112,7 +185,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - Fix crash when opening filter sheet with an empty library ([@krysanify](https://github.com/krysanify/)) ([#2355](https://github.com/mihonapp/mihon/pull/2355))
 - Fix mark as read/unread not working for selected library items ([@krysanify](https://github.com/krysanify/)) ([#2355](https://github.com/mihonapp/mihon/pull/2355))
 
-## [v0.19.0] - 2025-08-04
+- 2025-08-04
 ### Added
 - Add more Kaomoji for empty/error screens ([@ianfhunter](https://github.com/ianfhunter/)) ([#1909](https://github.com/mihonapp/mihon/pull/1909))
 - Add user manga notes ([@imkunet](https://github.com/imkunet), [@AntsyLich](https://github.com/AntsyLich)) ([#428](https://github.com/mihonapp/mihon/pull/428))
