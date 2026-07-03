@@ -18,6 +18,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.SourceFeedUI
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.ui.browse.feed.MaxFeedItems
@@ -188,7 +189,6 @@ open class SourceFeedScreenModel(
         }
     }
 
-<<<<<<< HEAD
     // KMK -->
     fun changeOrder(feed: FeedSavedSearch, newIndex: Int) {
         screenModelScope.launch {
@@ -197,15 +197,11 @@ open class SourceFeedScreenModel(
     }
     // KMK <--
 
-    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): ImmutableList<SourceFeedUI> {
+    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): List<SourceFeedUI> {
         // KMK -->
         val source = source
         // KMK <--
-        if (source !is CatalogueSource) return persistentListOf()
-=======
-    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): List<SourceFeedUI> {
         if (source !is CatalogueSource) return emptyList()
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
         val savedSearches = getSavedSearchBySourceIdFeed.await(source.id)
             .associateBy { it.id }
 
@@ -276,7 +272,7 @@ open class SourceFeedScreenModel(
 
     private val filterSerializer = FilterSerializer()
 
-    private fun getFilterList(savedSearch: SavedSearch, source: CatalogueSource): FilterList {
+    private fun getFilterList(savedSearch: SavedSearch, source: Source): FilterList {
         val filters = savedSearch.filtersJson ?: return FilterList()
         return runCatching {
             val originalFilters = source.getFilterList()
@@ -309,7 +305,7 @@ open class SourceFeedScreenModel(
     // KMK <--
 
     private suspend fun loadSearches() =
-        getExhSavedSearch.await(source.id, (source as CatalogueSource)::getFilterList)
+        getExhSavedSearch.await(source.id, source::getFilterList)
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name))
 
     fun onFilter(onBrowseClick: (query: String?, filters: String?) -> Unit) {

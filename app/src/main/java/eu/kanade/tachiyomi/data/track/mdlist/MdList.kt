@@ -11,8 +11,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import exh.md.network.MangaDexAuthInterceptor
 import exh.md.utils.FollowStatus
 import exh.md.utils.MdUtil
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import tachiyomi.core.common.util.lang.awaitSingle
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
@@ -140,7 +139,7 @@ class MdList(id: Long) : BaseTracker(id, "MDList") {
             mdex.getSearchManga(1, query, mdex.getFilterList())
                 .mangas
                 .map {
-                    toTrackSearch(mdex.getMangaDetails(it))
+                    toTrackSearch(mdex.fetchMangaDetails(it).awaitSingle())
                 }
                 .distinct()
         }

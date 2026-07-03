@@ -443,6 +443,8 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
                 // KMK -->
                 .mapIndexed { index, id -> id to index }.toMap()
             // KMK <--
+            val disabledSources = sourcePreferences.disabledSources.get()
+                .mapNotNull { it.toLongOrNull() }
             val sources = sourceManager
                 // KMK -->
                 .getVisibleCatalogueSources()

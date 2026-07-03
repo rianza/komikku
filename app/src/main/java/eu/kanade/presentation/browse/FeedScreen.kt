@@ -34,10 +34,7 @@ import eu.kanade.presentation.browse.components.GlobalSearchCardRow
 import eu.kanade.presentation.browse.components.GlobalSearchErrorResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchLoadingResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchResultItem
-import eu.kanade.presentation.browse.components.SourceIcon
-import eu.kanade.presentation.components.SourcesSearchBox
-import eu.kanade.tachiyomi.source.CatalogueSource
-import eu.kanade.tachiyomi.source.getNameForMangaInfo
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.ui.browse.feed.FeedScreenState
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.i18n.stringResource
@@ -60,7 +57,7 @@ import kotlin.time.Duration.Companion.seconds
 data class FeedItemUI(
     val feed: FeedSavedSearch,
     val savedSearch: SavedSearch?,
-    val source: CatalogueSource?,
+    val source: Source?,
     val title: String,
     val subtitle: String,
     val results: List<Manga>?,
@@ -70,11 +67,12 @@ data class FeedItemUI(
 fun FeedScreen(
     state: FeedScreenState,
     contentPadding: PaddingValues,
-    onClickSavedSearch: (SavedSearch, CatalogueSource) -> Unit,
-    onClickSource: (CatalogueSource) -> Unit,
     // KMK -->
     onLongClickFeed: (FeedItemUI) -> Unit,
     // KMK <--
+    onClickSavedSearch: (SavedSearch, Source) -> Unit,
+    onClickSource: (Source) -> Unit,
+    onClickDelete: (FeedSavedSearch) -> Unit,
     onClickManga: (Manga) -> Unit,
     // KMK -->
     onLongClickManga: (Manga) -> Unit,
@@ -183,9 +181,9 @@ fun FeedItem(
 
 @Composable
 fun FeedAddDialog(
-    sources: List<CatalogueSource>,
+    sources: List<Source>,
     onDismiss: () -> Unit,
-    onClickAdd: (CatalogueSource?) -> Unit,
+    onClickAdd: (Source?) -> Unit,
 ) {
     // KMK -->
     var query by remember { mutableStateOf("") }
@@ -245,10 +243,10 @@ fun FeedAddDialog(
 
 @Composable
 fun FeedAddSearchDialog(
-    source: CatalogueSource,
+    source: Source,
     savedSearches: List<SavedSearch?>,
     onDismiss: () -> Unit,
-    onClickAdd: (CatalogueSource, SavedSearch?) -> Unit,
+    onClickAdd: (Source, SavedSearch?) -> Unit,
 ) {
     var selected by remember { mutableStateOf<Int?>(null) }
     AlertDialog(
