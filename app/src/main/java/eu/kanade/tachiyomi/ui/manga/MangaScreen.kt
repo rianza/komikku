@@ -391,7 +391,15 @@ class MangaScreen(
             },
             onMorePreviewsClicked = { openMorePagePreviews(navigator, successState.manga) },
             // SY <--
-            onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
+            onEditNotesClicked = {
+                navigator.push(
+                    MangaNotesScreen(
+                        mangaId = successState.manga.id,
+                        mangaTitle = successState.manga.title,
+                        mangaNotes = successState.manga.notes,
+                    ),
+                )
+            },
             onMultiBookmarkClicked = screenModel::bookmarkChapters,
             onMultiMarkAsReadClicked = screenModel::markChaptersRead,
             onMarkPreviousAsReadClicked = screenModel::markPreviousChapterRead,
