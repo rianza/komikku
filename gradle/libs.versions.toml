@@ -31,6 +31,7 @@ composeGrid = "1.2.2"
 composeMaterialMotion = "2.0.1"
 composeRichEditor = "1.0.0-rc14"
 composeWebview = "0.33.6"
+colorpicker = "1.1.4"
 conscrypt = "2.5.3"
 directionalViewPager = "1.0.0"
 diskLruCache = "2.0.2"
@@ -123,6 +124,7 @@ composeGrid = { module = "io.woong.compose.grid:grid", version.ref = "composeGri
 composeMaterialMotion = { module = "io.github.fornewid:material-motion-compose-core", version.ref = "composeMaterialMotion" }
 composeRichEditor = { module = "com.mohamedrejeb.richeditor:richeditor-compose", version.ref = "composeRichEditor" }
 composeWebview = { module = "io.github.kevinnzou:compose-webview", version.ref = "composeWebview" }
+colorpicker = { module = "com.github.skydoves:colorpicker-compose", version.ref = "colorpicker" }
 conscrypt = { module = "org.conscrypt:conscrypt-android", version.ref = "conscrypt" }
 directionalViewPager = { module = "com.github.tachiyomiorg:DirectionalViewPager", version.ref = "directionalViewPager" }
 diskLruCache = { module = "com.jakewharton:disklrucache", version.ref = "diskLruCache" }

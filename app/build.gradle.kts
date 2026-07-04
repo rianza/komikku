@@ -45,12 +45,12 @@ android {
     }
 
     buildTypes {
-        val debug by getting {
+        val debug = getByName("debug") {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-${getLatestCommitCount()}"
             isPseudoLocalesEnabled = true
         }
-        val release by getting {
+        val release = getByName("release") {
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
             isProfileable = true
@@ -304,7 +304,7 @@ dependencies {
     // KMK -->
     implementation(libs.palette.ktx)
     implementation(libs.haze)
-    implementation(compose.colorpicker)
+    implementation(libs.colorpicker)
     implementation(projects.flagkit)
     // KMK <--
 
