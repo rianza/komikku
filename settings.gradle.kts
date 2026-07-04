@@ -6,16 +6,31 @@ pluginManagement {
         gradlePluginPortal()
         maven(url = "https://www.jitpack.io")
     }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.github.zellius.shortcut-helper") {
+                useModule("com.github.zellius:android-shortcut-gradle-plugin:${requested.version}")
+            }
+        }
+    }
 }
 
 dependencyResolutionManagement {
     versionCatalogs {
         create("sylibs") {
-            from(files("gradle/sy.versions.toml")
+            from(files("gradle/sy.versions.toml"))
         }
-
         create("mihonx") {
-            from(files("gradle/mihon.versions.toml")
+            from(files("gradle/mihon.versions.toml"))
+        }
+        create("kotlinx") {
+            from(files("gradle/kotlinx.versions.toml"))
+        }
+        create("androidx") {
+            from(files("gradle/androidx.versions.toml"))
+        }
+        create("compose") {
+            from(files("gradle/compose.versions.toml"))
         }
     }
 

@@ -1,7 +1,7 @@
 buildscript {
     dependencies {
         classpath(libs.kotlin.gradle)
-        classpath(sylibs.versionsx)
+        classpath(sylibs.gradleversionsx)
     }
 }
 
