@@ -462,7 +462,7 @@ private fun loadCover(
     // KMK <--
 ) {
     // KMK -->
-    if (Injekt.get<UiPreferences>().usePanoramaCoverAlways().get() && coverRatio.floatValue <= RatioSwitchToPanorama) {
+    if (Injekt.get<UiPreferences>().usePanoramaCoverAlways.get() && coverRatio.floatValue <= RatioSwitchToPanorama) {
         binding.mangaCover.visibility = View.GONE
         binding.mangaCoverPanorama.visibility = View.VISIBLE
         binding.mangaCoverPanorama.load(manga) {

@@ -248,8 +248,8 @@ class LibraryScreenModel(
                     .distinctUntilChanged(),
                 // KMK -->
                 combine(
-                    libraryPreferences.sortingMode().changes(),
-                    libraryPreferences.showHiddenCategories().changes(),
+                    libraryPreferences.sortingMode.changes(),
+                    libraryPreferences.showHiddenCategories.changes(),
                     libraryPreferences.showEmptyCategoriesSearch().changes(),
                     ::Triple,
                 ),
@@ -390,9 +390,9 @@ class LibraryScreenModel(
 
         // KMK -->
         combine(
-            libraryPreferences.filterCategories().changes(),
-            libraryPreferences.filterCategoriesInclude().changes(),
-            libraryPreferences.filterCategoriesExclude().changes(),
+            libraryPreferences.filterCategories.changes(),
+            libraryPreferences.filterCategoriesInclude.changes(),
+            libraryPreferences.filterCategoriesExclude.changes(),
         ) { filter, included, excluded ->
             Triple(
                 filter,
@@ -743,9 +743,9 @@ class LibraryScreenModel(
             libraryPreferences.filterLewd.changes(),
             // SY <--
             // KMK -->
-            libraryPreferences.sourceBadge().changes(),
-            libraryPreferences.useLangIcon().changes(),
-            libraryPreferences.filterCategories().changes(),
+            libraryPreferences.sourceBadge.changes(),
+            libraryPreferences.useLangIcon.changes(),
+            libraryPreferences.filterCategories.changes(),
             // KMK <--
         ) {
             ItemPreferences(

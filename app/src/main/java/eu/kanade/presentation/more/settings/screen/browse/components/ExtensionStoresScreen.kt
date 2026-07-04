@@ -21,8 +21,8 @@ import eu.kanade.presentation.category.components.CategoryFloatingActionButton
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoreScreenState
 import eu.kanade.tachiyomi.util.system.openInBrowser
+import mihon.domain.extension.model.ExtensionSignatures.REPO_HELP
 import mihon.domain.extension.model.ExtensionStore
-import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_HELP
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding

@@ -61,7 +61,26 @@ class UpdatesRepositoryImpl(
                     hideExcludedScanlators = hideExcludedScanlators.toLong(),
                 )
                     .awaitAsList()
-                    .map(::mapUpdatesWithRelations)
+                    .map { updatesView ->
+                        mapUpdatesWithRelations(
+                            mangaId = updatesView.mangaId,
+                            mangaTitle = updatesView.mangaTitle,
+                            chapterId = updatesView.chapterId,
+                            chapterName = updatesView.chapterName,
+                            scanlator = updatesView.scanlator,
+                            chapterUrl = updatesView.chapterUrl,
+                            read = updatesView.read,
+                            bookmark = updatesView.bookmark,
+                            lastPageRead = updatesView.last_page_read,
+                            sourceId = updatesView.source,
+                            favorite = updatesView.favorite,
+                            thumbnailUrl = updatesView.thumbnailUrl,
+                            coverLastModified = updatesView.coverLastModified,
+                            dateUpload = updatesView.dateUpload,
+                            dateFetch = updatesView.datefetch,
+                            excludedScanlator = updatesView.excludedScanlator,
+                        )
+                    }
             }
         // KMK <--
     }

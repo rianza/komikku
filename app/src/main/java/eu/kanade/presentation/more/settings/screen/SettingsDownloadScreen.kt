@@ -220,7 +220,7 @@ object SettingsDownloadScreen : SearchableSettings {
             title = stringResource(KMR.strings.download_cache_renew_interval),
             preferenceItems = persistentListOf(
                 Preference.PreferenceItem.ListPreference(
-                    preference = downloadPreferences.downloadCacheRenewInterval(),
+                    preference = downloadPreferences.downloadCacheRenewInterval,
                     entries = persistentMapOf(
                         -1 to stringResource(KMR.strings.download_cache_renew_interval_manual),
                         1 to stringResource(KMR.strings.download_cache_renew_interval_1hour),

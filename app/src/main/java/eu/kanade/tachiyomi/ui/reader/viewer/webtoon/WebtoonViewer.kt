@@ -179,7 +179,7 @@ class WebtoonViewer(
         }
 
         config.webtoonScaleTypeChangedListener = f@{ scaleType ->
-            if (!isContinuous && !readerPreferences.longStripGapSmartScale().get()) return@f
+            if (!isContinuous && !readerPreferences.longStripGapSmartScale.get()) return@f
 
             recycler.post {
                 recycler.doOnLayout doOnLayout@{

@@ -227,7 +227,7 @@ object SettingsLibraryScreen : SearchableSettings {
                 ),
                 // KMK -->
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = libraryPreferences.showUpdatingProgressBanner(),
+                    preference = libraryPreferences.showUpdatingProgressBanner,
                     title = stringResource(KMR.strings.pref_show_updating_progress_banner),
                 ),
                 // KMK <--
@@ -290,12 +290,12 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_show_empty_categories_search),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = libraryPreferences.fetchMetadataOnAdd(),
+                    preference = libraryPreferences.fetchMetadataOnAdd,
                     title = stringResource(KMR.strings.pref_fetch_manga_metadata_on_add),
                     subtitle = stringResource(KMR.strings.pref_fetch_manga_metadata_on_add_description),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = libraryPreferences.fetchChaptersOnAdd(),
+                    preference = libraryPreferences.fetchChaptersOnAdd,
                     title = stringResource(KMR.strings.pref_fetch_manga_chapters_on_add),
                     subtitle = stringResource(KMR.strings.pref_fetch_manga_chapters_on_add_description),
                 ),

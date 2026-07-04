@@ -34,14 +34,16 @@ import eu.kanade.presentation.browse.components.GlobalSearchCardRow
 import eu.kanade.presentation.browse.components.GlobalSearchErrorResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchLoadingResultItem
 import eu.kanade.presentation.browse.components.GlobalSearchResultItem
+import eu.kanade.presentation.browse.components.SourceIcon
+import eu.kanade.presentation.components.SourcesSearchBox
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.ui.browse.feed.FeedScreenState
 import kotlinx.coroutines.delay
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
-import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
@@ -200,7 +202,7 @@ fun FeedAddDialog(
     val composeOptions: List<@Composable () -> Unit> = sourceList
         .map {
             {
-                val source = Source(
+                val source = tachiyomi.domain.source.model.Source(
                     id = it.id,
                     lang = it.lang,
                     name = it.name,

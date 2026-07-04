@@ -274,6 +274,7 @@ dependencies {
     implementation(libs.injekt)
 
     // Image loading
+    implementation(platform(libs.coil.bom))
     implementation(libs.bundles.coil)
     implementation(libs.subsamplingScaleImageView) {
         exclude(module = "image-decoder")

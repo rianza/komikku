@@ -495,8 +495,8 @@ class UpdatesScreenModel(
         }
     }
 
-    val chapterSwipeStartAction by libraryPreferences.swipeToEndAction().asState(screenModelScope)
-    val chapterSwipeEndAction by libraryPreferences.swipeToStartAction().asState(screenModelScope)
+    val chapterSwipeStartAction by libraryPreferences.swipeToEndAction.asState(screenModelScope)
+    val chapterSwipeEndAction by libraryPreferences.swipeToStartAction.asState(screenModelScope)
 
     /**
      * @throws IllegalStateException if the swipe action is [LibraryPreferences.ChapterSwipeAction.Disabled]

@@ -119,7 +119,7 @@ open class SourceFeedScreenModel(
 
             getIncognitoState.subscribe(sourceId)
                 .onEach {
-                    if (!it) sourcePreferences.lastUsedSource().set(source.id)
+                    if (!it) sourcePreferences.lastUsedSource.set(source.id)
                     incognitoMode.value = it
                 }
                 .launchIn(screenModelScope)
@@ -219,7 +219,7 @@ open class SourceFeedScreenModel(
     }
 
     // KMK -->
-    private val hideInLibraryFeedItems = sourcePreferences.hideInLibraryFeedItems().get()
+    private val hideInLibraryFeedItems = sourcePreferences.hideInLibraryFeedItems.get()
     // KMK <--
 
     /**

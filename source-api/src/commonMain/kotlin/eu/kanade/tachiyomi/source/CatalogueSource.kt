@@ -40,7 +40,7 @@ interface CatalogueSource : Source {
     /**
      * Whether the source has support for latest updates.
      */
-    val supportsLatest: Boolean
+    override val supportsLatest: Boolean
 
     /**
      * Get a page with a list of manga.
@@ -109,7 +109,7 @@ interface CatalogueSource : Source {
     /**
      * Returns the list of filters for the source.
      */
-    fun getFilterList(): FilterList
+    override fun getFilterList(): FilterList
 
     // KMK -->
 

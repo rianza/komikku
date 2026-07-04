@@ -370,7 +370,7 @@ object SettingsAdvancedScreen : SearchableSettings {
                 ),
                 // KMK -->
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = uiPreferences.preloadLibraryColor(),
+                    preference = uiPreferences.preloadLibraryColor,
                     title = stringResource(KMR.strings.preload_library_cover_color),
                 ),
                 // KMK <--

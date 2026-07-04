@@ -72,8 +72,8 @@ class MangaCoverFetcher(
     // KMK -->
     private val scope by lazy { CoroutineScope(Dispatchers.IO) }
     private val uiPreferences = Injekt.get<UiPreferences>()
-    private val themeCoverBased = uiPreferences.themeCoverBased().get()
-    private val preloadLibraryColor = uiPreferences.preloadLibraryColor().get()
+    private val themeCoverBased = uiPreferences.themeCoverBased.get()
+    private val preloadLibraryColor = uiPreferences.preloadLibraryColor.get()
     // KMK <--
 
     private val diskCacheKey: String

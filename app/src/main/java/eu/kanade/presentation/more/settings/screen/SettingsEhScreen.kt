@@ -194,7 +194,7 @@ object SettingsEhScreen : SearchableSettings {
         exhPreferences: ExhPreferences,
     ): Preference.PreferenceItem.SwitchPreference {
         return Preference.PreferenceItem.SwitchPreference(
-            preference = exhPreferences.ehIncognitoMode(),
+            preference = exhPreferences.ehIncognitoMode,
             title = stringResource(MR.strings.pref_incognito_mode),
             subtitle = stringResource(MR.strings.pref_incognito_mode_summary),
             onValueChanged = { newVal ->

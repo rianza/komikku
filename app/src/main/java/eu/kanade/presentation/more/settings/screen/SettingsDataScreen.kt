@@ -209,7 +209,7 @@ object SettingsDataScreen : SearchableSettings {
         val pickStorageLocation = storageLocationPicker(storagePreferences.baseStorageDirectory)
 
         // KMK -->
-        val storagePref = storagePreferences.baseStorageDirectory()
+        val storagePref = storagePreferences.baseStorageDirectory
         // KMK <--
 
         return Preference.PreferenceItem.TextPreference(
@@ -324,7 +324,7 @@ object SettingsDataScreen : SearchableSettings {
                 ),
                 // KMK -->
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = backupPreferences.showRestoringProgressBanner(),
+                    preference = backupPreferences.showRestoringProgressBanner,
                     title = stringResource(KMR.strings.pref_show_restoring_progress_banner),
                 ),
                 // KMK <--
@@ -737,7 +737,7 @@ object SettingsDataScreen : SearchableSettings {
 
         return listOf(
             Preference.PreferenceItem.EditTextPreference(
-                preference = syncPreferences.clientHost(),
+                preference = syncPreferences.clientHost,
                 title = stringResource(SYMR.strings.pref_sync_host),
                 subtitle = stringResource(SYMR.strings.pref_sync_host_summ),
                 onValueChanged = { newValue ->
@@ -786,23 +786,23 @@ object SettingsDataScreen : SearchableSettings {
 
         return listOf(
             Preference.PreferenceItem.EditTextPreference(
-                preference = syncPreferences.webDavUrl(),
+                preference = syncPreferences.webDavUrl,
                 title = stringResource(KMR.strings.pref_webdav_url),
                 subtitle = stringResource(KMR.strings.pref_webdav_url_summ),
                 onValueChanged = { newValue ->
                     scope.launch {
-                        syncPreferences.webDavUrl().set(newValue.trim())
+                        syncPreferences.webDavUrl.set(newValue.trim())
                     }
                     true
                 },
             ),
             Preference.PreferenceItem.EditTextPreference(
-                preference = syncPreferences.webDavUsername(),
+                preference = syncPreferences.webDavUsername,
                 title = stringResource(KMR.strings.pref_webdav_username),
                 subtitle = stringResource(KMR.strings.pref_webdav_username_summ),
                 onValueChanged = { newValue ->
                     scope.launch {
-                        syncPreferences.webDavUsername().set(newValue.trim())
+                        syncPreferences.webDavUsername.set(newValue.trim())
                     }
                     true
                 },
@@ -815,7 +815,7 @@ object SettingsDataScreen : SearchableSettings {
                         onReturnPassword = { password ->
                             dialogOpen = false
                             scope.launch {
-                                syncPreferences.webDavPassword().set(password.replace("\n", ""))
+                                syncPreferences.webDavPassword.set(password.replace("\n", ""))
                             }
                         },
                         title = KMR.strings.pref_webdav_password,
@@ -830,12 +830,12 @@ object SettingsDataScreen : SearchableSettings {
                 )
             },
             Preference.PreferenceItem.EditTextPreference(
-                preference = syncPreferences.webDavFolder(),
+                preference = syncPreferences.webDavFolder,
                 title = stringResource(KMR.strings.pref_webdav_folder),
                 subtitle = stringResource(KMR.strings.pref_webdav_folder_summ),
                 onValueChanged = { newValue ->
                     scope.launch {
-                        syncPreferences.webDavFolder().set(newValue.trim())
+                        syncPreferences.webDavFolder.set(newValue.trim())
                     }
                     true
                 },

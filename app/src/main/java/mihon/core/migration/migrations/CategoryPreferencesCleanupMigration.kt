@@ -29,8 +29,8 @@ class CategoryPreferencesCleanupMigration : Migration {
             downloadPreferences.downloadNewChapterCategories,
             downloadPreferences.downloadNewChapterCategoriesExclude,
             // KMK -->
-            libraryPreferences.filterCategoriesInclude(),
-            libraryPreferences.filterCategoriesExclude(),
+            libraryPreferences.filterCategoriesInclude,
+            libraryPreferences.filterCategoriesExclude,
             // KMK <--
         )
         categoryPreferences.forEach { preference ->

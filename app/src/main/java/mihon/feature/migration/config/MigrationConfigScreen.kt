@@ -401,8 +401,8 @@ class MigrationConfigScreen(private val mangaIds: Collection<Long>) : Screen() {
     ) : StateScreenModel<ScreenModel.State>(State()) {
 
         // KMK -->
-        private val pinnedSources by lazy { sourcePreferences.pinnedSources().get().mapNotNull { it.toLongOrNull() } }
-        private val disabledSources by lazy { sourcePreferences.disabledSources().get().mapNotNull { it.toLongOrNull() } }
+        private val pinnedSources by lazy { sourcePreferences.pinnedSources.get().mapNotNull { it.toLongOrNull() } }
+        private val disabledSources by lazy { sourcePreferences.disabledSources.get().mapNotNull { it.toLongOrNull() } }
         // KMK <--
 
         private val sourcesComparator = { includedSources: /* KMK --> */ Map<Long, Int> /* KMK <-- */ ->

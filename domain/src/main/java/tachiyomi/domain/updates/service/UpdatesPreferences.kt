@@ -6,7 +6,9 @@ import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getEnum
 
 class UpdatesPreferences(
-    preferenceStore: PreferenceStore,
+    // KMK -->
+    private val preferenceStore: PreferenceStore,
+    // KMK <--
 ) {
 
     val filterDownloaded: Preference<TriState> = preferenceStore.getEnum(

@@ -25,9 +25,6 @@ import eu.kanade.domain.track.interactor.AddTracks
 import eu.kanade.domain.track.interactor.RefreshTracks
 import eu.kanade.domain.track.interactor.SyncChapterProgressWithTrack
 import eu.kanade.domain.track.interactor.TrackChapter
-import eu.kanade.tachiyomi.di.InjektModule
-import eu.kanade.tachiyomi.di.addFactory
-import eu.kanade.tachiyomi.di.addSingletonFactory
 import mihon.data.extension.repository.ExtensionStoreRepositoryImpl
 import mihon.data.extension.service.ExtensionStoreService
 import mihon.domain.chapter.interactor.FilterChaptersForDownload

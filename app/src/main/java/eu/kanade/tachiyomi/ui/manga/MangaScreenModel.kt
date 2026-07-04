@@ -238,8 +238,8 @@ class MangaScreenModel(
         get() = state.value as? State.Success
 
     // KMK -->
-    val useNewSourceNavigation by uiPreferences.useNewSourceNavigation().asState(screenModelScope)
-    val themeCoverBased = uiPreferences.themeCoverBased().get()
+    val useNewSourceNavigation by uiPreferences.useNewSourceNavigation.asState(screenModelScope)
+    val themeCoverBased = uiPreferences.themeCoverBased.get()
     // KMK <--
 
     val manga: Manga?
@@ -272,7 +272,7 @@ class MangaScreenModel(
     internal var showTrackDialogAfterCategorySelection: Boolean = false
 
     internal val autoOpenTrack: Boolean
-        get() = successState?.hasLoggedInTrackers == true && trackPreferences.trackOnAddingToLibrary().get()
+        get() = successState?.hasLoggedInTrackers == true && trackPreferences.trackOnAddingToLibrary.get()
 
     // EXH -->
     private val updateHelper: EHentaiUpdateHelper by injectLazy()
@@ -1168,7 +1168,7 @@ class MangaScreenModel(
      * Requests an list of related mangas from the source.
      */
     internal suspend fun fetchRelatedMangasFromSource(onDemand: Boolean = false, onFinish: (() -> Unit)? = null) {
-        val expandRelatedMangas = uiPreferences.expandRelatedMangas().get()
+        val expandRelatedMangas = uiPreferences.expandRelatedMangas.get()
         if ((!onDemand && !expandRelatedMangas) || manga?.source == MERGED_SOURCE_ID) return
 
         // start fetching related mangas
@@ -1183,7 +1183,7 @@ class MangaScreenModel(
             }
         }
         val state = successState ?: return
-        val relatedMangasEnabled = sourcePreferences.relatedMangas().get()
+        val relatedMangasEnabled = sourcePreferences.relatedMangas.get()
 
         try {
             if (state.source !is StubSource && relatedMangasEnabled) {

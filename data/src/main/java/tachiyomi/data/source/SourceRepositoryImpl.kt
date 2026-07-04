@@ -84,7 +84,7 @@ class SourceRepositoryImpl(
         val source = sourceManager.getOrStub(sourceId)
         // SY -->
         if (source.isEhBasedSource()) {
-            return EHentaiSearchPagingSource(source, query, filterList)
+            return EHentaiSearchPagingSource(source as HttpSource, query, filterList)
         }
         // SY <--
         return SourceSearchPagingSource(source, query, filterList)
@@ -94,7 +94,7 @@ class SourceRepositoryImpl(
         val source = sourceManager.getOrStub(sourceId)
         // SY -->
         if (source.isEhBasedSource()) {
-            return EHentaiPopularPagingSource(source)
+            return EHentaiPopularPagingSource(source as HttpSource)
         }
         // SY <--
         return SourcePopularPagingSource(source)
@@ -104,7 +104,7 @@ class SourceRepositoryImpl(
         val source = sourceManager.getOrStub(sourceId)
         // SY -->
         if (source.isEhBasedSource()) {
-            return EHentaiLatestPagingSource(source)
+            return EHentaiLatestPagingSource(source as HttpSource)
         }
         // SY <--
         return SourceLatestPagingSource(source)

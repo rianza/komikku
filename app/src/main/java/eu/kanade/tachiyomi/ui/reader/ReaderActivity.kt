@@ -166,7 +166,7 @@ class ReaderActivity : BaseActivity() {
     private val preferences = Injekt.get<BasePreferences>()
 
     // KMK -->
-    val themeCoverBased = Injekt.get<UiPreferences>().themeCoverBased().get()
+    val themeCoverBased = Injekt.get<UiPreferences>().themeCoverBased.get()
     // KMK <--
 
     // AM (CONNECTIONS) -->
@@ -398,7 +398,7 @@ class ReaderActivity : BaseActivity() {
                         screenModel = settingsScreenModel,
                         onChange = { stringRes ->
                             menuToggleToast?.cancel()
-                            if (!readerPreferences.showReadingMode().get()) {
+                            if (!readerPreferences.showReadingMode.get()) {
                                 menuToggleToast = toast(stringRes)
                             }
                         },

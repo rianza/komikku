@@ -8,6 +8,7 @@ import logcat.LogPriority
 import okhttp3.Cache
 import okhttp3.Headers
 import okhttp3.OkHttpClient
+import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import okio.IOException
 import tachiyomi.core.common.util.system.logcat
@@ -77,8 +78,26 @@ import kotlin.random.Random
         }
     }
 
+    val nonCloudflareClient /* KMK --> */ by lazy /* KMK <-- */ { clientBuilder().build() }
+
     /* SY --> */
-    open /* SY <-- */ val client = clientBuilder
+    open /* SY <-- */ val client /* KMK --> */ by lazy /* KMK <-- */ {
+        clientBuilder()
+            .addInterceptor(
+                CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
+            )
+            .build()
+    }
+
+    // KMK -->
+    /**
+     * Timeout in unit of seconds.
+     */
+    private fun clientWithTimeOut(
+        connectTimeout: Long = 30,
+        readTimeout: Long = 30,
+        callTimeout: Long = 120,
+    ) = clientBuilder(connectTimeout, readTimeout, callTimeout)
         .addInterceptor(
             CloudflareInterceptor(context, cookieJar, ::defaultUserAgentProvider),
         )

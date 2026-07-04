@@ -140,8 +140,8 @@ fun MangaInfoBox(
     // KMK <--
 ) {
     // KMK -->
-    val usePanoramaCover by Injekt.get<UiPreferences>().usePanoramaCoverMangaInfo().collectAsState()
-    val topAlignCover by Injekt.get<UiPreferences>().topAlignCover().collectAsState()
+    val usePanoramaCover by Injekt.get<UiPreferences>().usePanoramaCoverMangaInfo.collectAsState()
+    val topAlignCover by Injekt.get<UiPreferences>().topAlignCover.collectAsState()
     // KMK <--
     Box(modifier = modifier) {
         // Backdrop
@@ -252,7 +252,7 @@ fun MangaActionRow(
 ) {
     // KMK -->
     val libraryPreferences: LibraryPreferences = Injekt.get()
-    val restrictions = libraryPreferences.autoUpdateMangaRestrictions().get()
+    val restrictions = libraryPreferences.autoUpdateMangaRestrictions.get()
     val notSkipCompleted = MANGA_NON_COMPLETED !in restrictions || status != SManga.COMPLETED.toLong()
     val selectedInterval by remember(interval) { mutableIntStateOf(if (interval < 0) -interval else 0) }
     // KMK <--
@@ -366,7 +366,7 @@ fun ExpandableMangaDescription(
 ) {
     // KMK -->
     val uiPreferences = Injekt.get<UiPreferences>()
-    val pureDarkMode = uiPreferences.themeDarkAmoled().get()
+    val pureDarkMode = uiPreferences.themeDarkAmoled.get()
     // KMK <--
     Column(modifier = modifier) {
         val (expanded, onExpanded) = rememberSaveable {

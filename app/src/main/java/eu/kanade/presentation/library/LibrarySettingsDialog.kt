@@ -372,16 +372,16 @@ private fun ColumnScope.DisplayPage(
         pref = screenModel.libraryPreferences.languageBadge,
     )
     // KMK -->
-    val showLang by screenModel.libraryPreferences.languageBadge().collectAsState()
+    val showLang by screenModel.libraryPreferences.languageBadge.collectAsState()
     if (showLang) {
         CheckboxItem(
             label = stringResource(KMR.strings.action_display_language_icon),
-            pref = screenModel.libraryPreferences.useLangIcon(),
+            pref = screenModel.libraryPreferences.useLangIcon,
         )
     }
     CheckboxItem(
         label = stringResource(KMR.strings.action_display_source_badge),
-        pref = screenModel.libraryPreferences.sourceBadge(),
+        pref = screenModel.libraryPreferences.sourceBadge,
     )
     // KMK <--
     CheckboxItem(
@@ -397,7 +397,7 @@ private fun ColumnScope.DisplayPage(
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.action_show_hidden_categories),
-        pref = screenModel.libraryPreferences.showHiddenCategories(),
+        pref = screenModel.libraryPreferences.showHiddenCategories,
     )
     // KMK <--
     CheckboxItem(
@@ -469,10 +469,10 @@ private fun CategoriesFilter(
     libraryPreferences: LibraryPreferences,
     categories: List<Category>,
 ) {
-    val filterCategories by libraryPreferences.filterCategories().collectAsState()
+    val filterCategories by libraryPreferences.filterCategories.collectAsState()
 
-    val filterCategoriesInclude = libraryPreferences.filterCategoriesInclude()
-    val filterCategoriesExclude = libraryPreferences.filterCategoriesExclude()
+    val filterCategoriesInclude = libraryPreferences.filterCategoriesInclude
+    val filterCategoriesExclude = libraryPreferences.filterCategoriesExclude
     val included by filterCategoriesInclude.collectAsState()
     val excluded by filterCategoriesExclude.collectAsState()
 
@@ -496,7 +496,7 @@ private fun CategoriesFilter(
 
     Row(
         modifier = Modifier
-            .clickable(onClick = { libraryPreferences.filterCategories().toggle() })
+            .clickable(onClick = { libraryPreferences.filterCategories.toggle() })
             .fillMaxWidth()
             .padding(horizontal = SettingsItemsPaddings.Horizontal),
         verticalAlignment = Alignment.CenterVertically,

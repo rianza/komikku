@@ -52,7 +52,7 @@ object SettingsBrowseScreen : SearchableSettings {
         val uiPreferences = remember { Injekt.get<UiPreferences>() }
         // SY <--
         // KMK -->
-        val relatedMangasInOverflow by uiPreferences.expandRelatedMangas().collectAsState()
+        val relatedMangasInOverflow by uiPreferences.expandRelatedMangas.collectAsState()
         // KMK <--
         return listOf(
             // SY -->
@@ -126,7 +126,7 @@ object SettingsBrowseScreen : SearchableSettings {
                     ),
                     // KMK -->
                     Preference.PreferenceItem.SwitchPreference(
-                        preference = sourcePreferences.hideInLibraryFeedItems(),
+                        preference = sourcePreferences.hideInLibraryFeedItems,
                         title = stringResource(MR.strings.pref_hide_in_library_items),
                     ),
                     // KMK <--

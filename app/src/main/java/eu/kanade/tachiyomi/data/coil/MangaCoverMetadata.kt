@@ -21,7 +21,7 @@ object MangaCoverMetadata {
     private val coverCache by injectLazy<CoverCache>()
 
     fun load() {
-        val ratios = preferences.coverRatios().get()
+        val ratios = preferences.coverRatios.get()
         MangaCover.coverRatioMap = ConcurrentHashMap(
             ratios.mapNotNull {
                 val splits = it.split("|")
@@ -34,7 +34,7 @@ object MangaCoverMetadata {
                 }
             }.toMap(),
         )
-        val colors = preferences.coverColors().get()
+        val colors = preferences.coverColors.get()
         MangaCover.dominantCoverColorMap = ConcurrentHashMap(
             colors.mapNotNull {
                 val splits = it.split("|")
@@ -155,9 +155,9 @@ object MangaCoverMetadata {
 
     fun savePrefs() {
         val mapCopy = MangaCover.coverRatioMap.toMap()
-        preferences.coverRatios().set(mapCopy.map { "${it.key}|${it.value}" }.toSet())
+        preferences.coverRatios.set(mapCopy.map { "${it.key}|${it.value}" }.toSet())
         val mapColorCopy = MangaCover.dominantCoverColorMap.toMap()
-        preferences.coverColors().set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
+        preferences.coverColors.set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
     }
 
     private const val SUB_SAMPLE = 4

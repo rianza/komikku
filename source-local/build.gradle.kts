@@ -27,6 +27,7 @@ kotlin {
     sourceSets {
         androidMain {
             dependencies {
+                implementation(projects.core.archive)
                 implementation(projects.core.common)
                 implementation(projects.coreMetadata)
 

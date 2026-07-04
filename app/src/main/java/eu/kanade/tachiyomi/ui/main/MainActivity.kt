@@ -229,9 +229,9 @@ class MainActivity : BaseActivity() {
             val restoringState by backupRestoreStatus.isRunning.collectAsState()
             val syncingState by syncStatus.isRunning.collectAsState()
             val updatingState by libraryUpdateStatus.isRunning.collectAsState()
-            val restoringProgressBanner by backupPreferences.showRestoringProgressBanner().collectAsState()
+            val restoringProgressBanner by backupPreferences.showRestoringProgressBanner.collectAsState()
             val syncingProgressBanner by syncPreferences.showSyncingProgressBanner().collectAsState()
-            val updatingProgressBanner by libraryPreferences.showUpdatingProgressBanner().collectAsState()
+            val updatingProgressBanner by libraryPreferences.showUpdatingProgressBanner.collectAsState()
             val restoring = restoringState && restoringProgressBanner
             val syncing = syncingState && syncingProgressBanner
             val updating = updatingState && updatingProgressBanner

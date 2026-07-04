@@ -66,11 +66,11 @@ fun TachiyomiTheme(
         TachiyomiTheme(appTheme, amoled, content)
     } else {
         val uiPreferences = Injekt.get<UiPreferences>()
-        val isAmoled = amoled ?: uiPreferences.themeDarkAmoled().get()
+        val isAmoled = amoled ?: uiPreferences.themeDarkAmoled.get()
         DynamicMaterialExpressiveTheme(
             seedColor = seedColor,
             isAmoled = isAmoled,
-            style = uiPreferences.themeCoverBasedStyle().get(),
+            style = uiPreferences.themeCoverBasedStyle.get(),
             typography = typography,
             animate = true,
             content = content,
@@ -121,8 +121,8 @@ private fun getThemeColorScheme(
         AppTheme.CUSTOM -> {
             val uiPreferences = Injekt.get<UiPreferences>()
             CustomColorScheme(
-                seed = Color(uiPreferences.colorTheme().get()),
-                style = uiPreferences.customThemeStyle().get(),
+                seed = Color(uiPreferences.colorTheme.get()),
+                style = uiPreferences.customThemeStyle.get(),
             )
         }
         // KMK <--

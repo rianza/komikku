@@ -315,19 +315,6 @@ abstract class HttpSource : CatalogueSource {
     open fun latestUpdatesParse(response: Response): MangasPage = throw UnsupportedOperationException()
 
     /**
-     * Returns an observable with the updated details for a manga. Normally it's not needed to
-     * override this method.
-     *
-     * @since extensions-lib 1.4
-     * @param manga the manga to update.
-     * @return the updated manga.
-     */
-    override suspend fun getMangaDetails(manga: SManga): SManga {
-        @Suppress("DEPRECATION")
-        return fetchMangaDetails(manga).awaitSingle()
-    }
-
-    /**
      * Returns an observable with the updated details for a manga.
      * Normally it's not needed to override this method.
      *
@@ -418,17 +405,6 @@ abstract class HttpSource : CatalogueSource {
      */
     protected open fun relatedMangaListParse(response: Response): List<SManga> = popularMangaParse(response).mangas
     // KMK <--
-
-    /**
-     * Returns an observable with the updated chapter list for a manga. Normally it's not needed to
-     * override this method.
-     *
-     * @param manga the manga to look for chapters.
-     */
-    override suspend fun getChapterList(manga: SManga): List<SChapter> {
-        @Suppress("DEPRECATION")
-        return fetchChapterList(manga).awaitSingle()
-    }
 
     /**
      * Returns an observable with the updated chapter list for a manga.

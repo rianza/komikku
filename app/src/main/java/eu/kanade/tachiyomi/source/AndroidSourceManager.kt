@@ -84,7 +84,7 @@ class AndroidSourceManager(
                 }
                 // KMK -->
                 .combine(
-                    exhPreferences.isHentaiEnabled().changes(),
+                    exhPreferences.isHentaiEnabled.changes(),
                 ) { (a, b), c -> Triple(a, b, c) }
                 // KMK <--
                 // SY <--

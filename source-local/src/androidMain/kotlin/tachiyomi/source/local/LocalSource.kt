@@ -50,7 +50,7 @@ import java.nio.charset.StandardCharsets
 import kotlin.time.Duration.Companion.days
 import tachiyomi.domain.source.model.Source as DomainSource
 
-class LocalSource(
+actual class LocalSource(
     private val context: Context,
     private val fileSystem: LocalSourceFileSystem,
     private val coverManager: LocalCoverManager,
@@ -407,6 +407,16 @@ class LocalSource(
 
     // Filters
     override fun getFilterList() = FilterList(OrderBy.Popular(context))
+
+    // KMK -->
+    override suspend fun getRelatedMangaList(
+        manga: SManga,
+        exceptionHandler: (Throwable) -> Unit,
+        pushResults: suspend (relatedManga: Pair<String, List<SManga>>, completed: Boolean) -> Unit,
+    ) {
+        // Not supported for local source.
+    }
+    // KMK <--
 
     // Unused stuff
     override suspend fun getPageList(chapter: SChapter): List<Page> = throw UnsupportedOperationException("Unused")

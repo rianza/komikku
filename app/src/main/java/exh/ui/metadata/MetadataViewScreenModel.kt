@@ -26,7 +26,7 @@ class MetadataViewScreenModel(
 
     // KMK -->
     private val uiPreferences = Injekt.get<UiPreferences>()
-    val themeCoverBased = uiPreferences.themeCoverBased().get()
+    val themeCoverBased = uiPreferences.themeCoverBased.get()
     // KMK <--
 
     private val _manga = MutableStateFlow<Manga?>(null)

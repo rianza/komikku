@@ -163,12 +163,13 @@ class RecommendationSource(
     override val lang: String by lazy { delegate?.lang ?: "all" }
     override val supportsLatest by lazy { delegate?.supportsLatest ?: false }
 
-    override suspend fun getMangaDetails(manga: SManga) =
-        delegate?.getMangaDetails(manga)
-            ?: throw UnsupportedOperationException()
-    override suspend fun getChapterList(manga: SManga) =
-        delegate?.getChapterList(manga)
-            ?: throw UnsupportedOperationException()
+    override suspend fun getMangaUpdate(
+        manga: SManga,
+        chapters: List<SChapter>,
+        fetchDetails: Boolean,
+        fetchChapters: Boolean,
+    ) = delegate?.getMangaUpdate(manga, chapters, fetchDetails, fetchChapters)
+        ?: throw UnsupportedOperationException()
     override suspend fun getPageList(chapter: SChapter) =
         delegate?.getPageList(chapter)
             ?: throw UnsupportedOperationException()

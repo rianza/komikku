@@ -155,7 +155,7 @@ class BulkFavoriteScreenModel(
                 return@launch
             }
             val categories = getCategories()
-            val defaultCategoryId = libraryPreferences.defaultCategory().get()
+            val defaultCategoryId = libraryPreferences.defaultCategory.get()
             val defaultCategory = categories.find { it.id == defaultCategoryId.toLong() }
 
             when {
@@ -253,18 +253,22 @@ class BulkFavoriteScreenModel(
                 setMangaDefaultChapterFlags.await(manga)
                 addTracks.bindEnhancedTrackers(manga, source)
                 updateManga.awaitUpdateFavorite(manga.id, true)
-                val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd().get()
-                val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd().get()
+                val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd.get()
+                val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd.get()
                 if (fetchMetadataOnAdd || fetchChaptersOnAdd) {
                     val sManga = manga.toSManga()
+                    val update = source.getMangaUpdate(
+                        manga = sManga,
+                        chapters = emptyList(),
+                        fetchDetails = fetchMetadataOnAdd,
+                        fetchChapters = fetchChaptersOnAdd,
+                    )
                     if (fetchMetadataOnAdd) {
-                        val remoteMetadata = source.getMangaDetails(sManga)
-                        // Use `manga` instead of `new` so its title got updated with source's `getMangaDetails`
-                        updateManga.awaitUpdateFromSource(manga, remoteMetadata, false, coverCache)
+                        // Use `manga` instead of `new` so its title got updated with source's `getMangaUpdate`
+                        updateManga.awaitUpdateFromSource(manga, update.manga, false, coverCache)
                     }
                     if (fetchChaptersOnAdd) {
-                        val chapters = source.getChapterList(sManga)
-                        syncChaptersWithSource.await(chapters, manga, source, false)
+                        syncChaptersWithSource.await(update.chapters, manga, source, false)
                     }
                 }
             } catch (e: Exception) {
@@ -353,20 +357,24 @@ class BulkFavoriteScreenModel(
             }
 
             updateManga.await(new.toMangaUpdate())
-            val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd().get()
-            val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd().get()
+            val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd.get()
+            val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd.get()
             if (new.favorite && (fetchMetadataOnAdd || fetchChaptersOnAdd)) {
                 withIOContext {
                     try {
                         val sManga = manga.toSManga()
+                        val update = source.getMangaUpdate(
+                            manga = sManga,
+                            chapters = emptyList(),
+                            fetchDetails = fetchMetadataOnAdd,
+                            fetchChapters = fetchChaptersOnAdd,
+                        )
                         if (fetchMetadataOnAdd) {
-                            val remoteMetadata = source.getMangaDetails(sManga)
-                            // Use `manga` instead of `new` so its title got updated with source's `getMangaDetails`
-                            updateManga.awaitUpdateFromSource(manga, remoteMetadata, false, coverCache)
+                            // Use `manga` instead of `new` so its title got updated with source's `getMangaUpdate`
+                            updateManga.awaitUpdateFromSource(manga, update.manga, false, coverCache)
                         }
                         if (fetchChaptersOnAdd) {
-                            val chapters = source.getChapterList(sManga)
-                            syncChaptersWithSource.await(chapters, manga, source, false)
+                            syncChaptersWithSource.await(update.chapters, manga, source, false)
                         }
                     } catch (e: Exception) {
                         logcat(LogPriority.ERROR, e)
@@ -379,7 +387,7 @@ class BulkFavoriteScreenModel(
     internal fun addFavorite(manga: Manga) {
         screenModelScope.launch {
             val categories = getCategories()
-            val defaultCategoryId = libraryPreferences.defaultCategory().get()
+            val defaultCategoryId = libraryPreferences.defaultCategory.get()
             val defaultCategory = categories.find { it.id == defaultCategoryId.toLong() }
 
             when {

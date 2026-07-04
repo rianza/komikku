@@ -335,7 +335,7 @@ fun SourceFeedToolbar(
         // KMK -->
         actions = {
             AppBarActions(
-                actions = persistentListOf<AppBar.AppBarAction>().builder().apply {
+                actions = buildList {
                     add(bulkSelectionButton(isRunning, toggleSelectionMode))
 
                     onWebViewClick?.let { func ->
@@ -374,8 +374,7 @@ fun SourceFeedToolbar(
                             ),
                         )
                     }
-                }
-                    .build(),
+                },
             )
         },
         // KMK <--

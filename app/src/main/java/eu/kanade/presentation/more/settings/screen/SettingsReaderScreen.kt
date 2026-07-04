@@ -35,9 +35,6 @@ object SettingsReaderScreen : SearchableSettings {
     @Composable
     override fun getPreferences(): List<Preference> {
         val readerPref = remember { Injekt.get<ReaderPreferences>() }
-        // SY -->
-        val forceHorizontalSeekbar by readerPref.forceHorizontalSeekbar.collectAsState()
-        // SY <--
 
         return listOf(
             Preference.PreferenceItem.ListPreference(
@@ -71,25 +68,6 @@ object SettingsReaderScreen : SearchableSettings {
                 title = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
             ),
             // KMK <--
-            // SY -->
-            Preference.PreferenceItem.SwitchPreference(
-                preference = readerPref.forceHorizontalSeekbar,
-                title = stringResource(SYMR.strings.pref_force_horz_seekbar),
-                subtitle = stringResource(SYMR.strings.pref_force_horz_seekbar_summary),
-            ),
-            Preference.PreferenceItem.SwitchPreference(
-                preference = readerPref.landscapeVerticalSeekbar,
-                title = stringResource(SYMR.strings.pref_show_vert_seekbar_landscape),
-                subtitle = stringResource(SYMR.strings.pref_show_vert_seekbar_landscape_summary),
-                enabled = !forceHorizontalSeekbar,
-            ),
-            Preference.PreferenceItem.SwitchPreference(
-                preference = readerPref.leftVerticalSeekbar,
-                title = stringResource(SYMR.strings.pref_left_handed_vertical_seekbar),
-                subtitle = stringResource(SYMR.strings.pref_left_handed_vertical_seekbar_summary),
-                enabled = !forceHorizontalSeekbar,
-            ),
-            // SY <--
             /* SY -->
             Preference.PreferenceItem.SwitchPreference(
                 preference = readerPref.pageTransitions,
@@ -256,7 +234,7 @@ object SettingsReaderScreen : SearchableSettings {
 
         // KMK -->
         val pagedDisableZoomInPref = readerPreferences.pagedDisableZoomIn()
-        val landscapeZoomPref = readerPreferences.landscapeZoom()
+        val landscapeZoomPref = readerPreferences.landscapeZoom
         val pagedDisableZoomIn by pagedDisableZoomInPref.collectAsState()
         val landscapeZoom by landscapeZoomPref.collectAsState()
         // KMK <--
@@ -316,7 +294,7 @@ object SettingsReaderScreen : SearchableSettings {
                 ),
                 // KMK -->
                 Preference.PreferenceItem.ListPreference(
-                    preference = readerPreferences.landscapeZoomType(),
+                    preference = readerPreferences.landscapeZoomType,
                     entries = ReaderPreferences.LandscapeZoomScaleType.entries
                         .associateWith { stringResource(it.titleRes) },
                     title = stringResource(KMR.strings.pref_landscape_zoom_type),
@@ -327,7 +305,7 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(KMR.strings.pref_paged_disable_zoom_in),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = readerPreferences.pagedDoubleTapZoomEnabled(),
+                    preference = readerPreferences.pagedDoubleTapZoomEnabled,
                     title = stringResource(MR.strings.pref_double_tap_zoom),
                     enabled = !pagedDisableZoomIn,
                 ),
@@ -406,13 +384,13 @@ object SettingsReaderScreen : SearchableSettings {
                 ),
                 // KMK -->
                 Preference.PreferenceItem.ListPreference(
-                    preference = readerPreferences.webtoonScaleType(),
+                    preference = readerPreferences.webtoonScaleType,
                     entries = WebtoonScaleType.entries
                         .associateWith { stringResource(it.titleRes) },
                     title = stringResource(KMR.strings.pref_webtoon_scale_type),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = readerPreferences.longStripGapSmartScale(),
+                    preference = readerPreferences.longStripGapSmartScale,
                     title = stringResource(KMR.strings.pref_smart_scale_long_strip_gap),
                 ),
                 // KMK <--
@@ -472,7 +450,7 @@ object SettingsReaderScreen : SearchableSettings {
                 ),
                 // KMK -->
                 Preference.PreferenceItem.SwitchPreference(
-                    preference = readerPreferences.webtoonPinchToZoomEnabled(),
+                    preference = readerPreferences.webtoonPinchToZoomEnabled,
                     title = stringResource(KMR.strings.pref_pinch_to_zoom),
                 ),
                 // KMK <--

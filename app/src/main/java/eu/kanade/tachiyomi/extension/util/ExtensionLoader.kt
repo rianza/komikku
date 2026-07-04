@@ -19,8 +19,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
-import mihon.domain.extensionrepo.interactor.GetExtensionRepo
-import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extension.interactor.GetExtensionStores
+import mihon.domain.extension.model.ExtensionStore
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.injectLazy
 import java.io.File
@@ -45,7 +45,7 @@ internal object ExtensionLoader {
     private val trustExtension: TrustExtension by injectLazy()
 
     // KMK -->
-    private val getExtensionRepo: GetExtensionRepo by injectLazy()
+    private val getExtensionStores: GetExtensionStores by injectLazy()
     // KMK <--
 
     private val loadNsfwSource by lazy {
@@ -173,7 +173,7 @@ internal object ExtensionLoader {
         // Load each extension concurrently and wait for completion
         return runBlocking {
             // KMK -->
-            val extRepos = getExtensionRepo.getAll()
+            val extRepos = getExtensionStores.get()
             // KMK <--
             val deferred = extPkgs.map {
                 async {
@@ -249,11 +249,11 @@ internal object ExtensionLoader {
         context: Context,
         extensionInfo: ExtensionInfo,
         // KMK -->
-        extRepos: List<ExtensionRepo>? = null,
+        extRepos: List<ExtensionStore>? = null,
         // KMK <--
     ): LoadResult {
         // KMK -->
-        val repos = extRepos ?: getExtensionRepo.getAll()
+        val repos = extRepos ?: getExtensionStores.get()
         // KMK <--
         val pkgManager = context.packageManager
         val pkgInfo = extensionInfo.packageInfo
@@ -302,9 +302,9 @@ internal object ExtensionLoader {
                 signatures.last(),
                 // KMK -->
                 repoName = repos.firstOrNull { repo ->
-                    signatures.all { it == repo.signingKeyFingerprint }
+                    signatures.all { it == repo.signingKey }
                 }?.let { repo ->
-                    repo.shortName.takeIf { !it.isNullOrBlank() } ?: repo.name
+                    repo.badgeLabel.takeIf { it.isNotBlank() } ?: repo.name
                 },
                 // KMK <--
             )
@@ -371,9 +371,9 @@ internal object ExtensionLoader {
             // KMK -->
             signatureHash = signatures.last(),
             repoName = repos.firstOrNull { repo ->
-                signatures.all { it == repo.signingKeyFingerprint }
+                signatures.all { it == repo.signingKey }
             }?.let { repo ->
-                repo.shortName.takeIf { !it.isNullOrBlank() } ?: repo.name
+                repo.badgeLabel.takeIf { it.isNotBlank() } ?: repo.name
             },
             // KMK <--
         )

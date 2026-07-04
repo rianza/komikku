@@ -47,7 +47,7 @@ class ReaderProgressIndicator @JvmOverloads constructor(
     override fun Content() {
         // KMK -->
         val uiPreferences = Injekt.get<UiPreferences>()
-        val themeCoverBased = uiPreferences.themeCoverBased().get()
+        val themeCoverBased = uiPreferences.themeCoverBased.get()
         // KMK <--
         TachiyomiTheme(
             // KMK -->

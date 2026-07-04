@@ -262,7 +262,7 @@ class MangaScreen(
         val hazeState = remember { HazeState() }
         val fullCoverBackground = MaterialTheme.colorScheme.surfaceTint.blend(MaterialTheme.colorScheme.surface)
 
-        val isHentaiEnabled: Boolean = Injekt.get<ExhPreferences>().isHentaiEnabled().get()
+        val isHentaiEnabled: Boolean = Injekt.get<ExhPreferences>().isHentaiEnabled.get()
         val isConfigurableSource = successState.source.anyIs<ConfigurableSource>() ||
             (successState.source.isEhBasedSource() && isHentaiEnabled)
         // KMK <--

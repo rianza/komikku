@@ -794,7 +794,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * based on the `removeAfterReadSlots` offset while the user is reading sequentially.
      */
     private fun deleteDupChapterIfNeeded(chapterToDelete: ReaderChapter) {
-        val removeAfterReadSlots = downloadPreferences.removeAfterReadSlots().get()
+        val removeAfterReadSlots = downloadPreferences.removeAfterReadSlots.get()
         if (removeAfterReadSlots != 0) return
         enqueueDeleteReadChapters(chapterToDelete)
     }

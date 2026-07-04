@@ -119,7 +119,7 @@ private fun MigrateSourceList(
     // KMK -->
     val lazyListState = rememberLazyListState()
     var filterObsoleteSource by rememberSaveable { mutableStateOf(false) }
-    val isHentaiEnabled = remember { Injekt.get<ExhPreferences>().isHentaiEnabled().get() }
+    val isHentaiEnabled = remember { Injekt.get<ExhPreferences>().isHentaiEnabled.get() }
 
     BackHandler(enabled = !state.searchQuery.isNullOrBlank()) {
         onChangeSearchQuery("")

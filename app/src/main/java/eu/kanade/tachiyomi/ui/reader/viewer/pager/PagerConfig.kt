@@ -165,13 +165,13 @@ class PagerConfig(
                 { disableZoomIn = it },
                 { imagePropertyChangedListener?.invoke() },
             )
-        readerPreferences.pagedDoubleTapZoomEnabled()
+        readerPreferences.pagedDoubleTapZoomEnabled
             .register(
                 { doubleTapZoom = it },
                 { imagePropertyChangedListener?.invoke() },
             )
 
-        readerPreferences.landscapeZoomType()
+        readerPreferences.landscapeZoomType
             .register(
                 { landscapeZoomScaleType = it },
                 { imagePropertyChangedListener?.invoke() },

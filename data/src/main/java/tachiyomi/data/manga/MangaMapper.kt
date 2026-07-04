@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
+import tachiyomi.view.LibraryView
 
 object MangaMapper {
     @Suppress("UNUSED_PARAMETER")
@@ -253,6 +254,10 @@ object MangaMapper {
             totalChapters = libraryView.totalCount,
             readCount = libraryView.readCount.toLong(),
             bookmarkCount = libraryView.bookmarkCount.toLong(),
+            // KMK -->
+            bookmarkReadCount = libraryView.bookmarkedReadCount,
+            chapterFlags = libraryView.chapter_flags,
+            // KMK <--
             latestUpload = libraryView.latestUpload,
             chapterFetchedAt = libraryView.chapterFetchedAt,
             lastRead = libraryView.lastRead,

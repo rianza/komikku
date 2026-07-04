@@ -22,9 +22,9 @@ object MigrateUtils {
         // KMK -->
         // Also update pin
         val preferences = migrationContext.get<SourcePreferences>() ?: return
-        val isPinned = oldId.toString() in preferences.pinnedSources().get()
+        val isPinned = oldId.toString() in preferences.pinnedSources.get()
         if (isPinned) {
-            preferences.pinnedSources().getAndSet { pinned ->
+            preferences.pinnedSources.getAndSet { pinned ->
                 pinned.minus(oldId.toString())
                     .plus(newId.toString())
             }

@@ -44,7 +44,10 @@ private val mapper = { cursor: SqlCursor ->
         chapterFetchedAt = cursor.getLong(30)!!,
         lastRead = cursor.getLong(31)!!,
         bookmarkCount = cursor.getDouble(32)!!,
-        categories = cursor.getString(33)!!,
+        // KMK -->
+        bookmarkedReadCount = cursor.getLong(33)!!,
+        // KMK <--
+        categories = cursor.getString(34)!!,
     )
 }
 
@@ -72,6 +75,9 @@ class LibraryQuery(
                 coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
                 coalesce(C.lastRead, 0) AS lastRead,
                 coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+                -- KMK -->
+                coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+                -- KMK <--
                 coalesce(MC.categories, '0') AS categories
             FROM mangas M
             LEFT JOIN (
@@ -82,7 +88,10 @@ class LibraryQuery(
                     coalesce(max(chapters.date_upload), 0) AS latestUpload,
                     coalesce(max(history.last_read), 0) AS lastRead,
                     coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
-                    sum(chapters.bookmark) AS bookmarkCount
+                    sum(chapters.bookmark) AS bookmarkCount,
+                    -- KMK -->
+                    sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount
+                    -- KMK <--
                 FROM chapters
                 LEFT JOIN excluded_scanlators
                 ON chapters.manga_id = excluded_scanlators.manga_id
@@ -109,6 +118,9 @@ class LibraryQuery(
                 coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
                 coalesce(C.lastRead, 0) AS lastRead,
                 coalesce(C.bookmarkCount, 0) AS bookmarkCount,
+                -- KMK -->
+                coalesce(C.bookmarkReadCount, 0) AS bookmarkedReadCount,
+                -- KMK <--
                 coalesce(MC.categories, '0') AS categories
             FROM mangas M
             LEFT JOIN (
@@ -125,7 +137,10 @@ class LibraryQuery(
                     coalesce(max(chapters.date_upload), 0) AS latestUpload,
                     coalesce(max(history.last_read), 0) AS lastRead,
                     coalesce(max(chapters.date_fetch), 0) AS fetchedAt,
-                    sum(chapters.bookmark) AS bookmarkCount
+                    sum(chapters.bookmark) AS bookmarkCount,
+                    -- KMK -->
+                    sum(CASE WHEN chapters.bookmark = 1 AND chapters.read = 1 THEN 1 ELSE 0 END) AS bookmarkReadCount
+                    -- KMK <--
                 FROM chapters
                 LEFT JOIN excluded_scanlators
                 ON chapters.manga_id = excluded_scanlators.manga_id

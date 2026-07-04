@@ -87,7 +87,7 @@ class DownloadCache(
      */
     private val renewInterval // = 1.hours.inWholeMilliseconds
         // KMK -->
-        get() = downloadPreferences.downloadCacheRenewInterval().get()
+        get() = downloadPreferences.downloadCacheRenewInterval.get()
             .hours.inWholeMilliseconds
     // KMK <--
 

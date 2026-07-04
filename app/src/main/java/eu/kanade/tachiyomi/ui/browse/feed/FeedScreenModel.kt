@@ -253,7 +253,7 @@ open class FeedScreenModel(
     }
 
     // KMK -->
-    private val hideInLibraryFeedItems = sourcePreferences.hideInLibraryFeedItems()
+    private val hideInLibraryFeedItems = sourcePreferences.hideInLibraryFeedItems
     // KMK <--
 
     /**

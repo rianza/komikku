@@ -79,7 +79,7 @@ internal fun MangaItem(
     // KMK <--
 ) {
     // KMK -->
-    val panoramaCover = usePanoramaCover ?: Injekt.get<UiPreferences>().usePanoramaCoverFlow().collectAsState().value
+    val panoramaCover = usePanoramaCover ?: Injekt.get<UiPreferences>().usePanoramaCoverFlow.collectAsState().value
     val coverRatio = remember { mutableFloatStateOf(1f) }
     // KMK <--
     Box(

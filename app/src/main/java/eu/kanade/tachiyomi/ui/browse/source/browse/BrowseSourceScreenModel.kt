@@ -209,7 +209,7 @@ open class BrowseSourceScreenModel(
             // KMK-->
             getIncognitoState.subscribe(sourceId)
                 .onEach {
-                    if (!it) sourcePreferences.lastUsedSource().set(source.id)
+                    if (!it) sourcePreferences.lastUsedSource.set(source.id)
                     incognitoMode.value = it
                 }
                 .launchIn(screenModelScope)
@@ -417,20 +417,24 @@ open class BrowseSourceScreenModel(
 
             updateManga.await(new.toMangaUpdate())
             // KMK -->
-            val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd().get()
-            val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd().get()
+            val fetchMetadataOnAdd = libraryPreferences.fetchMetadataOnAdd.get()
+            val fetchChaptersOnAdd = libraryPreferences.fetchChaptersOnAdd.get()
             if (new.favorite && (fetchMetadataOnAdd || fetchChaptersOnAdd)) {
                 withIOContext {
                     try {
                         val sManga = manga.toSManga()
+                        val update = source.getMangaUpdate(
+                            manga = sManga,
+                            chapters = emptyList(),
+                            fetchDetails = fetchMetadataOnAdd,
+                            fetchChapters = fetchChaptersOnAdd,
+                        )
                         if (fetchMetadataOnAdd) {
-                            val remoteMetadata = source.getMangaDetails(sManga)
-                            // Use `manga` instead of `new` so its title got updated with source's `getMangaDetails`
-                            updateManga.awaitUpdateFromSource(manga, remoteMetadata, false, coverCache)
+                            // Use `manga` instead of `new` so its title got updated with source's `getMangaUpdate`
+                            updateManga.awaitUpdateFromSource(manga, update.manga, false, coverCache)
                         }
                         if (fetchChaptersOnAdd) {
-                            val chapters = source.getChapterList(sManga)
-                            syncChaptersWithSource.await(chapters, manga, source, false)
+                            syncChaptersWithSource.await(update.chapters, manga, source, false)
                         }
                     } catch (e: Exception) {
                         logcat(LogPriority.ERROR, e)

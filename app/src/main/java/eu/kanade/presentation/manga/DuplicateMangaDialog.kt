@@ -294,7 +294,7 @@ private fun DuplicateMangaListItem(
     onMigrate: () -> Unit,
 ) {
     // KMK -->
-    val usePanoramaCover by Injekt.get<UiPreferences>().usePanoramaCoverAlways().collectAsState()
+    val usePanoramaCover by Injekt.get<UiPreferences>().usePanoramaCoverAlways.collectAsState()
     val coverRatio = remember { mutableFloatStateOf(1f) }
     val coverIsWide = coverRatio.floatValue <= RatioSwitchToPanorama
     // KMK <--

@@ -1,6 +1,6 @@
 package tachiyomi.data.source
 
-import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.MetadataMangasPage
@@ -36,7 +36,7 @@ abstract class EHentaiPagingSource(
 }
 
 class EHentaiSearchPagingSource(
-    source: Source,
+    source: CatalogueSource,
     val query: String,
     val filters: FilterList,
 ) : EHentaiPagingSource(source) {
@@ -45,13 +45,13 @@ class EHentaiSearchPagingSource(
     }
 }
 
-class EHentaiPopularPagingSource(source: Source) : EHentaiPagingSource(source) {
+class EHentaiPopularPagingSource(source: CatalogueSource) : EHentaiPagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
         return source.getPopularManga(currentPage)
     }
 }
 
-class EHentaiLatestPagingSource(source: Source) : EHentaiPagingSource(source) {
+class EHentaiLatestPagingSource(source: CatalogueSource) : EHentaiPagingSource(source) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
         return source.getLatestUpdates(currentPage)
     }
