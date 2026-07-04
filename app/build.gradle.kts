@@ -8,7 +8,6 @@ plugins {
     alias(mihonx.plugins.android.application)
     alias(mihonx.plugins.compose)
     alias(mihonx.plugins.spotless)
-    id("com.github.zellius.shortcut-helper")
     kotlin("plugin.parcelize")
     id("com.github.ben-manes.versions")
 
@@ -23,8 +22,6 @@ if (Config.includeTelemetry) {
         apply(libs.plugins.firebase.crashlytics.get().pluginId)
     }
 }
-
-shortcutHelper.setFilePath("./shortcuts.xml")
 
 android {
     namespace = "eu.kanade.tachiyomi"

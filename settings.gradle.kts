@@ -6,13 +6,6 @@ pluginManagement {
         gradlePluginPortal()
         maven(url = "https://www.jitpack.io")
     }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "com.github.zellius.shortcut-helper") {
-                useModule("com.github.zellius:android-shortcut-gradle-plugin:${requested.version}")
-            }
-        }
-    }
 }
 
 dependencyResolutionManagement {
