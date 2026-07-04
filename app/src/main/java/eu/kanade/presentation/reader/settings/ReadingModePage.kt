@@ -119,7 +119,7 @@ private fun PagerViewerSettings(screenModel: ReaderSettingsScreenModel) {
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
-        pref = screenModel.preferences.smallerTapZone(),
+        pref = screenModel.preferences.smallerTapZone,
     )
     // KMK <--
 
@@ -258,7 +258,7 @@ private fun WebtoonViewerSettings(
     // KMK -->
     CheckboxItem(
         label = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
-        pref = screenModel.preferences.smallerTapZone(),
+        pref = screenModel.preferences.smallerTapZone,
     )
     // KMK <--
 

@@ -58,7 +58,7 @@ fun MigrationConfigScreenSheet(
     // KMK <--
 ) {
     var extraSearchQuery by rememberSaveable { mutableStateOf("") }
-    val migrationFlags by preferences.migrationFlags().collectAsState()
+    val migrationFlags by preferences.migrationFlags.collectAsState()
     AdaptiveSheet(onDismissRequest = onDismissRequest) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Column(

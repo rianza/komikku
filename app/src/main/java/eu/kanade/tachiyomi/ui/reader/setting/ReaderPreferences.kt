@@ -13,7 +13,7 @@ import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
 
 class ReaderPreferences(
-    preferenceStore: PreferenceStore,
+    private val preferenceStore: PreferenceStore,
 ) {
 
     // region General
@@ -122,7 +122,7 @@ class ReaderPreferences(
     val webtoonDisableZoomOut: Preference<Boolean> = preferenceStore.getBoolean("webtoon_disable_zoom_out", false)
 
     // KMK -->
-    fun pagedDisableZoomIn() = preferenceStore.getBoolean("paged_disable_zoom_in", false)
+    val pagedDisableZoomIn: Preference<Boolean> = preferenceStore.getBoolean("paged_disable_zoom_in", false)
     // KMK <--
 
     // endregion
@@ -210,7 +210,7 @@ class ReaderPreferences(
     )
 
     // KMK -->
-    fun smallerTapZone() = preferenceStore.getBoolean("reader_navigation_smaller_tap_zone", false)
+    val smallerTapZone: Preference<Boolean> = preferenceStore.getBoolean("reader_navigation_smaller_tap_zone", false)
     // KMK <--
 
     // endregion

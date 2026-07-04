@@ -78,7 +78,7 @@ class WebtoonConfig(
             .onEach { navigationModeChangedListener?.invoke() }
             .launchIn(scope)
         // KMK -->
-        readerPreferences.smallerTapZone().changes()
+        readerPreferences.smallerTapZone.changes()
             .drop(1)
             .onEach { updateNavigation(navigationMode) }
             .launchIn(scope)

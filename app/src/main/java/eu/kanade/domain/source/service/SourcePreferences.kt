@@ -75,9 +75,9 @@ class SourcePreferences(
         false,
     )
 
-    fun migrationSources() = preferenceStore.getLongArray("migration_sources", emptyList())
+    val migrationSources = preferenceStore.getLongArray("migration_sources", emptyList())
 
-    fun migrationFlags() = preferenceStore.getObjectFromInt(
+    val migrationFlags = preferenceStore.getObjectFromInt(
         key = "migration_flags",
         defaultValue = MigrationFlag.entries.toSet(),
         serializer = { MigrationFlag.toBit(it) },

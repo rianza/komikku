@@ -141,7 +141,7 @@ class MigrationListScreenModel(
         // val deepSearchMode = preferences.migrationDeepSearchMode.get()
         // KMK <--
 
-        val sources = preferences.migrationSources().get()
+        val sources = preferences.migrationSources.get()
             .mapNotNull { sourceManager.get(it) }
 
         for (manga in mangas) {
