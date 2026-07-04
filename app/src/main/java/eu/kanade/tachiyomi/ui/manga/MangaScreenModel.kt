@@ -580,7 +580,7 @@ class MangaScreenModel(
     }
 
     private suspend fun syncTrackers() {
-        if (!trackPreferences.autoSyncProgressFromTrackers().get()) return
+        if (!trackPreferences.autoSyncProgressFromTrackers.get()) return
 
         refreshTracks.await(mangaId, enhancedTrackersOnly = false)
             .filter { it.first != null }

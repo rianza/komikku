@@ -53,6 +53,6 @@ class TrackPreferences(
     // SY <--
 
     // KMK -->
-    fun autoSyncProgressFromTrackers() = preferenceStore.getBoolean("pref_auto_sync_progress_from_trackers_key", true)
+    val autoSyncProgressFromTrackers = preferenceStore.getBoolean("pref_auto_sync_progress_from_trackers_key", true)
     // KMK <--
 }

@@ -152,7 +152,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         setupExhLogging() // EXH logging
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
-                networkPreferences.verboseLogging().get() -> LogPriority.VERBOSE
+                networkPreferences.verboseLogging.get() -> LogPriority.VERBOSE
                 BuildConfig.DEBUG -> LogPriority.DEBUG
                 else -> LogPriority.INFO
             }

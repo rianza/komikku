@@ -202,7 +202,7 @@ fun MoreScreen(
                 )
             }
             // SY -->
-            if (exhPreferences.isHentaiEnabled.get() || delegateSourcePreferences.delegateSources().get()) {
+            if (exhPreferences.isHentaiEnabled.get() || delegateSourcePreferences.delegateSources.get()) {
                 item {
                     TextPreferenceWidget(
                         title = stringResource(SYMR.strings.eh_batch_add),

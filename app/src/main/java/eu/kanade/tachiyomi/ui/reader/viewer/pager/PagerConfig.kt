@@ -160,7 +160,7 @@ class PagerConfig(
             )
 
         // KMK -->
-        readerPreferences.pagedDisableZoomIn()
+        readerPreferences.pagedDisableZoomIn
             .register<Boolean>(
                 { disableZoomIn = it },
                 { imagePropertyChangedListener?.invoke() },

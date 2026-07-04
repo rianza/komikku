@@ -64,7 +64,7 @@ object SettingsReaderScreen : SearchableSettings {
             ),
             // KMK -->
             Preference.PreferenceItem.SwitchPreference(
-                preference = readerPref.smallerTapZone(),
+                preference = readerPref.smallerTapZone,
                 title = stringResource(KMR.strings.pref_viewer_nav_smaller_tap_zone),
             ),
             // KMK <--
@@ -233,7 +233,7 @@ object SettingsReaderScreen : SearchableSettings {
         val rotateToFit by rotateToFitPref.collectAsState()
 
         // KMK -->
-        val pagedDisableZoomInPref = readerPreferences.pagedDisableZoomIn()
+        val pagedDisableZoomInPref = readerPreferences.pagedDisableZoomIn
         val landscapeZoomPref = readerPreferences.landscapeZoom
         val pagedDisableZoomIn by pagedDisableZoomInPref.collectAsState()
         val landscapeZoom by landscapeZoomPref.collectAsState()
