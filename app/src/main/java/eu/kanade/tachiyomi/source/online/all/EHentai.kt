@@ -96,7 +96,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
 // TODO Consider gallery updating when doing tabbed browsing
-@Suppress("DEPRECATION", "OverridingDeprecatedMember")
+@Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
 class EHentai(
     override val id: Long,
     val exh: Boolean,
