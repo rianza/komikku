@@ -42,4 +42,3 @@ multiplatformResources {
     resourcesClassName.set("SYMR")
     resourcesPackage.set("tachiyomi.i18n.sy")
 }
-
