@@ -33,7 +33,7 @@ import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.injectLazy
 
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION", "OverridingDeprecatedMember")
 class MergedSource : HttpSource() {
     private val getManga: GetManga by injectLazy()
     private val getMergedReferencesById: GetMergedReferencesById by injectLazy()
