@@ -34,6 +34,7 @@ import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
 import tachiyomi.core.common.util.lang.withIOContext
 
+@Suppress("DEPRECATION")
 class NHentai(delegate: HttpSource, val context: Context) :
     DelegatedHttpSource(delegate),
     MetadataSource<NHentaiSearchMetadata, Response>,

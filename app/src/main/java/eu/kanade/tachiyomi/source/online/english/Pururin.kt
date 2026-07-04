@@ -24,6 +24,7 @@ import org.jsoup.nodes.Document
 import rx.Observable
 import tachiyomi.core.common.util.lang.runAsObservable
 
+@Suppress("DEPRECATION")
 class Pururin(delegate: HttpSource, val context: Context) :
     DelegatedHttpSource(delegate),
     MetadataSource<PururinSearchMetadata, Document>,

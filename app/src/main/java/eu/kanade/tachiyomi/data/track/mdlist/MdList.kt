@@ -20,6 +20,7 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
 import tachiyomi.domain.track.model.Track as DomainTrack
 
+@Suppress("DEPRECATION")
 class MdList(id: Long) : BaseTracker(id, "MDList") {
 
     companion object {

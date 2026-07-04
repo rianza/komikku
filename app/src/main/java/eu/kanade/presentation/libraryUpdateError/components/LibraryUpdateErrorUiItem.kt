@@ -117,6 +117,7 @@ private fun LibraryUpdateErrorUiItem(
 ) {
     val haptic = LocalHapticFeedback.current
 
+    @Suppress("DEPRECATION")
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             when (it) {

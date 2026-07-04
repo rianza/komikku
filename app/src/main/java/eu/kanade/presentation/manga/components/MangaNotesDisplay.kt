@@ -18,6 +18,7 @@ import com.mohamedrejeb.richeditor.ui.material3.RichText
 
 private val FADE_TIME = tween<Float>(500)
 
+@Suppress("OPT_IN_USAGE")
 @Composable
 fun MangaNotesDisplay(
     content: String,

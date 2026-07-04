@@ -199,6 +199,7 @@ class SettingsDebugScreen : Screen() {
                         .fillMaxSize()
                         .background(color = Color.White.copy(alpha = 0.3F))
                         .pointerInput(running && result == null) {
+                            @Suppress("DEPRECATION")
                             forEachGesture {
                                 awaitPointerEventScope {
                                     waitForUpOrCancellation()?.consume()

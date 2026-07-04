@@ -36,6 +36,7 @@ import java.io.PipedOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
+@Suppress("DEPRECATION")
 class GoogleDriveSyncService(context: Context, json: Json, syncPreferences: SyncPreferences) : SyncService(
     context,
     json,
