@@ -439,7 +439,7 @@ open class BrowseSourceScreenModel(
                                     author = updatedManga.author,
                                     artist = updatedManga.artist,
                                     description = updatedManga.description,
-                                    genre = updatedManga.genre,
+                                    genre = updatedManga.genre?.split(", ")?.map { it.trim() },
                                     status = updatedManga.status.toLong(),
                                     thumbnailUrl = updatedManga.thumbnail_url,
                                 ),

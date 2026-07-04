@@ -196,7 +196,7 @@ private fun ExtensionContent(
                                     {
                                         Button(onClick = { navigator?.push(ExtensionStoresScreen()) }) {
                                             Text(
-                                                text = stringResource(MR.strings.action_add_repo),
+                                                text = stringResource(MR.strings.extensionStores),
                                                 style = LocalTextStyle.current.copy(
                                                     color = MaterialTheme.colorScheme.onPrimary,
                                                 ),
@@ -605,9 +605,17 @@ private fun ExtensionItemContentPreview() {
         signatureHash = "900000",
         repoName = "Repository",
         sources = emptyList(),
-        apkName = "Test",
+        apkUrl = "https://example.com/test.apk",
         iconUrl = "",
-        repoUrl = "",
+        store = mihon.domain.extension.model.ExtensionStore(
+            indexUrl = "https://example.com",
+            name = "Test",
+            badgeLabel = "",
+            signingKey = "",
+            contact = mihon.domain.extension.model.ExtensionStore.Contact("", null),
+            isLegacy = false,
+            extensionListUrl = null,
+        ),
     )
     val extInstalled = Extension.Installed(
         name = "Tachiyomi",
@@ -620,7 +628,6 @@ private fun ExtensionItemContentPreview() {
         signatureHash = "900000",
         repoName = "Repository",
         sources = emptyList(),
-        repoUrl = "",
         pkgFactory = null,
         icon = null,
         hasUpdate = false,

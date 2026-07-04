@@ -54,7 +54,7 @@ internal class MangaDexSimilarPagingSource(
     }
 
     private val mangadexService by lazy {
-        MangaDexService(client)
+        MangaDexService(client, okhttp3.Headers.Builder().build())
     }
     private val similarService by lazy {
         SimilarService(client)

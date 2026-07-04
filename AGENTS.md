@@ -134,7 +134,7 @@ Gradle `-P` flags (`buildSrc/.../BuildConfig.kt`):
 ./gradlew spotlessCheck              # REQUIRED before considering work done (CI gate)
 ./gradlew assemblePreview            # main CI/dev APK
 ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater  # full upstream CI build
-./gradlew testReleaseUnitTest        # CI unit tests (or ./gradlew test for all modules)
+./gradlew testDebugUnitTest        # CI unit tests (or ./gradlew test for all modules)
 ./gradlew installDebug               # device install
 ./gradlew :data:generateSqlDelightInterface  # after .sq / .sqm changes
 ```
@@ -205,7 +205,7 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 | **Required format gate** | `./gradlew spotlessCheck` (must pass before task is done) |
 | Debug APK build | `./gradlew assembleDebug` |
 | Preview APK build (CI) | `./gradlew assemblePreview` |
-| Unit tests (CI) | `./gradlew testReleaseUnitTest` |
+| Unit tests (CI) | `./gradlew testDebugUnitTest` |
 | All module tests | `./gradlew test` |
 | SQLDelight codegen | `./gradlew :data:generateSqlDelightInterface` |
 

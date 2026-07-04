@@ -51,6 +51,7 @@ import okhttp3.Response
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.extension
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.lang.launchNow
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
@@ -123,8 +124,8 @@ class Downloader(
 
     init {
         launchNow {
-            val chapters = async { store.restore() }
-            addAllToQueue(chapters.await())
+            val chapters = store.restore()
+            addAllToQueue(chapters)
         }
     }
 
@@ -518,7 +519,7 @@ class Downloader(
             val file = tmpDir.findFile("$filename.tmp")
                 ?: tmpDir.createFile("$filename.tmp")!!
 
-            val response = source.getImage(page, dataSaver, file.length())
+            val response = source.getImage(page, dataSaver)
 
             try {
                 response.body

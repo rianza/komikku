@@ -2,7 +2,9 @@ package eu.kanade.presentation.browse.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.outlined.Help
 import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -121,11 +123,11 @@ fun BrowseSourceToolbar(
                         }
                     }
                     // SY <--
-                    if (isConfigurableSource) {
+                    if (isConfigurableSource && onSettingsClick != null) {
                         add(
                             AppBar.OverflowAction(
                                 title = stringResource(MR.strings.action_settings),
-                                onClick = onSettingsClick,
+                                onClick = { onSettingsClick.invoke() },
                             ),
                         )
                     }

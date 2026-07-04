@@ -318,10 +318,8 @@ object SettingsAppearanceScreen : SearchableSettings {
                     } else {
                         stringResource(MR.strings.disabled)
                     },
-                    valueRange = 0..10,
                     onValueChanged = {
                         uiPreferences.previewsRowCount.set(it)
-                        true
                     },
                 ),
             ),

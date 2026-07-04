@@ -23,6 +23,7 @@ import mihon.domain.chapter.interactor.FilterChaptersForDownload
 import mihon.domain.source.interactor.UpdateMangaFromRemote
 import okhttp3.Response
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.GetMergedReferencesById
@@ -32,6 +33,7 @@ import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.injectLazy
 
+@Suppress("DEPRECATION")
 class MergedSource : HttpSource() {
     private val getManga: GetManga by injectLazy()
     private val getMergedReferencesById: GetMergedReferencesById by injectLazy()
@@ -62,6 +64,8 @@ class MergedSource : HttpSource() {
     override fun chapterListParse(response: Response) = throw UnsupportedOperationException()
     override fun pageListParse(response: Response) = throw UnsupportedOperationException()
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
+
+    override fun getFilterList() = FilterList()
 
     @Deprecated("Use the 1.x API instead", replaceWith = ReplaceWith("getChapterList"))
     override fun fetchChapterList(manga: SManga) = throw UnsupportedOperationException()

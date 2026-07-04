@@ -253,7 +253,7 @@ class SyncManager(
                     categories = syncOptions.categories,
                     extensionStores = syncOptions.extensionStores,
                     // SY -->
-                    savedSearches = syncOptions.savedSearches,
+                    savedSearchesFeeds = syncOptions.savedSearchesFeeds,
                     // SY <--
                 ),
             )

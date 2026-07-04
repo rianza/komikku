@@ -43,6 +43,7 @@ class CategoriesRestorer(
                             name = backupCategory.name,
                             order = backupCategory.order,
                             flags = backupCategory.flags,
+                            hidden = if (backupCategory.hidden) 1L else 0L,
                             version = backupCategory.version,
                             uid = if (backupCategory.uid != 0L) backupCategory.uid else dbCategory.uid,
                             last_modified_at = backupCategory.lastModifiedAt,
@@ -55,14 +56,14 @@ class CategoriesRestorer(
                     val order = nextOrder++
                     database.categoriesQueries.insert(
                         // KMK -->
+                        name = backupCategory.name,
+                        order = order,
+                        flags = backupCategory.flags,
                         hidden = if (backupCategory.hidden) 1L else 0L,
+                        version = backupCategory.version,
+                        uid = backupCategory.uid,
+                        last_modified_at = backupCategory.lastModifiedAt,
                         // KMK <--
-                        backupCategory.name,
-                        order,
-                        backupCategory.flags,
-                        backupCategory.version,
-                        backupCategory.uid,
-                        backupCategory.lastModifiedAt,
                     ).awaitAsOne()
                         .let { id -> backupCategory.toCategory(id).copy(order = order) }
                 }

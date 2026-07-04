@@ -163,6 +163,7 @@ fun Screen.feedTab(
                         // KMK -->
                         onLongClickFeed = screenModel::openActionsDialog,
                         // KMK <--
+                        onClickDelete = screenModel::openDeleteDialog,
                         onClickManga = { manga ->
                             // KMK -->
                             if (bulkFavoriteState.selectionMode) {
