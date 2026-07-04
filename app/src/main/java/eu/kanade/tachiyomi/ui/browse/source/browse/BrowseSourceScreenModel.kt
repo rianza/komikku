@@ -73,6 +73,7 @@ import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetFlatMetadataById
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.MangaWithChapterCount
 import tachiyomi.domain.manga.model.toMangaUpdate
 import tachiyomi.domain.source.interactor.DeleteSavedSearchById
@@ -430,8 +431,19 @@ open class BrowseSourceScreenModel(
                             fetchChapters = fetchChaptersOnAdd,
                         )
                         if (fetchMetadataOnAdd) {
-                            // Use `manga` instead of `new` so its title got updated with source's `getMangaUpdate`
-                            updateManga.awaitUpdateFromSource(manga, update.manga, false, coverCache)
+                            val updatedManga = update.manga
+                            updateManga.await(
+                                MangaUpdate(
+                                    id = manga.id,
+                                    title = updatedManga.title,
+                                    author = updatedManga.author,
+                                    artist = updatedManga.artist,
+                                    description = updatedManga.description,
+                                    genre = updatedManga.genre,
+                                    status = updatedManga.status.toLong(),
+                                    thumbnailUrl = updatedManga.thumbnail_url,
+                                ),
+                            )
                         }
                         if (fetchChaptersOnAdd) {
                             syncChaptersWithSource.await(update.chapters, manga, source, false)

@@ -59,7 +59,7 @@ class MigrateMangaUseCase(
     ) {
         val targetSource = sourceManager.get(target.source) ?: return
         val currentSource = sourceManager.get(current.source)
-        val flags = /* KMK --> */ presetFlags ?: /* KMK <-- */ sourcePreferences.migrationFlags.get()
+        val flags = /* KMK --> */ presetFlags ?: /* KMK <-- */ sourcePreferences.migrationFlags().get()
 
         try {
             updateMangaFromRemote(

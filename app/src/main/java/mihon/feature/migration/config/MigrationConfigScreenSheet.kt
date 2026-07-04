@@ -58,7 +58,7 @@ fun MigrationConfigScreenSheet(
     // KMK <--
 ) {
     var extraSearchQuery by rememberSaveable { mutableStateOf("") }
-    val migrationFlags by preferences.migrationFlags.collectAsState()
+    val migrationFlags by preferences.migrationFlags().collectAsState()
     AdaptiveSheet(onDismissRequest = onDismissRequest) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -151,12 +151,12 @@ fun MigrationConfigScreenSheet(
                 MigrationSheetSwitchItem(
                     title = stringResource(MR.strings.migrationConfigScreen_hideUnmatchedTitle),
                     subtitle = null,
-                    preference = preferences.migrationHideUnmatched,
+                    preference = preferences.migrationHideUnmatched(),
                 )
                 MigrationSheetSwitchItem(
                     title = stringResource(MR.strings.migrationConfigScreen_hideWithoutUpdatesTitle),
                     subtitle = stringResource(MR.strings.migrationConfigScreen_hideWithoutUpdatesSubtitle),
-                    preference = preferences.migrationHideWithoutUpdates,
+                    preference = preferences.migrationHideWithoutUpdates(),
                 )
                 // KMK -->
                 if (fullSettings) {

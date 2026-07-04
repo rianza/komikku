@@ -161,12 +161,12 @@ class PagerConfig(
 
         // KMK -->
         readerPreferences.pagedDisableZoomIn()
-            .register(
+            .register<Boolean>(
                 { disableZoomIn = it },
                 { imagePropertyChangedListener?.invoke() },
             )
         readerPreferences.pagedDoubleTapZoomEnabled
-            .register(
+            .register<Boolean>(
                 { doubleTapZoom = it },
                 { imagePropertyChangedListener?.invoke() },
             )

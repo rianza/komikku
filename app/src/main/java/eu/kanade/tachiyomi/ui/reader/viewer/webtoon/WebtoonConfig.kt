@@ -122,7 +122,7 @@ class WebtoonConfig(
             )
 
         readerPreferences.webtoonScaleType
-            .register(
+            .register<ReaderPreferences.WebtoonScaleType>(
                 { webtoonScaleType = it },
                 { webtoonScaleTypeChangedListener?.invoke(it) },
             )

@@ -214,6 +214,7 @@ fun SearchBoxTrailingIcon(
 }
 
 internal val SOURCE_SEARCH_BOX_HEIGHT = 65.dp
+internal val SEARCH_DEBOUNCE_MILLIS = 300L
 
 @Preview
 @Composable

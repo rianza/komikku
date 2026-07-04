@@ -179,7 +179,7 @@ class MangaScreenModel(
     private val smartSearched: Boolean,
     // SY <--
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
-    trackPreferences: TrackPreferences = Injekt.get(),
+    private val trackPreferences: TrackPreferences = Injekt.get(),
     readerPreferences: ReaderPreferences = Injekt.get(),
     private val uiPreferences: UiPreferences = Injekt.get(),
     // KMK -->
@@ -1585,6 +1585,16 @@ class MangaScreenModel(
             } catch (e: Throwable) {
                 logcat(LogPriority.ERROR, e)
             }
+        }
+    }
+    // KMK <--
+
+    // KMK -->
+    private suspend fun fetchChaptersFromSource() {
+        // Fetch chapters from source for local source
+        val state = successState ?: return
+        if (state.source.isLocal()) {
+            fetchAllFromSource(manualFetch = false, fetchDetails = false, fetchChapters = true)
         }
     }
     // KMK <--

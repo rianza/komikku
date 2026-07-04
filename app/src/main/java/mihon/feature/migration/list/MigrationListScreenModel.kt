@@ -64,11 +64,11 @@ class MigrationListScreenModel(
     val items
         inline get() = state.value.items
 
-    private var hideUnmatched = preferences.migrationHideUnmatched.get()
-    private var hideWithoutUpdates = preferences.migrationHideWithoutUpdates.get()
+    private var hideUnmatched = preferences.migrationHideUnmatched().get()
+    private var hideWithoutUpdates = preferences.migrationHideWithoutUpdates().get()
     // KMK -->
-    private var prioritizeByChapters = preferences.migrationPrioritizeByChapters.get()
-    private var deepSearchMode = preferences.migrationDeepSearchMode.get()
+    private var prioritizeByChapters = preferences.migrationPrioritizeByChapters().get()
+    private var deepSearchMode = preferences.migrationDeepSearchMode().get()
     // KMK <--
 
     private val navigateBackChannel = Channel<Unit>()
@@ -141,7 +141,7 @@ class MigrationListScreenModel(
         // val deepSearchMode = preferences.migrationDeepSearchMode.get()
         // KMK <--
 
-        val sources = preferences.migrationSources.get()
+        val sources = preferences.migrationSources().get()
             .mapNotNull { sourceManager.get(it) }
 
         for (manga in mangas) {
