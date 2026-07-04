@@ -1,5 +1,5 @@
 plugins {
-    id("mihon.library")
+    alias(mihonx.plugins.android.library)
     kotlin("android")
 }
 
