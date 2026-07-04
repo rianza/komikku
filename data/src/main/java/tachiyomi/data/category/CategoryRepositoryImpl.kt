@@ -90,4 +90,3 @@ class CategoryRepositoryImpl(
         database.categoriesQueries.delete(categoryId = categoryId)
     }
 }
-

@@ -20,11 +20,6 @@ import androidx.compose.ui.Modifier
 import eu.kanade.presentation.components.TabbedDialog
 import eu.kanade.presentation.components.TabbedDialogPaddings
 import eu.kanade.tachiyomi.ui.updates.UpdatesSettingsScreenModel
-<<<<<<< HEAD
-import kotlinx.collections.immutable.persistentListOf
-=======
-import tachiyomi.core.common.preference.getAndSet
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
 import tachiyomi.domain.updates.service.UpdatesPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR

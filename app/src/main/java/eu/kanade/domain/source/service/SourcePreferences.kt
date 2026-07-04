@@ -61,7 +61,7 @@ class SourcePreferences(
     // KMK <--
 
     @Deprecated("Use ExtensionRepoRepository instead", replaceWith = ReplaceWith("ExtensionRepoRepository.getAll()"))
-val extensionRepos: Preference<Set<String>> = preferenceStore.getStringSet("extension_repos", emptySet())
+    val extensionRepos: Preference<Set<String>> = preferenceStore.getStringSet("extension_repos", emptySet())
 
     val extensionUpdatesCount: Preference<Int> = preferenceStore.getInt("ext_updates_count", 0)
 

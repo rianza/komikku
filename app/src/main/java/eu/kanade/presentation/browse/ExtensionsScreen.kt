@@ -194,7 +194,7 @@ private fun ExtensionContent(
                                 // KMK -->
                                 KMR.strings.extensions_page_more -> {
                                     {
-                                        Button(onClick = { navigator?.push(ExtensionReposScreen()) }) {
+                                        Button(onClick = { navigator?.push(ExtensionStoresScreen()) }) {
                                             Text(
                                                 text = stringResource(MR.strings.action_add_repo),
                                                 style = LocalTextStyle.current.copy(

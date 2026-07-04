@@ -51,13 +51,8 @@ import eu.kanade.tachiyomi.ui.base.delegate.SecureActivityDelegate
 import eu.kanade.tachiyomi.ui.category.biometric.BiometricTimesScreen
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.authenticate
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.isAuthenticationSupported
-<<<<<<< HEAD
 import eu.kanade.tachiyomi.util.system.telemetryIncluded
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableMap
 import mihon.core.archive.CbzCrypto
-=======
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.sy.SYMR
@@ -150,13 +145,8 @@ object SettingsSecurityScreen : SearchableSettings {
                 Preference.PreferenceItem.ListPreference(
                     preference = securityPreferences.encryptionType,
                     entries = SecurityPreferences.EncryptionType.entries
-<<<<<<< HEAD
-                        .associateWith { stringResource(it.titleRes) }
-                        .toImmutableMap(),
-                    title = stringResource(SYMR.strings.encryption_type),
-=======
                         .associateWith { stringResource(it.titleRes) },
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
+                    title = stringResource(SYMR.strings.encryption_type),
                     enabled = passwordProtectDownloads,
 
                 ),
@@ -226,30 +216,6 @@ object SettingsSecurityScreen : SearchableSettings {
                 },
                 // SY <--
                 Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.secure_screen_summary)),
-            ),
-        )
-    }
-
-    @Composable
-    private fun getFirebaseGroup(
-        privacyPreferences: PrivacyPreferences,
-    ): Preference.PreferenceGroup {
-        return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.pref_firebase),
-            preferenceItems = persistentListOf(
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = privacyPreferences.crashlytics(),
-                    title = stringResource(MR.strings.onboarding_permission_crashlytics),
-                    subtitle = stringResource(MR.strings.onboarding_permission_crashlytics_description),
-                ),
-                /*
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = privacyPreferences.analytics(),
-                    title = stringResource(MR.strings.onboarding_permission_analytics),
-                    subtitle = stringResource(MR.strings.onboarding_permission_analytics_description),
-                ),
-                 */
-                Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.firebase_summary)),
             ),
         )
     }
@@ -411,8 +377,6 @@ object SettingsSecurityScreen : SearchableSettings {
         )
     }
     // SY <--
-<<<<<<< HEAD
-=======
 
     @Composable
     private fun getFirebaseGroup(
@@ -435,7 +399,6 @@ object SettingsSecurityScreen : SearchableSettings {
             ),
         )
     }
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
 }
 
 private val LockAfterValues = listOf(

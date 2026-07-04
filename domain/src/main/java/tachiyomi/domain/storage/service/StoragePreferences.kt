@@ -11,4 +11,3 @@ class StoragePreferences(
 // Storing URI of the directory (either file:/// or storage://
     val baseStorageDirectory: Preference<String> = preferenceStore.getString(Preference.appStateKey("storage_dir"), folderProvider.path())
 }
-

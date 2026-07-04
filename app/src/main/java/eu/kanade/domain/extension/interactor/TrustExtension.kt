@@ -36,4 +36,3 @@ class TrustExtension(
         preferences.trustedExtensions.delete()
     }
 }
-

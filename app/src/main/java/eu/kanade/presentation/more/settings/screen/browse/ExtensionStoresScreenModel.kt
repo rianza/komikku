@@ -3,6 +3,7 @@ package eu.kanade.presentation.more.settings.screen.browse
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
@@ -22,6 +23,9 @@ class ExtensionStoresScreenModel(
     private val removeExtensionStore: RemoveExtensionStore = Injekt.get(),
     private val updateExtensionStores: UpdateExtensionStores = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
+    // KMK -->
+    private val sourcePreferences: SourcePreferences = Injekt.get(),
+    // KMK <--
 ) : StateScreenModel<ExtensionStoreScreenState>(ExtensionStoreScreenState.Loading) {
 
     private inline fun updateSuccessState(
@@ -41,12 +45,25 @@ class ExtensionStoresScreenModel(
                 .collectLatest { stores ->
                     mutableState.update {
                         when (it) {
-                            ExtensionStoreScreenState.Loading -> ExtensionStoreScreenState.Success(stores = stores)
+                            ExtensionStoreScreenState.Loading -> ExtensionStoreScreenState.Success(
+                                stores = stores,
+                                // KMK -->
+                                disabledRepos = sourcePreferences.disabledRepos().get(),
+                                // KMK <--
+                            )
                             is ExtensionStoreScreenState.Success -> it.copy(stores = stores)
                         }
                     }
                 }
         }
+        // KMK -->
+        screenModelScope.launchIO {
+            sourcePreferences.disabledRepos().changes()
+                .collectLatest { disabledRepos ->
+                    updateSuccessState { it.copy(disabledRepos = disabledRepos) }
+                }
+        }
+        // KMK <--
     }
 
     /**
@@ -135,6 +152,26 @@ class ExtensionStoresScreenModel(
             it.copy(dialog = null)
         }
     }
+
+    // KMK -->
+    fun enableRepo(indexUrl: String) {
+        val disabledRepos = sourcePreferences.disabledRepos().get()
+        if (indexUrl in disabledRepos) {
+            sourcePreferences.disabledRepos().set(
+                disabledRepos.filterNot { it == indexUrl }.toSet(),
+            )
+        }
+    }
+
+    fun disableRepo(indexUrl: String) {
+        val disabledRepos = sourcePreferences.disabledRepos().get()
+        if (indexUrl !in disabledRepos) {
+            sourcePreferences.disabledRepos().set(
+                disabledRepos + indexUrl,
+            )
+        }
+    }
+    // KMK <--
 }
 
 sealed class ExtensionStoreDialog {
@@ -157,6 +194,9 @@ sealed class ExtensionStoreScreenState {
     data class Success(
         val stores: List<ExtensionStore>,
         val dialog: ExtensionStoreDialog? = null,
+        // KMK -->
+        val disabledRepos: Set<String> = emptySet(),
+        // KMK <--
     ) : ExtensionStoreScreenState() {
 
         val isEmpty: Boolean

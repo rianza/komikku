@@ -19,18 +19,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import eu.kanade.presentation.category.components.CategoryFloatingActionButton
 import eu.kanade.presentation.components.AppBar
-<<<<<<< HEAD:app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionReposScreen.kt
-import eu.kanade.presentation.more.settings.screen.browse.RepoScreenState
-import eu.kanade.tachiyomi.util.system.openInBrowser
-import kotlinx.collections.immutable.persistentSetOf
-import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.KOMIKKU_SIGNATURE
-import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_HELP
-import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_SIGNATURE
-import mihon.domain.extensionrepo.model.ExtensionRepo
-=======
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoreScreenState
+import eu.kanade.tachiyomi.util.system.openInBrowser
 import mihon.domain.extension.model.ExtensionStore
->>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349)):app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresScreen.kt
+import mihon.domain.extensionrepo.interactor.CreateExtensionRepo.Companion.REPO_HELP
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
@@ -43,19 +35,14 @@ import tachiyomi.presentation.core.util.plus
 fun ExtensionStoresScreen(
     state: ExtensionStoreScreenState.Success,
     onClickCreate: () -> Unit,
-<<<<<<< HEAD:app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionReposScreen.kt
-    onOpenWebsite: (ExtensionRepo) -> Unit,
-    onClickDelete: (String) -> Unit,
-    // KMK -->
-    onClickEnable: (String) -> Unit,
-    onClickDisable: (String) -> Unit,
-    // KMK <--
-=======
     onCopy: (ExtensionStore) -> Unit,
     onOpenWebsite: (ExtensionStore) -> Unit,
     onOpenDiscord: (ExtensionStore) -> Unit,
     onClickDelete: (ExtensionStore) -> Unit,
->>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349)):app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresScreen.kt
+    // KMK -->
+    onClickEnable: (ExtensionStore) -> Unit,
+    onClickDisable: (ExtensionStore) -> Unit,
+    // KMK <--
     onClickRefresh: () -> Unit,
     navigateUp: () -> Unit,
 ) {
@@ -125,19 +112,27 @@ fun ExtensionStoresScreen(
 // KMK -->
 @Preview
 @Composable
-private fun ExtensionReposScreenPreview() {
-    val state = RepoScreenState.Success(
-        repos = persistentSetOf(
-            ExtensionRepo("https://repo", "Komikku", "", "", KOMIKKU_SIGNATURE),
-            ExtensionRepo("https://repo", "Repo", "", "", REPO_SIGNATURE),
-            ExtensionRepo("https://repo", "Other", "", "", "key2"),
+private fun ExtensionStoresScreenPreview() {
+    val state = ExtensionStoreScreenState.Success(
+        stores = listOf(
+            ExtensionStore(
+                indexUrl = "https://repo/index.min.json",
+                name = "Komikku",
+                badgeLabel = "",
+                signingKey = "",
+                contact = ExtensionStore.Contact(website = "https://repo", discord = null),
+                isLegacy = false,
+                extensionListUrl = null,
+            ),
         ),
-        disabledRepos = setOf("https://repo"),
+        disabledRepos = setOf("https://repo/index.min.json"),
     )
-    ExtensionReposScreen(
+    ExtensionStoresScreen(
         state = state,
         onClickCreate = { },
+        onCopy = { },
         onOpenWebsite = { },
+        onOpenDiscord = { },
         onClickDelete = { },
         onClickEnable = { },
         onClickDisable = { },
@@ -148,12 +143,14 @@ private fun ExtensionReposScreenPreview() {
 
 @Preview
 @Composable
-private fun ExtensionReposScreenEmptyPreview() {
-    val state = RepoScreenState.Success(repos = persistentSetOf())
-    ExtensionReposScreen(
+private fun ExtensionStoresScreenEmptyPreview() {
+    val state = ExtensionStoreScreenState.Success(stores = emptyList())
+    ExtensionStoresScreen(
         state = state,
         onClickCreate = { },
+        onCopy = { },
         onOpenWebsite = { },
+        onOpenDiscord = { },
         onClickDelete = { },
         onClickEnable = { },
         onClickDisable = { },

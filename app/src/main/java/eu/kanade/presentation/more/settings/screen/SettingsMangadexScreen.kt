@@ -179,14 +179,9 @@ object SettingsMangadexScreen : SearchableSettings {
         return Preference.PreferenceItem.ListPreference(
             preference = sourcePreferences.preferredMangaDexId,
             entries = MdUtil.getEnabledMangaDexs(sourcePreferences)
-<<<<<<< HEAD
-                .associate { it.id.toString() to it.toString() }
-                .toImmutableMap(),
+                .associate { it.id.toString() to it.toString() },
             title = stringResource(SYMR.strings.mangadex_preffered_source),
             subtitle = stringResource(SYMR.strings.mangadex_preffered_source_summary),
-=======
-                .associate { it.id.toString() to it.toString() },
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
         )
     }
 

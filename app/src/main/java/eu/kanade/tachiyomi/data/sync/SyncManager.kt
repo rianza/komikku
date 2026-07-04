@@ -109,13 +109,8 @@ class SyncManager(
             backupCategories = backupCreator.backupCategories(backupOptions),
             backupSources = backupCreator.backupSources(backupManga),
             backupPreferences = backupCreator.backupAppPreferences(backupOptions),
-<<<<<<< HEAD
-            backupExtensionRepo = backupCreator.backupExtensionRepos(backupOptions),
-            backupSourcePreferences = backupCreator.backupSourcePreferences(backupOptions),
-=======
             backupSourcePreferences = backupCreator.backupSourcePreferences(backupOptions),
             backupExtensionStores = backupCreator.backupExtensionStores(backupOptions),
->>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
 
             // SY -->
             backupSavedSearches = backupCreator.backupSavedSearches(backupOptions),
@@ -418,4 +413,3 @@ class SyncManager(
         }
     }
 }
-

@@ -197,12 +197,7 @@ object SettingsLibraryScreen : SearchableSettings {
                 // SY -->
                 Preference.PreferenceItem.ListPreference(
                     preference = libraryPreferences.groupLibraryUpdateType,
-<<<<<<< HEAD
-                    entries = persistentMapOf(
-=======
-                    title = stringResource(SYMR.strings.library_group_updates),
                     entries = mapOf(
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
                         GroupLibraryMode.GLOBAL to stringResource(SYMR.strings.library_group_updates_global),
                         GroupLibraryMode.ALL_BUT_UNGROUPED to
                             stringResource(SYMR.strings.library_group_updates_all_but_ungrouped),

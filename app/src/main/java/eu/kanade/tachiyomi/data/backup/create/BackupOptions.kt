@@ -40,11 +40,7 @@ data class BackupOptions(
     )
 
     fun canCreate() =
-<<<<<<< HEAD
-        libraryEntries || categories || appSettings || extensionRepoSettings || sourceSettings || savedSearchesFeeds
-=======
-        libraryEntries || categories || appSettings || extensionStores || sourceSettings || savedSearches
->>>>>>> a0ae52671f (Change extension repo to extension store and add support for newer extension index format (#3349))
+        libraryEntries || categories || appSettings || extensionStores || sourceSettings || savedSearchesFeeds
 
     companion object {
         val libraryOptions = listOf(

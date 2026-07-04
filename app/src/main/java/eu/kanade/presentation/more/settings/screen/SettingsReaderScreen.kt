@@ -318,8 +318,7 @@ object SettingsReaderScreen : SearchableSettings {
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.landscapeZoomType(),
                     entries = ReaderPreferences.LandscapeZoomScaleType.entries
-                        .associateWith { stringResource(it.titleRes) }
-                        .toImmutableMap(),
+                        .associateWith { stringResource(it.titleRes) },
                     title = stringResource(KMR.strings.pref_landscape_zoom_type),
                     enabled = landscapeZoom && imageScaleType in zoomWideImagesAllowedList,
                 ),
@@ -409,8 +408,7 @@ object SettingsReaderScreen : SearchableSettings {
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.webtoonScaleType(),
                     entries = WebtoonScaleType.entries
-                        .associateWith { stringResource(it.titleRes) }
-                        .toImmutableMap(),
+                        .associateWith { stringResource(it.titleRes) },
                     title = stringResource(KMR.strings.pref_webtoon_scale_type),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
@@ -558,13 +556,7 @@ object SettingsReaderScreen : SearchableSettings {
             preferenceItems = listOf(
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.preloadSize,
-<<<<<<< HEAD
-                    entries = persistentMapOf(
-=======
-                    title = stringResource(SYMR.strings.reader_preload_amount),
-                    subtitle = stringResource(SYMR.strings.reader_preload_amount_summary),
                     entries = mapOf(
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
                         4 to stringResource(SYMR.strings.reader_preload_amount_4_pages),
                         6 to stringResource(SYMR.strings.reader_preload_amount_6_pages),
                         8 to stringResource(SYMR.strings.reader_preload_amount_8_pages),
@@ -638,27 +630,17 @@ object SettingsReaderScreen : SearchableSettings {
                 Preference.PreferenceItem.MultiSelectListPreference(
                     preference = readerPreferences.readerBottomButtons,
                     entries = ReaderBottomButton.entries
-<<<<<<< HEAD
-                        .associate { it.value to stringResource(it.stringRes) }
-                        .toImmutableMap(),
+                        .associate { it.value to stringResource(it.stringRes) },
                     title = stringResource(SYMR.strings.reader_bottom_buttons),
                     subtitle = stringResource(SYMR.strings.reader_bottom_buttons_summary),
-=======
-                        .associate { it.value to stringResource(it.stringRes) },
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
                 ),
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.pageLayout,
                     entries = ReaderPreferences.PageLayouts
                         .mapIndexed { index, it -> index to stringResource(it) }
-<<<<<<< HEAD
-                        .toMap()
-                        .toImmutableMap(),
+                        .toMap(),
                     title = stringResource(SYMR.strings.page_layout),
                     subtitle = stringResource(SYMR.strings.automatic_can_still_switch),
-=======
-                        .toMap(),
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
                 ),
                 Preference.PreferenceItem.SwitchPreference(
                     preference = readerPreferences.invertDoublePages,
@@ -669,27 +651,17 @@ object SettingsReaderScreen : SearchableSettings {
                     preference = readerPreferences.centerMarginType,
                     entries = ReaderPreferences.CenterMarginTypes
                         .mapIndexed { index, it -> index + 1 to stringResource(it) }
-<<<<<<< HEAD
-                        .toMap()
-                        .toImmutableMap(),
+                        .toMap(),
                     title = stringResource(SYMR.strings.center_margin),
                     subtitle = stringResource(SYMR.strings.pref_center_margin_summary),
-=======
-                        .toMap(),
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
                 ),
                 Preference.PreferenceItem.ListPreference(
                     preference = readerPreferences.archiveReaderMode,
                     entries = ReaderPreferences.archiveModeTypes
                         .mapIndexed { index, it -> index to stringResource(it) }
-<<<<<<< HEAD
-                        .toMap()
-                        .toImmutableMap(),
+                        .toMap(),
                     title = stringResource(SYMR.strings.pref_archive_reader_mode),
                     subtitle = stringResource(SYMR.strings.pref_archive_reader_mode_summary),
-=======
-                        .toMap(),
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
                 ),
             ),
         )

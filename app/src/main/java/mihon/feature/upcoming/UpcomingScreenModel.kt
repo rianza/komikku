@@ -114,22 +114,16 @@ class UpcomingScreenModel(
 
     data class State(
         val selectedYearMonth: YearMonth = YearMonth.now(),
-<<<<<<< HEAD
-        val items: ImmutableList<UpcomingUIModel> = persistentListOf(),
-        val events: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        val headerIndexes: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        // KMK -->
-        val isLoadingUpcoming: Boolean = true,
-        val isShowingUpdatingMangas: Boolean = false,
-        val updatingItems: ImmutableList<UpcomingUIModel> = persistentListOf(),
-        val updatingEvents: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        val updatingHeaderIndexes: ImmutableMap<LocalDate, Int> = persistentMapOf(),
-        val isLoadingUpdating: Boolean = true,
-        // KMK <--
-=======
         val items: List<UpcomingUIModel> = listOf(),
         val events: Map<LocalDate, Int> = mapOf(),
         val headerIndexes: Map<LocalDate, Int> = mapOf(),
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
+        // KMK -->
+        val isLoadingUpcoming: Boolean = true,
+        val isShowingUpdatingMangas: Boolean = false,
+        val updatingItems: List<UpcomingUIModel> = listOf(),
+        val updatingEvents: Map<LocalDate, Int> = mapOf(),
+        val updatingHeaderIndexes: Map<LocalDate, Int> = mapOf(),
+        val isLoadingUpdating: Boolean = true,
+        // KMK <--
     )
 }

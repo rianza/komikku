@@ -26,13 +26,8 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.BulkSelectionToolbar
 import eu.kanade.presentation.components.SearchToolbar
-<<<<<<< HEAD
-import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-=======
 import eu.kanade.presentation.util.animateItemFastScroll
->>>>>>> bb7f18c4cc (Drop kotlinx-collections-immutable usage (#3380))
+import eu.kanade.tachiyomi.ui.browse.BulkFavoriteScreenModel
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SavedSearch
@@ -236,7 +231,7 @@ fun SourceFeedList(
         ) { item ->
             // KMK <--
             GlobalSearchResultItem(
-                modifier = Modifier.animateItem(),
+                modifier = Modifier.animateItemFastScroll(),
                 title =
                 // KMK -->
                 if (item !is SourceFeedUI.SourceSavedSearch) {
