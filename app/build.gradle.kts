@@ -50,6 +50,7 @@ android {
         val release = getByName("release") {
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
+
             isProfileable = true
 
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
@@ -59,15 +60,6 @@ android {
 
         val commonMatchingFallbacks = listOf(release.name)
 
-        create("releaseTest") {
-            initWith(release)
-
-            applicationIdSuffix = ".rt"
-            isMinifyEnabled = false
-            isShrinkResources = false
-
-            matchingFallbacks.addAll(commonMatchingFallbacks)
-        }
         create("foss") {
             initWith(release)
 
