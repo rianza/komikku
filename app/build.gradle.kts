@@ -145,6 +145,10 @@ android {
         viewBinding = true
         buildConfig = true
         aidl = true
+
+        // Disable some unused things
+        renderScript = false
+        shaders = false
     }
 
     lint {
