@@ -27,6 +27,7 @@ class TrackLoginActivity : BaseOAuthLoginActivity() {
                     "bangumi-auth" -> handleBangumi(data["code"])
                     "myanimelist-auth" -> handleMyAnimeList(data["code"])
                     "shikimori-auth" -> handleShikimori(data["code"])
+                    "hikka-auth" -> handleHikka(data["reference"])
                 }
             } finally {
                 returnToSettings()
@@ -63,6 +64,14 @@ class TrackLoginActivity : BaseOAuthLoginActivity() {
             trackerManager.shikimori.login(code)
         } else {
             trackerManager.shikimori.logout()
+        }
+    }
+
+    private suspend fun handleHikka(reference: String?) {
+        if (reference != null) {
+            trackerManager.hikka.login(reference)
+        } else {
+            trackerManager.hikka.logout()
         }
     }
 }
