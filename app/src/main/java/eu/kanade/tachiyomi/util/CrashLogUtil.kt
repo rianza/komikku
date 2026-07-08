@@ -40,7 +40,13 @@ class CrashLogUtil(
         }
     }
 
-    fun getDebugInfo(): String {
+    fun getDebugInfo(includeWebView: Boolean = true): String {
+        val webViewInfo = if (includeWebView) {
+            "\nWebView: ${WebViewUtil.getVersion(context)}"
+        } else {
+            ""
+        }
+
         return """
             App ID: ${BuildConfig.APPLICATION_ID}
             App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.COMMIT_SHA}, ${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TIME})
@@ -50,8 +56,7 @@ class CrashLogUtil(
             Device brand: ${Build.BRAND}
             Device manufacturer: ${Build.MANUFACTURER}
             Device name: ${Build.DEVICE} (${Build.PRODUCT})
-            Device model: ${Build.MODEL}
-            WebView: ${WebViewUtil.getVersion(context)}
+            Device model: ${Build.MODEL}$webViewInfo
             Current time: ${OffsetDateTime.now(ZoneId.systemDefault())}
         """.trimIndent()
     }

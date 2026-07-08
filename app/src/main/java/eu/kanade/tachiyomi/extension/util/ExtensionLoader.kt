@@ -61,8 +61,14 @@ internal object ExtensionLoader {
     private const val METADATA_EXTENSION_LIB = "tachiyomix.extensionLib"
     private const val METADATA_CONTENT_WARNING = "tachiyomix.contentWarning"
 
-    const val LIB_VERSION_MIN = 1.4
-    const val LIB_VERSION_MAX = 1.6
+    private val SUPPORTED_LIB_VERSIONS = listOf(1.4, 1.6)
+    private const val LIB_VERSION_EPSILON = 0.0001
+
+    private fun isSupportedLibVersion(version: Double): Boolean {
+        return SUPPORTED_LIB_VERSIONS.any {
+            kotlin.math.abs(version - it) < LIB_VERSION_EPSILON
+        }
+    }
 
     @Suppress("DEPRECATION")
     private val PACKAGE_FLAGS = PackageManager.GET_CONFIGURATIONS or
@@ -277,22 +283,21 @@ internal object ExtensionLoader {
         }
 
         // Validate lib version
-        val libVersion = appInfo.metaData.getDouble(METADATA_EXTENSION_LIB).takeUnless { it == 0.0 }
-            ?: versionName.substringBeforeLast('.').toDoubleOrNull()
-        if (libVersion == null || (libVersion != LIB_VERSION_MIN && libVersion != LIB_VERSION_MAX)) {
+        val libVersion = appInfo.metaData.get(METADATA_EXTENSION_LIB).let { value ->
+            when (value) {
+                // Use toString() for Float to avoid 1.4f becoming 1.399999976... as Double.
+                is Number -> value.toString().toDoubleOrNull()
+                is String -> value.toDoubleOrNull()
+                else -> null
+            }
+        } ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+
+        if (libVersion == null || !isSupportedLibVersion(libVersion)) {
             logcat(LogPriority.WARN) {
-                "Lib version is $libVersion, while only versions " +
-                    "$LIB_VERSION_MIN and $LIB_VERSION_MAX is allowed"
+                "Lib version is $libVersion, while only version(s) ${SUPPORTED_LIB_VERSIONS.joinToString()} are supported"
             }
             return LoadResult.Error
         }
-//        if (libVersion == null || libVersion < LIB_VERSION_MIN || libVersion > LIB_VERSION_MAX) {
-//            logcat(LogPriority.WARN) {
-//                "Lib version is $libVersion, while only versions " +
-//                    "$LIB_VERSION_MIN or $LIB_VERSION_MAX is allowed"
-//            }
-//            return LoadResult.Error
-//        }
 
         val signatures = getSignatures(pkgInfo)
         if (signatures.isNullOrEmpty()) {

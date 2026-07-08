@@ -17,7 +17,7 @@ class ReleaseServiceImpl(
 
     override suspend fun latest(arguments: GetApplicationRelease.Arguments): Release? {
         val release = with(json) {
-            networkService.client
+            networkService.noCookiesClient
                 .newCall(GET("https://api.github.com/repos/${arguments.repository}/releases/latest"))
                 .awaitSuccess()
                 .parseAs<GithubRelease>()
@@ -38,7 +38,7 @@ class ReleaseServiceImpl(
     // KMK -->
     override suspend fun releaseNotes(arguments: GetApplicationRelease.Arguments): List<Release> {
         return with(json) {
-            networkService.client
+            networkService.noCookiesClient
                 .newCall(GET("https://api.github.com/repos/${arguments.repository}/releases"))
                 .awaitSuccess()
                 .parseAs<List<GithubRelease>>()

@@ -400,7 +400,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         )
 
         xLogD("Application booting...")
-        xLogD(CrashLogUtil(applicationContext).getDebugInfo())
+        // Avoid initializing WebView during cold startup just to print debug info.
+        // Full crash dumps still include WebView info via CrashLogUtil.dumpLogs().
+        xLogD(CrashLogUtil(applicationContext).getDebugInfo(includeWebView = false))
     }
 
     private inner class DisableIncognitoReceiver : BroadcastReceiver() {

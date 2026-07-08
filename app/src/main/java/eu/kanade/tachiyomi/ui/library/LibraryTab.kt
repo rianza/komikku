@@ -443,14 +443,10 @@ data object LibraryTab : Tab {
             HomeScreen.showBottomNav(!state.selectionMode)
         }
 
-        LaunchedEffect(Unit) {
-            // Do not keep splash screen blocked by the full library query.
-            // Large libraries can continue loading on the Library loading state.
-            (context as? MainActivity)?.ready = true
-        }
-
         LaunchedEffect(state.isLoading) {
             if (!state.isLoading) {
+                (context as? MainActivity)?.ready = true
+
                 // AM (DISCORD) -->
                 with(DiscordRPCService) {
                     discordScope.launchIO { setScreen(context, DiscordScreen.LIBRARY) }

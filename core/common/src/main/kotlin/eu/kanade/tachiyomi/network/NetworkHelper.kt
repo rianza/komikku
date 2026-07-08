@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import logcat.LogPriority
 import okhttp3.Cache
+import okhttp3.CookieJar
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -36,6 +37,7 @@ import kotlin.random.Random
         connectTimeout: Long = 30,
         readTimeout: Long = 30,
         callTimeout: Long = 120,
+        cookieJar: CookieJar = this.cookieJar,
         // KMK <--
     ): OkHttpClient.Builder = run {
         val builder = OkHttpClient.Builder()
@@ -79,6 +81,12 @@ import kotlin.random.Random
     }
 
     val nonCloudflareClient /* KMK --> */ by lazy /* KMK <-- */ { clientBuilder().build() }
+
+    // For app-owned API calls that never need WebView-shared cookies.
+    // Avoids initializing Android CookieManager/WebView during startup update checks.
+    val noCookiesClient by lazy {
+        clientBuilder(cookieJar = CookieJar.NO_COOKIES).build()
+    }
 
     /* SY --> */
     open /* SY <-- */ val client /* KMK --> */ by lazy /* KMK <-- */ {
