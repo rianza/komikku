@@ -54,4 +54,8 @@ val migrations: List<Migration>
         RemoveDuplicateReaderPreferenceMigration(),
         InstallationIdMigration(),
         MoveVerticalSeekbarSettingsMigration(),
+        // KMK -->
+        DisabledRepoMigration(),
+        SyncPrefKeyMigration(),
+        // KMK <--
     )
