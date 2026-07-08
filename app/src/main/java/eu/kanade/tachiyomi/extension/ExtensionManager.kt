@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -375,7 +376,9 @@ class ExtensionManager(
 
         untrustedExtensionMapFlow.value -= extension.pkgName
 
-        ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)
+        withContext(Dispatchers.IO) {
+            ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)
+        }
             .let { it as? LoadResult.Success }
             ?.let { registerNewExtension(it.extension) }
     }

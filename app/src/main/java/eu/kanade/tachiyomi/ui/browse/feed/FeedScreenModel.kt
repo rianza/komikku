@@ -19,6 +19,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -77,8 +78,10 @@ open class FeedScreenModel(
     var pushed: Boolean = false
 
     init {
-        getFeedSavedSearchGlobal.subscribe()
-            .distinctUntilChanged()
+        combine(
+            getFeedSavedSearchGlobal.subscribe().distinctUntilChanged(),
+            sourceManager.sources,
+        ) { feeds, _ -> feeds }
             .onEach {
                 sourceManager.isInitialized.first { it }
                 val items = getSourcesToGetFeed(it).map { (feed, savedSearch) ->
@@ -97,6 +100,24 @@ open class FeedScreenModel(
                 getFeed(items)
             }
             .catch { _events.send(Event.FailedFetchingSources) }
+            .launchIn(screenModelScope)
+
+        combine(
+            sourceManager.sources,
+            sourcePreferences.enabledLanguages.changes(),
+            sourcePreferences.pinnedSources.changes(),
+            sourcePreferences.disabledSources.changes(),
+        ) { _, _, _, _ -> getEnabledSources() }
+            .onEach { sources ->
+                mutableState.update { state ->
+                    val dialog = state.dialog
+                    if (dialog is Dialog.AddFeed) {
+                        state.copy(dialog = dialog.copy(options = sources))
+                    } else {
+                        state
+                    }
+                }
+            }
             .launchIn(screenModelScope)
     }
 
@@ -119,6 +140,7 @@ open class FeedScreenModel(
                 _events.send(Event.TooManyFeeds)
                 return@launchIO
             }
+            sourceManager.isInitialized.first { it }
             mutableState.update { state ->
                 state.copy(
                     dialog = Dialog.AddFeed(getEnabledSources()),
