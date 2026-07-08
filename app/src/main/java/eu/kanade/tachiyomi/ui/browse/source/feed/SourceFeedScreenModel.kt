@@ -18,7 +18,6 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.browse.SourceFeedUI
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.CatalogueSource
-import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.ui.browse.feed.MaxFeedItems
@@ -28,11 +27,15 @@ import exh.source.getMainSource
 import exh.source.isEhBasedSource
 import exh.source.mangaDexSourceIds
 import exh.util.nullIfBlank
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -103,11 +106,15 @@ open class SourceFeedScreenModel(
     init {
         // KMK -->
         screenModelScope.launch {
-            var retry = 10
-            while (source !is CatalogueSource && retry-- > 0) {
-                // Sometime source is late to load, so we need to wait a bit
-                delay(100)
+            sourceManager.isInitialized.first { it }
+
+            // Exponential backoff retry until source is loaded as CatalogueSource
+            var retry = 0
+            while (source !is CatalogueSource && retry < 20) {
+                val delayMs = if (retry < 4) 50L * (1 shl retry) else 1000L
+                delay(delayMs)
                 source = sourceManager.getOrStub(sourceId)
+                retry++
             }
             val source = source
             if (source !is CatalogueSource) return@launch
@@ -197,11 +204,11 @@ open class SourceFeedScreenModel(
     }
     // KMK <--
 
-    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): List<SourceFeedUI> {
+    private suspend fun getSourcesToGetFeed(feedSavedSearch: List<FeedSavedSearch>): ImmutableList<SourceFeedUI> {
         // KMK -->
         val source = source
         // KMK <--
-        if (source !is CatalogueSource) return emptyList()
+        if (source !is CatalogueSource) return persistentListOf()
         val savedSearches = getSavedSearchBySourceIdFeed.await(source.id)
             .associateBy { it.id }
 
@@ -216,6 +223,7 @@ open class SourceFeedScreenModel(
             ) + feedSavedSearch
                 .map { SourceFeedUI.SourceSavedSearch(it, savedSearches[it.savedSearch]!!, null) }
             )
+            .toImmutableList()
     }
 
     // KMK -->
@@ -245,7 +253,7 @@ open class SourceFeedScreenModel(
                                 )
                             }
                         }.mangas
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
                         emptyList()
                     }
 
@@ -262,7 +270,7 @@ open class SourceFeedScreenModel(
                         state.copy(
                             items = state.items.map { item ->
                                 if (item.id == sourceFeed.id) sourceFeed.withResults(titles) else item
-                            },
+                            }.toImmutableList(),
                         )
                     }
                 }
@@ -272,7 +280,7 @@ open class SourceFeedScreenModel(
 
     private val filterSerializer = FilterSerializer()
 
-    private fun getFilterList(savedSearch: SavedSearch, source: Source): FilterList {
+    private fun getFilterList(savedSearch: SavedSearch, source: CatalogueSource): FilterList {
         val filters = savedSearch.filtersJson ?: return FilterList()
         return runCatching {
             val originalFilters = source.getFilterList()
@@ -305,8 +313,9 @@ open class SourceFeedScreenModel(
     // KMK <--
 
     private suspend fun loadSearches() =
-        getExhSavedSearch.await(source.id, source::getFilterList)
+        getExhSavedSearch.await(source.id, (source as CatalogueSource)::getFilterList)
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, EXHSavedSearch::name))
+            .toImmutableList()
 
     fun onFilter(onBrowseClick: (query: String?, filters: String?) -> Unit) {
         // KMK -->
@@ -454,9 +463,9 @@ open class SourceFeedScreenModel(
 @Immutable
 data class SourceFeedState(
     val searchQuery: String? = null,
-    val items: List<SourceFeedUI> = emptyList(),
+    val items: ImmutableList<SourceFeedUI> = persistentListOf(),
     val filters: FilterList = FilterList(),
-    val savedSearches: List<EXHSavedSearch> = emptyList(),
+    val savedSearches: ImmutableList<EXHSavedSearch> = persistentListOf(),
     val dialog: SourceFeedScreenModel.Dialog? = null,
 ) {
     val isLoading

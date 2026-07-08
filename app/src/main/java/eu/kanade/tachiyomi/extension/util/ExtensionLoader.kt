@@ -173,7 +173,10 @@ internal object ExtensionLoader {
         // Load each extension concurrently and wait for completion
         return runBlocking {
             // KMK -->
+            // Fetch extension repos ONCE before concurrent extension loading
+            // to avoid repeated DB queries inside each loadExtension call
             val extRepos = getExtensionStores.get()
+            val trustedSigningKeys = extRepos.map { it.signingKey }.toHashSet()
             // KMK <--
             val deferred = extPkgs.map {
                 async {
@@ -182,6 +185,7 @@ internal object ExtensionLoader {
                         it,
                         // KMK -->
                         extRepos,
+                        trustedSigningKeys,
                         // KMK <--
                     )
                 }
@@ -250,10 +254,12 @@ internal object ExtensionLoader {
         extensionInfo: ExtensionInfo,
         // KMK -->
         extRepos: List<ExtensionStore>? = null,
+        trustedSigningKeys: Set<String>? = null,
         // KMK <--
     ): LoadResult {
         // KMK -->
         val repos = extRepos ?: getExtensionStores.get()
+        val trustedKeys = trustedSigningKeys ?: repos.map { it.signingKey }.toHashSet()
         // KMK <--
         val pkgManager = context.packageManager
         val pkgInfo = extensionInfo.packageInfo
@@ -292,7 +298,7 @@ internal object ExtensionLoader {
         if (signatures.isNullOrEmpty()) {
             logcat(LogPriority.WARN) { "Package $pkgName isn't signed" }
             return LoadResult.Error
-        } else if (!trustExtension.isTrusted(pkgInfo, signatures)) {
+        } else if (!trustExtension.isTrusted(pkgInfo, signatures, trustedKeys)) {
             val extension = Extension.Untrusted(
                 extName,
                 pkgName,

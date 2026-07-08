@@ -13,12 +13,12 @@ class TrustExtension(
     private val preferences: SourcePreferences,
 ) {
 
-    suspend fun isTrusted(pkgInfo: PackageInfo, fingerprints: List<String>): Boolean {
+    suspend fun isTrusted(pkgInfo: PackageInfo, fingerprints: List<String>, precomputedKeys: Set<String>? = null): Boolean {
         // KMK -->
         if (isDebugBuildType) return true
         if (fingerprints.contains(ExtensionSignatures.KOMIKKU_SIGNATURE)) return true
         // KMK <--
-        val trustedFingerprints = repository.getAll().map { it.signingKey }.toHashSet()
+        val trustedFingerprints = precomputedKeys ?: repository.getAll().map { it.signingKey }.toHashSet()
         val key = "${pkgInfo.packageName}:${PackageInfoCompat.getLongVersionCode(pkgInfo)}:${fingerprints.last()}"
         return trustedFingerprints.any { fingerprints.contains(it) } || key in preferences.trustedExtensions.get()
     }

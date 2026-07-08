@@ -72,35 +72,21 @@ class ExtensionStoresScreenModel(
      * @param baseUrl The baseUrl of the repo to create.
      */
     fun createRepo(baseUrl: String) {
-        screenModelScope.launch {
-            updateSuccessState {
-                it.copy(
-                    dialog = when (it.dialog) {
-                        is ExtensionStoreDialog.Create -> it.dialog.copy(processing = true)
-                        is ExtensionStoreDialog.Confirm -> it.dialog.copy(processing = true)
-                        else -> it.dialog
-                    },
-                )
-            }
+        screenModelScope.launchIO {
+            // Dismiss dialog immediately for smooth UX - validation runs in background
+            dismissDialog()
             addExtensionStore(baseUrl)
                 .onSuccess {
                     extensionManager.findAvailableExtensions()
-                    dismissDialog()
                 }
                 .onFailure { throwable ->
+                    // Re-show dialog with error if validation fails
                     updateSuccessState {
                         it.copy(
-                            dialog = when (it.dialog) {
-                                is ExtensionStoreDialog.Create -> it.dialog.copy(
-                                    processing = false,
-                                    errorMessage = throwable.message ?: "unknown error",
-                                )
-                                is ExtensionStoreDialog.Confirm -> it.dialog.copy(
-                                    processing = false,
-                                    errorMessage = throwable.message ?: "unknown error",
-                                )
-                                else -> it.dialog
-                            },
+                            dialog = ExtensionStoreDialog.Create(
+                                processing = false,
+                                errorMessage = throwable.message ?: "unknown error",
+                            ),
                         )
                     }
                 }

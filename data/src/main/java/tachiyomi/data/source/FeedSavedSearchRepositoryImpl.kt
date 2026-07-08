@@ -69,13 +69,18 @@ class FeedSavedSearchRepositoryImpl(
 
     override suspend fun insert(feedSavedSearch: FeedSavedSearch): Long {
         // KMK -->
-        val currentFeeds = database.feed_saved_searchQueries
-            .selectAll(FeedSavedSearchMapper::map)
-            .awaitAsList()
+        // Use targeted query instead of loading all feeds for duplicate check
+        val currentFeeds = if (feedSavedSearch.global) {
+            database.feed_saved_searchQueries
+                .selectAllGlobal(FeedSavedSearchMapper::map)
+                .awaitAsList()
+        } else {
+            database.feed_saved_searchQueries
+                .selectBySource(feedSavedSearch.source, FeedSavedSearchMapper::map)
+                .awaitAsList()
+        }
         val existedFeedId = currentFeeds.find { currentFeed ->
-            currentFeed.source == feedSavedSearch.source &&
-                currentFeed.savedSearch == feedSavedSearch.savedSearch &&
-                currentFeed.global == feedSavedSearch.global
+            currentFeed.savedSearch == feedSavedSearch.savedSearch
         }?.id
 
         return existedFeedId
