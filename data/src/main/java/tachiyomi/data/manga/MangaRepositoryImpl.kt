@@ -4,7 +4,6 @@ import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
@@ -65,16 +64,15 @@ class MangaRepositoryImpl(
 
     // SY -->
     override suspend fun getLibraryManga(): List<LibraryManga> {
-        return getLibraryQuery()
+        return database.libraryViewQueries
+            .library(MangaMapper::mapLibraryManga)
             .awaitAsList()
-            .map(MangaMapper::mapLibraryView)
     }
 
     override fun getLibraryMangaAsFlow(): Flow<List<LibraryManga>> {
         return database.libraryViewQueries
             .library(MangaMapper::mapLibraryManga)
             .subscribeToList()
-            .map { getLibraryManga() }
     }
     // SY <--
 

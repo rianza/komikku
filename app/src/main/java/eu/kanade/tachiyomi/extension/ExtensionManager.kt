@@ -89,7 +89,7 @@ class ExtensionManager(
         // KMK -->
         // Launch extension loading in background to avoid blocking app startup.
         // Consumers that depend on extensions must wait on isInitialized flow.
-        scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.IO) {
             initExtensions()
         }
         // KMK <--

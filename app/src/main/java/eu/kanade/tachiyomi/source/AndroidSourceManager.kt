@@ -78,17 +78,23 @@ class AndroidSourceManager(
     init {
         scope.launch {
             extensionManager.installedExtensionsFlow
+                // KMK -->
+                .combine(extensionManager.isInitialized) { extensions, extensionsInitialized ->
+                    extensions to extensionsInitialized
+                }
+                // KMK <--
                 // SY -->
-                .combine(exhPreferences.enableExhentai.changes()) { extensions, enableExhentai ->
-                    extensions to enableExhentai
+                .combine(exhPreferences.enableExhentai.changes()) { (extensions, extensionsInitialized), enableExhentai ->
+                    Triple(extensions, extensionsInitialized, enableExhentai)
                 }
                 // KMK -->
                 .combine(
                     exhPreferences.isHentaiEnabled.changes(),
-                ) { (a, b), c -> Triple(a, b, c) }
+                ) { extensionState, isHentaiEnabled -> extensionState to isHentaiEnabled }
                 // KMK <--
                 // SY <--
-                .collectLatest { (extensions, enableExhentai/* KMK --> */, isHentaiEnabled/* KMK <-- */) ->
+                .collectLatest { (extensionState, isHentaiEnabled) ->
+                    val (extensions, extensionsInitialized, enableExhentai) = extensionState
                     val mutableMap = ConcurrentHashMap<Long, Source>(
                         mapOf(
                             LocalSource.ID to LocalSource(
@@ -125,7 +131,9 @@ class AndroidSourceManager(
                         }
                     }
                     sourcesMapFlow.value = mutableMap
-                    _isInitialized.value = true
+                    if (extensionsInitialized) {
+                        _isInitialized.value = true
+                    }
                 }
         }
 

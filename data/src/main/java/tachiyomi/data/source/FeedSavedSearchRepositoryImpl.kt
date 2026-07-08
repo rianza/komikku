@@ -80,7 +80,9 @@ class FeedSavedSearchRepositoryImpl(
                 .awaitAsList()
         }
         val existedFeedId = currentFeeds.find { currentFeed ->
-            currentFeed.savedSearch == feedSavedSearch.savedSearch
+            currentFeed.source == feedSavedSearch.source &&
+                currentFeed.savedSearch == feedSavedSearch.savedSearch &&
+                currentFeed.global == feedSavedSearch.global
         }?.id
 
         return existedFeedId
