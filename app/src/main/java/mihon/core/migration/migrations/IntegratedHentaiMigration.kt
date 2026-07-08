@@ -11,8 +11,8 @@ class IntegratedHentaiMigration : Migration {
     override suspend fun invoke(migrationContext: MigrationContext): Boolean = withIOContext {
         val isHentaiEnabled = migrationContext.get<ExhPreferences>()?.isHentaiEnabled
             ?: return@withIOContext false
-        if (!isHentaiEnabled.isSet() || isHentaiEnabled.get()) {
-            isHentaiEnabled.set(true)
+        if (!isHentaiEnabled.isSet()) {
+            isHentaiEnabled.set(false)
         }
         return@withIOContext true
     }

@@ -17,7 +17,7 @@ class ExhPreferences(
     // KMK <--
 
     // SY -->
-    val isHentaiEnabled: Preference<Boolean> = preferenceStore.getBoolean("eh_is_hentai_enabled", true)
+    val isHentaiEnabled: Preference<Boolean> = preferenceStore.getBoolean("eh_is_hentai_enabled", false)
     // kmk -->
     val ehIncognitoMode: Preference<Boolean> = preferenceStore.getBoolean("eh_incognito_mode", false)
     // kmk <--
