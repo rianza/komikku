@@ -182,8 +182,12 @@ class StorageManager(
             context: Context,
             storageDirPref: Preference<String>,
         ) {
-            UniFile.fromUri(context, storageDirPref.get().toUri())?.let {
-                it.mkdirs()
+            val uri = storageDirPref.get().toUri()
+            if (uri.scheme == "file") {
+                uri.path?.let(::File)?.mkdirs()
+            }
+
+            UniFile.fromUri(context, uri)?.let {
                 storageDirPref.set("") // Trigger recompose
                 storageDirPref.set(it.uri.toString())
             }
