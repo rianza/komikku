@@ -59,7 +59,7 @@ class ExtensionStoreRepositoryImpl(
         }
     }
 
-    private fun upsert(store: ExtensionStore) {
+    private suspend fun upsert(store: ExtensionStore) {
         database.extension_storeQueries.upsert(
             indexUrl = store.indexUrl,
             name = store.name,
