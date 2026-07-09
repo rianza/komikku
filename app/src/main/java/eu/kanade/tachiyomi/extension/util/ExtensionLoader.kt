@@ -283,16 +283,12 @@ internal object ExtensionLoader {
         }
 
         // Validate lib version
-        val libVersion = appInfo.metaData.get(METADATA_EXTENSION_LIB).let { value ->
-            when (value) {
-                // Use toString() for Float to avoid 1.4f becoming 1.399999976... as Double.
-                is Number -> value.toString().toDoubleOrNull()
-                is String -> value.toDoubleOrNull()
-                else -> null
-            }
-        } ?: versionName.substringBeforeLast('.').toDoubleOrNull()
-
-        if (libVersion == null || !isSupportedLibVersion(libVersion)) {
+        val libVersion = appInfo.metaData.getFloat(METADATA_EXTENSION_LIB)
+            .takeUnless { it == 0.0f }
+            ?.toString()
+            ?.toDouble()
+            ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+        if (libVersion == null || libVersion !in SUPPORTED_LIB_VERSIONS) {
             logcat(LogPriority.WARN) {
                 "Lib version is $libVersion, while only version(s) ${SUPPORTED_LIB_VERSIONS.joinToString()} are supported"
             }
