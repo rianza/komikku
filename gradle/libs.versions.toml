@@ -82,7 +82,7 @@ timber = "5.0.1"
 # KMK <--
 unifile = "08f224c8f9"
 voyager = "2.2.21-1.10.3"
-xmlutil = "1.0.0"
+xmlutil = "1.0.1"
 
 [libraries]
 aboutLibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
