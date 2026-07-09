@@ -183,7 +183,7 @@ class StorageManager(
             storageDirPref: Preference<String>,
         ) {
             UniFile.fromUri(context, storageDirPref.get().toUri())?.let {
-                it.mkdir()
+                it.mkdirs()
                 storageDirPref.set("") // Trigger recompose
                 storageDirPref.set(it.uri.toString())
             }
