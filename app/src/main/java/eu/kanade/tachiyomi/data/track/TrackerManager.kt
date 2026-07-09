@@ -42,6 +42,9 @@ class TrackerManager {
     val mangaBaka = MangaBaka(MANGABAKA)
 
     val trackers = listOf(
+        // SY -->
+        mdList,
+        // SY <--
         myAnimeList,
         aniList,
         kitsu,
