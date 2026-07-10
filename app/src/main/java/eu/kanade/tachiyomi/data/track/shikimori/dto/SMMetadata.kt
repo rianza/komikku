@@ -25,4 +25,3 @@ data class SMMetadataResult(
 data class SMMangaPoster(
     val originalUrl: String,
 )
-
