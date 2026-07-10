@@ -249,7 +249,6 @@ class EHentaiUpdateWorker(private val context: Context, workerParams: WorkerPara
                 manga,
                 fetchDetails = true,
                 fetchChapters = true,
-                manualFetch = false,
             ).getOrThrow()
             return result.newChapters to getChaptersByMangaId.await(manga.id)
         } catch (t: Throwable) {

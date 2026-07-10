@@ -13,7 +13,6 @@ import eu.kanade.tachiyomi.data.track.mdlist.MdList
 import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.source.model.MangasPage
-import eu.kanade.tachiyomi.source.model.MetadataMangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
@@ -37,11 +36,9 @@ import exh.md.handlers.MangaHotHandler
 import exh.md.handlers.MangaPlusHandler
 import exh.md.handlers.NamicomiHandler
 import exh.md.handlers.PageHandler
-import exh.md.handlers.SimilarHandler
 import exh.md.network.MangaDexLoginHelper
 import exh.md.service.MangaDexAuthService
 import exh.md.service.MangaDexService
-import exh.md.service.SimilarService
 import exh.md.utils.FollowStatus
 import exh.md.utils.MdApi
 import exh.md.utils.MdLang
@@ -109,9 +106,6 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     private val mangadexAuthService by lazy {
         MangaDexAuthService(baseHttpClient, headers)
     }
-    private val similarService by lazy {
-        SimilarService(client)
-    }
     private val apiMangaParser by lazy {
         ApiMangaParser(mdLang.lang)
     }
@@ -120,9 +114,6 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     }
     private val mangaHandler by lazy {
         MangaHandler(mdLang.lang, mangadexService, apiMangaParser)
-    }
-    private val similarHandler by lazy {
-        SimilarHandler(mdLang.lang, mangadexService, similarService)
     }
     private val mangaPlusHandler by lazy {
         MangaPlusHandler(network.client)
@@ -323,14 +314,6 @@ class MangaDex(delegate: HttpSource, val context: Context) :
     // RandomMangaSource method
     override suspend fun fetchRandomMangaUrl(): String {
         return mangaHandler.fetchRandomMangaId()
-    }
-
-    suspend fun getMangaSimilar(manga: SManga): MetadataMangasPage {
-        return similarHandler.getSimilar(manga)
-    }
-
-    suspend fun getMangaRelated(manga: SManga): MetadataMangasPage {
-        return similarHandler.getRelated(manga)
     }
 
     suspend fun getMangaMetadata(track: Track): SManga {

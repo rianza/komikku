@@ -101,7 +101,6 @@ object DebugFunctions {
                     },
                     manga,
                     fetchDetails = true,
-                    fetchChapters = false,
                 )
             }
         }
