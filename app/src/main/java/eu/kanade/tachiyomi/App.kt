@@ -111,6 +111,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
+    // KMK -->
+    private var logFilePrinter: EnhancedFilePrinter? = null
+    // KMK <--
+
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
@@ -166,6 +170,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         val scope = ProcessLifecycleOwner.get().lifecycleScope
+
+        // KMK -->
+        val storageManager = Injekt.get<StorageManager>()
+        storageManager.changes
+            .onEach { logFilePrinter?.updateFolder(storageManager.getLogsDirectory()) }
+            .launchIn(scope)
+        // KMK <--
 
         // Show notification to disable Incognito Mode when it's enabled
         basePreferences.incognitoMode.changes()
@@ -300,6 +311,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun onStart(owner: LifecycleOwner) {
+        // KMK -->
+        val storageManager = Injekt.get<StorageManager>()
+        if (storageManager.refresh()) {
+            logFilePrinter?.updateFolder(storageManager.getLogsDirectory())
+        }
+        logFilePrinter?.resumeFileLogging()
+        // KMK <--
         SecureActivityDelegate.onApplicationStart()
 
         val syncPreferences: SyncPreferences = Injekt.get()
@@ -314,6 +332,11 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun onStop(owner: LifecycleOwner) {
+        // Close SAF descriptors before the process becomes cached. The printer remains paused,
+        // so queued/background logs cannot immediately reopen ExternalStorageProvider.
+        // KMK -->
+        logFilePrinter?.pauseFileLogging()
+        // KMK <--
         SecureActivityDelegate.onApplicationStopped()
 
         // AM (DISCORD) -->
@@ -372,21 +395,22 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (logFolder != null) {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
-            printers += EnhancedFilePrinter
-                .Builder(logFolder) {
-                    fileNameGenerator = object : DateFileNameGenerator() {
-                        override fun generateFileName(logLevel: Int, timestamp: Long): String {
-                            return super.generateFileName(
-                                logLevel,
-                                timestamp,
-                            ) + "-${BuildConfig.BUILD_TYPE}.txt"
-                        }
+            val printer = EnhancedFilePrinter.Builder(logFolder) {
+                fileNameGenerator = object : DateFileNameGenerator() {
+                    override fun generateFileName(logLevel: Int, timestamp: Long): String {
+                        return super.generateFileName(
+                            logLevel,
+                            timestamp,
+                        ) + "-${BuildConfig.BUILD_TYPE}.txt"
                     }
-                    flattener { timeMillis, level, tag, message ->
-                        "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
-                    }
-                    backupStrategy = NeverBackupStrategy()
                 }
+                flattener { timeMillis, level, tag, message ->
+                    "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
+                }
+                backupStrategy = NeverBackupStrategy()
+            }
+            logFilePrinter = printer
+            printers += printer
         }
 
         // Install Crashlytics in prod

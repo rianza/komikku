@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.manga
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -69,6 +70,7 @@ import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.sorted
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
+import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.toast
 import exh.debug.DebugToggles
@@ -164,6 +166,7 @@ import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import java.io.File
 import kotlin.math.floor
 import androidx.compose.runtime.State as RuntimeState
 
@@ -933,8 +936,9 @@ class MangaScreenModel(
             if (currentManga == null || currentSource == null || currentSource is StubSource) return
 
             val mangaDir = downloadProvider.findMangaDir(/* SY --> */ currentManga.ogTitle /* SY <-- */, currentSource) ?: return
+            val folderUri = mangaDir.uri.toFileProviderUri(context) ?: mangaDir.uri
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(mangaDir.uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                setDataAndType(folderUri, DocumentsContract.Document.MIME_TYPE_DIR)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(intent)
@@ -942,6 +946,15 @@ class MangaScreenModel(
             logcat(LogPriority.ERROR, e)
             context.toast(e.message ?: context.stringResource(KMR.strings.error_opening_folder))
         }
+    }
+
+    /** Convert internal direct-file storage to a one-shot URI safe to share with file managers. */
+    private fun Uri.toFileProviderUri(context: Context): Uri? {
+        if (scheme != "file") return null
+        val directory = File(path ?: return null)
+            .takeIf { it.exists() && it.isDirectory }
+            ?: return null
+        return runCatching { directory.getUriCompat(context) }.getOrNull()
     }
 
     /**
