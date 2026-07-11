@@ -188,13 +188,15 @@ class MangaCoverFetcher(
                 }
 
                 // KMK -->
-                setRatioAndColorsInScope(
-                    mangaCover,
-                    bufferedSource = ImageSource(
-                        source = responseBody.source(),
-                        fileSystem = FileSystem.SYSTEM,
-                    ).source(),
-                )
+                // Metadata must not consume the one-shot response source that Coil owns.
+                // Peek a bounded independent copy and let setRatioAndColorsInScope close it.
+                val bodyLength = responseBody.contentLength()
+                if (bodyLength < 0 || bodyLength <= MAX_COVER_METADATA_BYTES) {
+                    setRatioAndColorsInScope(
+                        mangaCover,
+                        bufferedSource = response.peekBody(MAX_COVER_METADATA_BYTES).source(),
+                    )
+                }
                 // KMK <--
                 // Read from response if cache is unused or unusable
                 return SourceFetchResult(
@@ -350,9 +352,14 @@ class MangaCoverFetcher(
         onlyFavorite: Boolean = !themeCoverBased,
         force: Boolean = false,
     ) {
-        if (!preloadLibraryColor) return
+        if (!preloadLibraryColor) {
+            bufferedSource?.close()
+            return
+        }
         scope.launch {
-            MangaCoverMetadata.setRatioAndColors(mangaCover, bufferedSource, ogFile, onlyFavorite, force)
+            bufferedSource.use { source ->
+                MangaCoverMetadata.setRatioAndColors(mangaCover, source, ogFile, onlyFavorite, force)
+            }
         }
     }
     // KMK <--
@@ -420,5 +427,9 @@ class MangaCoverFetcher(
         private val CACHE_CONTROL_NO_NETWORK_NO_CACHE = CacheControl.Builder().noCache().onlyIfCached().build()
 
         private const val HTTP_NOT_MODIFIED = 304
+
+        // KMK -->
+        private const val MAX_COVER_METADATA_BYTES = 5L * 1024 * 1024 // 5 MiB
+        // KMK <--
     }
 }
