@@ -25,6 +25,7 @@ import okhttp3.CacheControl
 import okhttp3.Call
 import okhttp3.Request
 import okhttp3.Response
+import okio.Buffer
 import okio.BufferedSource
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
@@ -165,9 +166,9 @@ class MangaCoverFetcher(
             }
 
             // Fetch from network
-            val response = executeNetworkRequest()
-            val responseBody = checkNotNull(response.body) { "Null response source" }
-            try {
+            executeNetworkRequest().use { response ->
+                val responseBody = checkNotNull(response.body) { "Null response source" }
+
                 // Read from cover cache after library manga cover updated
                 val responseCoverCache = writeResponseToCoverCache(response, libraryCoverCacheFile)
                 if (responseCoverCache != null) {
@@ -188,25 +189,23 @@ class MangaCoverFetcher(
                 }
 
                 // KMK -->
-                // Metadata must not consume the one-shot response source that Coil owns.
-                // Peek a bounded independent copy and let setRatioAndColorsInScope close it.
-                val bodyLength = responseBody.contentLength()
-                if (bodyLength < 0 || bodyLength <= MAX_COVER_METADATA_BYTES) {
+                // A live OkHttp body cannot outlive this fetch safely: cancelled image requests
+                // may leave its transparent GzipSource/Inflater open. Consume it while Response.use
+                // owns it, then give Coil an independent in-memory source.
+                val responseBuffer = Buffer()
+                responseBody.source().use { responseBuffer.writeAll(it) }
+                if (responseBuffer.size <= MAX_COVER_METADATA_BYTES) {
                     setRatioAndColorsInScope(
                         mangaCover,
-                        bufferedSource = response.peekBody(MAX_COVER_METADATA_BYTES).source(),
+                        bufferedSource = responseBuffer.clone(),
                     )
                 }
                 // KMK <--
-                // Read from response if cache is unused or unusable
                 return SourceFetchResult(
-                    source = ImageSource(source = responseBody.source(), fileSystem = FileSystem.SYSTEM),
+                    source = ImageSource(source = responseBuffer, fileSystem = FileSystem.SYSTEM),
                     mimeType = "image/*",
                     dataSource = if (response.cacheResponse != null) DataSource.DISK else DataSource.NETWORK,
                 )
-            } catch (e: Exception) {
-                responseBody.close()
-                throw e
             }
         } catch (e: Exception) {
             snapshot?.close()
