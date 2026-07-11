@@ -48,6 +48,8 @@ class MergedSource : HttpSource() {
 
     override val baseUrl = ""
 
+    override fun getFilterList() = FilterList()
+
     @Deprecated("Use the 1.x API instead", replaceWith = ReplaceWith("getChapterList"))
     override fun fetchChapterList(manga: SManga) = throw UnsupportedOperationException()
     override suspend fun getImage(page: Page, existingSize: Long): Response = throw UnsupportedOperationException()
