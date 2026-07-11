@@ -27,11 +27,6 @@ selectBySource:
 SELECT * FROM feed_saved_search WHERE source = :sourceId AND global = 0 ORDER BY feed_order;
 
 -- KMK -->
-insertReturningId:
-INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
-VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search))
-RETURNING _id;
-
 insert:
 INSERT INTO feed_saved_search (source, saved_search, global, feed_order)
 VALUES (:sourceId, :savedSearch, :global, (SELECT COALESCE(MAX(feed_order), 0) + 1 FROM feed_saved_search));

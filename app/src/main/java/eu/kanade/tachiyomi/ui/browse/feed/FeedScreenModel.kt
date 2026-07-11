@@ -13,11 +13,11 @@ import eu.kanade.presentation.browse.FeedItemUI
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.util.system.LocaleHelper
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -28,12 +28,15 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import logcat.LogPriority
 import mihon.domain.manga.model.toDomainManga
 import tachiyomi.core.common.util.QuerySanitizer.sanitize
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.source.interactor.CountFeedSavedSearchGlobal
@@ -50,6 +53,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import xyz.nulldev.ts.api.http.serializer.FilterSerializer
 import java.util.concurrent.Executors
+import kotlin.time.Duration.Companion.milliseconds
 import tachiyomi.domain.manga.model.Manga as DomainManga
 
 /**
@@ -60,7 +64,7 @@ open class FeedScreenModel(
     val sourcePreferences: SourcePreferences = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
     private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
-    getFeedSavedSearchGlobal: GetFeedSavedSearchGlobal = Injekt.get(),
+    private val getFeedSavedSearchGlobal: GetFeedSavedSearchGlobal = Injekt.get(),
     private val getSavedSearchGlobalFeed: GetSavedSearchGlobalFeed = Injekt.get(),
     private val countFeedSavedSearchGlobal: CountFeedSavedSearchGlobal = Injekt.get(),
     private val getSavedSearchBySourceId: GetSavedSearchBySourceId = Injekt.get(),
@@ -82,24 +86,7 @@ open class FeedScreenModel(
             getFeedSavedSearchGlobal.subscribe().distinctUntilChanged(),
             sourceManager.sources,
         ) { feeds, _ -> feeds }
-            .onEach {
-                sourceManager.isInitialized.first { it }
-                val items = getSourcesToGetFeed(it).map { (feed, savedSearch) ->
-                    createCatalogueSearchItem(
-                        feed = feed,
-                        savedSearch = savedSearch,
-                        source = sourceManager.get(feed.source),
-                        results = null,
-                    )
-                }
-                mutableState.update { state ->
-                    state.copy(
-                        items = items,
-                    )
-                }
-                getFeed(items)
-            }
-            .catch { _events.send(Event.FailedFetchingSources) }
+            .onEach(::refreshFeedItemsSafely)
             .launchIn(screenModelScope)
 
         combine(
@@ -119,6 +106,31 @@ open class FeedScreenModel(
                 }
             }
             .launchIn(screenModelScope)
+    }
+
+    private suspend fun refreshFeedItemsSafely(feeds: List<FeedSavedSearch>) {
+        try {
+            refreshFeedItems(feeds)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Failed to refresh Feed items" }
+            _events.send(Event.FailedFetchingSources)
+        }
+    }
+
+    private suspend fun refreshFeedItems(feeds: List<FeedSavedSearch>) {
+        sourceManager.isInitialized.first { it }
+        val items = getSourcesToGetFeed(feeds).map { (feed, savedSearch) ->
+            createCatalogueSearchItem(
+                feed = feed,
+                savedSearch = savedSearch,
+                source = sourceManager.get(feed.source),
+                results = null,
+            )
+        }
+        mutableState.update { state -> state.copy(items = items) }
+        getFeed(items)
     }
 
     fun init() {
@@ -218,7 +230,7 @@ open class FeedScreenModel(
 
     fun createFeed(source: Source, savedSearch: SavedSearch?) {
         screenModelScope.launchNonCancellable {
-            insertFeedSavedSearch.await(
+            val feedId = insertFeedSavedSearch.await(
                 FeedSavedSearch(
                     id = -1,
                     source = source.id,
@@ -226,7 +238,21 @@ open class FeedScreenModel(
                     global = true,
                     feedOrder = 0,
                 ),
-            )
+            ) ?: run {
+                _events.send(Event.FailedFetchingSources)
+                return@launchNonCancellable
+            }
+
+            // SQLDelight normally updates the subscribed query immediately. If an OEM/driver
+            // delays that invalidation, explicitly refresh instead of waiting for the next insert.
+            val observed = withTimeoutOrNull(FEED_INSERT_OBSERVER_TIMEOUT) {
+                state.first { currentState ->
+                    currentState.items.orEmpty().any { it.feed.id == feedId }
+                }
+            }
+            if (observed == null) {
+                refreshFeedItemsSafely(getFeedSavedSearchGlobal.await())
+            }
         }
     }
 
@@ -411,3 +437,4 @@ data class FeedScreenState(
 }
 
 const val MaxFeedItems = 20
+private val FEED_INSERT_OBSERVER_TIMEOUT = 500.milliseconds
