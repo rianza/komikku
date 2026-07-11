@@ -437,12 +437,27 @@ class DownloadCache(
 
                 updatedRootDir.sourceDirs.values.map { sourceDir ->
                     async {
-                        sourceDir.mangaDirs = sourceDir.dir?.listFiles().orEmpty()
+                        // Wrap directory listing in try-catch: SAF-backed directories can
+                        // throw if the underlying files were deleted externally (e.g. via
+                        // file manager) between the exists() check and listFiles().
+                        val sourceFiles = runCatching { sourceDir.dir?.listFiles().orEmpty() }
+                            .getOrElse {
+                                logcat(LogPriority.WARN, it) { "Failed to list source dir" }
+                                emptyArray()
+                            }
+
+                        sourceDir.mangaDirs = sourceFiles
                             .filter { it.isDirectory && !it.name.isNullOrBlank() }
                             .associate { it.name!! to MangaDirectory(it) }
 
                         sourceDir.mangaDirs.values.forEach { mangaDir ->
-                            val chapterDirs = mangaDir.dir?.listFiles().orEmpty()
+                            val chapterFiles = runCatching { mangaDir.dir?.listFiles().orEmpty() }
+                                .getOrElse {
+                                    logcat(LogPriority.WARN, it) { "Failed to list manga dir" }
+                                    emptyArray()
+                                }
+
+                            val chapterDirs = chapterFiles
                                 .mapNotNull {
                                     when {
                                         // Ignore incomplete downloads
