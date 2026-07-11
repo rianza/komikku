@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -170,6 +171,9 @@ interface CatalogueSource : Source {
         runCatching { fetchRelatedMangaList(manga) }
             .onSuccess { if (it.isNotEmpty()) pushResults(Pair("", it), false) }
             .onFailure { e ->
+                // Don't log CancellationException as error - it's a normal
+                // cancellation (e.g. user navigated away from screen)
+                if (e is CancellationException) throw e
                 logcat(LogPriority.ERROR, e) { "## getRelatedMangaListByExtension: $e" }
             }
     }
@@ -229,7 +233,7 @@ interface CatalogueSource : Source {
             .onEach { words.add(it) }
         if (words.isEmpty()) return
 
-        coroutineScope {
+        supervisorScope {
             val filterList = getFilterList()
             words.map { keyword ->
                 launch {
@@ -238,6 +242,9 @@ interface CatalogueSource : Source {
                     }
                         .onSuccess { if (it.isNotEmpty()) pushResults(Pair(keyword, it), false) }
                         .onFailure { e ->
+                            // Don't log CancellationException as error - it's a normal
+                            // cancellation (e.g. user navigated away from screen)
+                            if (e is CancellationException) throw e
                             logcat(LogPriority.ERROR, e) { "## getRelatedMangaListBySearch: $e" }
                         }
                 }
