@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Looper
 import android.os.StrictMode
+import android.os.Trace
 import android.webkit.WebView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -72,6 +73,7 @@ import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.notify
+import eu.kanade.tachiyomi.util.system.startupTrace
 import eu.kanade.tachiyomi.util.system.telemetryIncluded
 import exh.log.CrashlyticsPrinter
 import exh.log.EHLogLevel
@@ -120,6 +122,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     override fun onCreate() {
         super<Application>.onCreate()
 
+        // KMK -->
+        Trace.beginSection("KMK:App.onCreate")
+        // KMK <--
+
         // Diagnostic only: report the allocation stack of closeable resources finalized without
         // being closed. Do not enable penaltyDeath or ship this policy in stable release builds.
         if (isDebugBuildType || isPreviewBuildType) {
@@ -131,14 +137,17 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             )
         }
 
-        patchInjekt()
-        TelemetryConfig.init(
-            applicationContext,
-            isPreviewBuildType,
-            BuildConfig.COMMIT_COUNT,
-        )
+        startupTrace("App.patchInjekt") { patchInjekt() }
+        startupTrace("App.telemetry") {
+            TelemetryConfig.init(
+                applicationContext,
+                isPreviewBuildType,
+                BuildConfig.COMMIT_COUNT,
+            )
+        }
 
         // KMK -->
+        Trace.beginSection("KMK:App.platformSetup")
         if (isDebugBuildType) Timber.plant(Timber.DebugTree())
         // KMK <--
 
@@ -154,7 +163,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             val process = getProcessName()
             if (packageName != process) WebView.setDataDirectorySuffix(process)
         }
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
+        // KMK -->
+        Trace.beginSection("KMK:App.importModules")
+        // KMK <--
         Injekt.importModule(PreferenceModule(this))
         Injekt.importModule(AppModule(this))
         Injekt.importModule(DomainModule())
@@ -165,7 +180,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Injekt.importModule(SYPreferenceModule(this))
         Injekt.importModule(SYDomainModule())
         // SY <--
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
+        // KMK -->
+        Trace.beginSection("KMK:App.logging")
+        // KMK <--
         setupExhLogging() // EXH logging
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
@@ -177,8 +198,11 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             LogcatLogger.loggers += XLogLogcatLogger() // SY Redirect Logcat to XLog
             LogcatLogger.loggers += AndroidLogcatLogger(minLogPriority)
         }
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
-        setupNotificationChannels()
+        startupTrace("App.notificationChannels") { setupNotificationChannels() }
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
@@ -232,23 +256,32 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .onEach(TelemetryConfig::setCrashlyticsEnabled)
             .launchIn(scope)
 
-        basePreferences.hardwareBitmapThreshold.let { preference ->
-            if (!preference.isSet()) preference.set(GLUtil.DEVICE_TEXTURE_LIMIT)
+        startupTrace("App.hardwareBitmap") {
+            basePreferences.hardwareBitmapThreshold.let { preference ->
+                if (!preference.isSet()) preference.set(GLUtil.DEVICE_TEXTURE_LIMIT)
+            }
         }
 
         basePreferences.hardwareBitmapThreshold.changes()
             .onEach { ImageUtil.hardwareBitmapThreshold = it }
             .launchIn(scope)
 
-        setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
+        startupTrace("App.theme") {
+            setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
+        }
 
         // KMK -->
-        MangaCoverMetadata.load()
+        startupTrace("App.coverMetadataLoad") { MangaCoverMetadata.load() }
         // KMK <--
 
         // Updates widget update
-        WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
+        startupTrace("App.widgetManager") {
+            WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
+        }
 
+        // KMK -->
+        Trace.beginSection("KMK:App.workAndSync")
+        // KMK <--
         if (!WorkManager.isInitialized()) {
             WorkManager.initialize(this, Configuration.Builder().build())
         }
@@ -257,8 +290,15 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (syncPreferences.isSyncEnabled() && syncTriggerOpt.syncOnAppStart) {
             SyncDataJob.startNow(this@App)
         }
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
-        initializeMigrator()
+        startupTrace("App.migrator") { initializeMigrator() }
+
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
     }
 
     private fun initializeMigrator() {
@@ -279,7 +319,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
-        return ImageLoader.Builder(this).apply {
+        // KMK -->
+        Trace.beginSection("KMK:App.newImageLoader")
+        // KMK <--
+        val imageLoader = ImageLoader.Builder(this).apply {
             val callFactoryLazy = lazy { Injekt.get<NetworkHelper>().client }
             components {
                 // NetworkFetcher.Factory
@@ -321,6 +364,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             decoderCoroutineContext(Dispatchers.IO.limitedParallelism(3))
         }
             .build()
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
+        return imageLoader
     }
 
     override fun onStart(owner: LifecycleOwner) {

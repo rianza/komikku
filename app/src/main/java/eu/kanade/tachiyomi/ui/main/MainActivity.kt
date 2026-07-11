@@ -9,10 +9,12 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.os.Trace
 import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -101,6 +103,7 @@ import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
+import eu.kanade.tachiyomi.util.system.startupTrace
 import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import exh.debug.DebugToggles
@@ -161,7 +164,10 @@ class MainActivity : BaseActivity() {
     private val getIncognitoState: GetIncognitoState by injectLazy()
 
     // To be checked by splash screen. If true then splash screen will be removed.
-    var ready = false
+    // KMK -->
+    var ready by mutableStateOf(false)
+    private var firstComposition = true
+    // KMK <--
 
     private var navigator: Navigator? = null
 
@@ -198,14 +204,25 @@ class MainActivity : BaseActivity() {
         val isLaunch = savedInstanceState == null
 
         // Prevent splash screen showing up on configuration changes
-        val splashScreen = if (isLaunch) installSplashScreen() else null
+        val splashScreen = startupTrace("MainActivity.installSplash") {
+            if (isLaunch) installSplashScreen() else null
+        }
 
-        super.onCreate(savedInstanceState)
+        // KMK -->
+        Trace.beginSection("KMK:MainActivity.superOnCreate")
+        try {
+            super.onCreate(savedInstanceState)
+        } finally {
+            Trace.endSection()
+        }
+        // KMK <--
 
-        val didMigration = if (isLaunch) {
-            Migrator.awaitAndRelease()
-        } else {
-            false
+        val didMigration = startupTrace("MainActivity.awaitMigration") {
+            if (isLaunch) {
+                Migrator.awaitAndRelease()
+            } else {
+                false
+            }
         }
 
         // Do not let the launcher create a new activity http://stackoverflow.com/questions/16283079
@@ -220,6 +237,14 @@ class MainActivity : BaseActivity() {
         // SY <--
 
         setComposeContent {
+            // KMK -->
+            val traceFirstComposition = firstComposition
+            if (traceFirstComposition) {
+                Trace.beginSection("KMK:MainActivity.firstComposition")
+            }
+            ReportDrawnWhen { ready }
+            // KMK <--
+
             val context = LocalContext.current
 
             var incognito by remember { mutableStateOf(getIncognitoState.await(null)) }
@@ -461,6 +486,12 @@ class MainActivity : BaseActivity() {
             // SY -->
             ConfigureExhDialog(run = runExhConfigureDialog, onRunning = { runExhConfigureDialog = false })
             // SY <--
+            // KMK -->
+            if (traceFirstComposition) {
+                firstComposition = false
+                Trace.endSection()
+            }
+            // KMK <--
         }
 
         val startTime = System.currentTimeMillis()

@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.extension.model.LoadResult
 import eu.kanade.tachiyomi.extension.util.ExtensionInstallReceiver
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
+import eu.kanade.tachiyomi.util.system.startupTrace
 import eu.kanade.tachiyomi.util.system.toast
 import exh.log.xLogD
 import exh.source.BlacklistedSources
@@ -159,7 +160,11 @@ class ExtensionManager(
      */
     private suspend fun initExtensions() {
         extensionLoadMutex.withLock {
-            val extensions = ExtensionLoader.loadExtensions(context)
+            // KMK -->
+            val extensions = startupTrace("Extensions.loadInstalled") {
+                ExtensionLoader.loadExtensions(context)
+            }
+            // KMK <--
 
             installedExtensionMapFlow.value = extensions
                 .filterIsInstance<LoadResult.Success>()
