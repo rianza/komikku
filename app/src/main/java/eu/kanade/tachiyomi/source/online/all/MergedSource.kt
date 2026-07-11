@@ -4,6 +4,7 @@ import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
@@ -66,6 +67,13 @@ class MergedSource : HttpSource() {
     @Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getPopularManga"))
     override fun fetchPopularManga(page: Int) = throw UnsupportedOperationException()
     override suspend fun getPopularManga(page: Int) = throw UnsupportedOperationException()
+
+    @Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getSearchManga"))
+    override fun fetchSearchManga(page: Int, query: String, filters: FilterList) = throw UnsupportedOperationException()
+    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList) = throw UnsupportedOperationException()
+
+    override fun mangaDetailsRequest(manga: SManga) = throw UnsupportedOperationException()
+    override fun mangaDetailsParse(response: Response): SManga = throw UnsupportedOperationException()
 
     override suspend fun getMangaUpdate(
         manga: SManga,
