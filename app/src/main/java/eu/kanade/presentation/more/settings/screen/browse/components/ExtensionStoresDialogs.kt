@@ -36,7 +36,7 @@ fun ExtensionStoreCreateDialog(
     val state = rememberTextFieldState()
     val storeAlreadyExists by remember(storeIndexUrls) {
         derivedStateOf {
-            val indexUrl = state.text.toString()
+            val indexUrl = state.text.toString().trim()
             storeIndexUrls.contains(indexUrl)
         }
     }
@@ -66,14 +66,15 @@ fun ExtensionStoreCreateDialog(
                     Text(text = errorMessage ?: stringResource(msgRes))
                 },
                 isError = errorMessage != null || storeAlreadyExists,
+                enabled = !processing,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 lineLimits = TextFieldLineLimits.SingleLine,
             )
         },
         confirmButton = {
             TextButton(
-                onClick = { onCreate(state.text.toString()) },
-                enabled = !processing && state.text.isNotEmpty() && !storeAlreadyExists,
+                onClick = { onCreate(state.text.toString().trim()) },
+                enabled = !processing && state.text.isNotBlank() && !storeAlreadyExists,
             ) {
                 Text(
                     text = stringResource(
@@ -87,7 +88,10 @@ fun ExtensionStoreCreateDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
+            TextButton(
+                onClick = onDismissRequest,
+                enabled = !processing,
+            ) {
                 Text(text = stringResource(MR.strings.action_cancel))
             }
         },
@@ -153,6 +157,7 @@ fun ExtensionStoreConfirmDialog(
                     modifier = Modifier.fillMaxWidth(),
                     state = state,
                     readOnly = true,
+                    enabled = !processing,
                     supportingText = when {
                         storeAlreadyExists -> {
                             {
@@ -184,7 +189,10 @@ fun ExtensionStoreConfirmDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
+            TextButton(
+                onClick = onDismissRequest,
+                enabled = !processing,
+            ) {
                 Text(text = stringResource(MR.strings.action_cancel))
             }
         },

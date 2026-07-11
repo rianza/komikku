@@ -59,7 +59,9 @@ class ExtensionStoresScreen(
             null -> {}
             is ExtensionStoreDialog.Create -> {
                 ExtensionStoreCreateDialog(
-                    onDismissRequest = screenModel::dismissDialog,
+                    onDismissRequest = {
+                        if (!dialog.processing) screenModel.dismissDialog()
+                    },
                     onCreate = { screenModel.createRepo(it) },
                     storeIndexUrls = successState.stores.map { it.indexUrl }.toSet(),
                     processing = dialog.processing,
@@ -76,7 +78,9 @@ class ExtensionStoresScreen(
             }
             is ExtensionStoreDialog.Confirm -> {
                 ExtensionStoreConfirmDialog(
-                    onDismissRequest = screenModel::dismissDialog,
+                    onDismissRequest = {
+                        if (!dialog.processing) screenModel.dismissDialog()
+                    },
                     onCreate = { screenModel.createRepo(dialog.url) },
                     storeIndexUrl = dialog.url,
                     storeAlreadyExists = dialog.alreadyExists,

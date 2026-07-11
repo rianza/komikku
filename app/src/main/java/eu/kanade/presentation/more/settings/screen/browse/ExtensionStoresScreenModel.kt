@@ -72,22 +72,44 @@ class ExtensionStoresScreenModel(
      * @param baseUrl The baseUrl of the repo to create.
      */
     fun createRepo(baseUrl: String) {
+        val normalizedUrl = baseUrl.trim()
+        if (normalizedUrl.isEmpty()) return
+
+        val successState = state.value as? ExtensionStoreScreenState.Success ?: return
+        val processingDialog = when (val dialog = successState.dialog) {
+            is ExtensionStoreDialog.Create -> {
+                if (dialog.processing) return
+                dialog.copy(processing = true, errorMessage = null)
+            }
+            is ExtensionStoreDialog.Confirm -> {
+                if (dialog.processing) return
+                dialog.copy(processing = true, errorMessage = null)
+            }
+            else -> return
+        }
+        updateSuccessState { it.copy(dialog = processingDialog) }
+
         screenModelScope.launchIO {
-            // Dismiss dialog immediately for smooth UX - validation runs in background
-            dismissDialog()
-            addExtensionStore(baseUrl)
+            addExtensionStore(normalizedUrl)
                 .onSuccess {
                     extensionManager.reloadInstalledExtensions()
                     extensionManager.findAvailableExtensions()
+                    dismissDialog()
                 }
                 .onFailure { throwable ->
-                    // Re-show dialog with error if validation fails
-                    updateSuccessState {
-                        it.copy(
-                            dialog = ExtensionStoreDialog.Create(
-                                processing = false,
-                                errorMessage = throwable.message ?: "unknown error",
-                            ),
+                    updateSuccessState { state ->
+                        state.copy(
+                            dialog = when (val dialog = state.dialog) {
+                                is ExtensionStoreDialog.Create -> dialog.copy(
+                                    processing = false,
+                                    errorMessage = throwable.message ?: "unknown error",
+                                )
+                                is ExtensionStoreDialog.Confirm -> dialog.copy(
+                                    processing = false,
+                                    errorMessage = throwable.message ?: "unknown error",
+                                )
+                                else -> dialog
+                            },
                         )
                     }
                 }
