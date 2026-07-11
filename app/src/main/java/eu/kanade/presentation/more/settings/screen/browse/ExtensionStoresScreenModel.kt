@@ -77,6 +77,7 @@ class ExtensionStoresScreenModel(
             dismissDialog()
             addExtensionStore(baseUrl)
                 .onSuccess {
+                    extensionManager.reloadInstalledExtensions()
                     extensionManager.findAvailableExtensions()
                 }
                 .onFailure { throwable ->
@@ -102,6 +103,8 @@ class ExtensionStoresScreenModel(
         if (status is ExtensionStoreScreenState.Success) {
             screenModelScope.launchIO {
                 updateExtensionStores()
+                extensionManager.reloadInstalledExtensions()
+                extensionManager.findAvailableExtensions()
             }
         }
     }
@@ -112,6 +115,7 @@ class ExtensionStoresScreenModel(
     fun deleteRepo(baseUrl: String) {
         screenModelScope.launchIO {
             removeExtensionStore(baseUrl)
+            extensionManager.reloadInstalledExtensions()
             extensionManager.findAvailableExtensions()
         }
     }

@@ -19,6 +19,7 @@ import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.SavedSearchRestorer
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
 import exh.source.MERGED_SOURCE_ID
 import kotlinx.coroutines.CoroutineScope
@@ -52,6 +53,7 @@ class BackupRestorer(
     private val categoriesRestorer: CategoriesRestorer = CategoriesRestorer(),
     private val preferenceRestorer: PreferenceRestorer = PreferenceRestorer(context),
     private val extensionStoreRestorer: ExtensionStoreRestorer = ExtensionStoreRestorer(),
+    private val extensionManager: ExtensionManager = Injekt.get(),
     private val mangaRestorer: MangaRestorer = MangaRestorer(isSync),
     // SY -->
     private val savedSearchRestorer: SavedSearchRestorer = SavedSearchRestorer(),
@@ -74,6 +76,18 @@ class BackupRestorer(
         val startTime = System.currentTimeMillis()
 
         restoreFromFile(uri, options)
+
+        // KMK -->
+        // Store signing keys may turn already installed extensions from untrusted into trusted.
+        // Revalidate once after every restored store has been committed so sources update live.
+        if (options.extensionStores) {
+            try {
+                extensionManager.reloadInstalledExtensions()
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to reload extensions after restoring stores" }
+            }
+        }
+        // KMK <--
 
         // Invalidate download cache to ensure UI reflects any restored downloads
         if (options.libraryEntries) {

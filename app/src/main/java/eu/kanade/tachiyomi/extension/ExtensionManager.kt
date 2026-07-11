@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withUIContext
@@ -58,6 +60,10 @@ class ExtensionManager(
 ) {
 
     val scope = CoroutineScope(SupervisorJob())
+
+    // KMK -->
+    private val extensionLoadMutex = Mutex()
+    // KMK <--
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
@@ -151,22 +157,36 @@ class ExtensionManager(
     /**
      * Loads and registers the installed extensions.
      */
-    private fun initExtensions() {
-        val extensions = ExtensionLoader.loadExtensions(context)
+    private suspend fun initExtensions() {
+        extensionLoadMutex.withLock {
+            val extensions = ExtensionLoader.loadExtensions(context)
 
-        installedExtensionMapFlow.value = extensions
-            .filterIsInstance<LoadResult.Success>()
-            .associate { it.extension.pkgName to it.extension }
+            installedExtensionMapFlow.value = extensions
+                .filterIsInstance<LoadResult.Success>()
+                .associate { it.extension.pkgName to it.extension }
 
-        untrustedExtensionMapFlow.value = extensions
-            .filterIsInstance<LoadResult.Untrusted>()
-            .associate { it.extension.pkgName to it.extension }
-            // SY -->
-            .filterNotBlacklisted()
-        // SY <--
+            untrustedExtensionMapFlow.value = extensions
+                .filterIsInstance<LoadResult.Untrusted>()
+                .associate { it.extension.pkgName to it.extension }
+                // SY -->
+                .filterNotBlacklisted()
+            // SY <--
 
-        _isInitialized.value = true
+            _isInitialized.value = true
+        }
     }
+
+    // KMK -->
+    /**
+     * Revalidates installed extension signatures after configured extension stores change.
+     * Updating the state flows also makes the source manager rebuild its source map.
+     */
+    suspend fun reloadInstalledExtensions() {
+        withContext(Dispatchers.IO) {
+            initExtensions()
+        }
+    }
+    // KMK <--
 
     // EXH -->
     private fun <T : Extension> Map<String, T>.filterNotBlacklisted(): Map<String, T> {
