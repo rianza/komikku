@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
@@ -374,7 +375,7 @@ class ExtensionManager(
 
         trustExtension.trust(extension.pkgName, extension.versionCode, extension.signatureHash)
 
-        untrustedExtensionMapFlow.value -= extension.pkgName
+        untrustedExtensionMapFlow.update { it - extension.pkgName }
 
         withContext(Dispatchers.IO) {
             ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)
@@ -396,7 +397,7 @@ class ExtensionManager(
         }
         // SY <--
 
-        installedExtensionMapFlow.value += extension
+        installedExtensionMapFlow.update { it + extension }
     }
 
     /**
@@ -413,7 +414,7 @@ class ExtensionManager(
         }
         // SY <--
 
-        installedExtensionMapFlow.value += extension
+        installedExtensionMapFlow.update { it + extension }
     }
 
     /**
@@ -423,8 +424,8 @@ class ExtensionManager(
      * @param pkgName The package name of the uninstalled application.
      */
     private fun unregisterExtension(pkgName: String) {
-        installedExtensionMapFlow.value -= pkgName
-        untrustedExtensionMapFlow.value -= pkgName
+        installedExtensionMapFlow.update { it - pkgName }
+        untrustedExtensionMapFlow.update { it - pkgName }
     }
 
     /**
@@ -443,8 +444,8 @@ class ExtensionManager(
         }
 
         override fun onExtensionUntrusted(extension: Extension.Untrusted) {
-            installedExtensionMapFlow.value -= extension.pkgName
-            untrustedExtensionMapFlow.value += extension
+            installedExtensionMapFlow.update { it - extension.pkgName }
+            untrustedExtensionMapFlow.update { it + extension }
             updatePendingUpdatesCount()
         }
 

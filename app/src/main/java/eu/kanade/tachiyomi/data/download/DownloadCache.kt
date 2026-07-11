@@ -427,7 +427,13 @@ class DownloadCache(
             rootDownloadsDirMutex.withLock {
                 val updatedRootDir = RootDirectory(storageManager.getDownloadsDirectory())
 
-                updatedRootDir.sourceDirs = updatedRootDir.dir?.listFiles().orEmpty()
+                val rootFiles = runCatching { updatedRootDir.dir?.listFiles().orEmpty() }
+                    .getOrElse {
+                        logcat(LogPriority.WARN, it) { "Failed to list downloads root" }
+                        emptyArray()
+                    }
+
+                updatedRootDir.sourceDirs = rootFiles
                     .filter { it.isDirectory && !it.name.isNullOrBlank() }
                     .mapNotNull { dir ->
                         val sourceId = sourceMap[dir.name!!.lowercase()]

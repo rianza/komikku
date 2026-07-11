@@ -239,6 +239,8 @@ class MangaScreen(
                     withIOContext {
                         assistUrl = getMangaUrl(screenModel.manga, screenModel.source)
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to get manga URL" }
                 }

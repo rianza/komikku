@@ -512,10 +512,13 @@ class MangaScreenModel(
                     fetchDetails = needRefreshInfo,
                     fetchChapters = needRefreshChapter,
                 )
-                // KMK -->
-                launch { fetchRelatedMangasFromSource() }
-                // KMK <--
             }
+
+            // KMK -->
+            // Related manga is UI state, not refresh state. Fetch it on every initial
+            // screen load even when cached manga info/chapters are still fresh.
+            launch { fetchRelatedMangasFromSource() }
+            // KMK <--
 
             // Initial loading finished
             updateSuccessState { it.copy(isRefreshingData = false) }
