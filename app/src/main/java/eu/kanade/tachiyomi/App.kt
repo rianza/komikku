@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Looper
+import android.os.StrictMode
 import android.webkit.WebView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -118,6 +119,18 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
+
+        // Diagnostic only: report the allocation stack of closeable resources finalized without
+        // being closed. Do not enable penaltyDeath or ship this policy in stable release builds.
+        if (isDebugBuildType || isPreviewBuildType) {
+            StrictMode.setVmPolicy(
+                StrictMode.VmPolicy.Builder(StrictMode.getVmPolicy())
+                    .detectLeakedClosableObjects()
+                    .penaltyLog()
+                    .build(),
+            )
+        }
+
         patchInjekt()
         TelemetryConfig.init(
             applicationContext,
