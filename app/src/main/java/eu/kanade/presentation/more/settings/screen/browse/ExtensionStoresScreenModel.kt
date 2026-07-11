@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,6 +28,8 @@ class ExtensionStoresScreenModel(
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<ExtensionStoreScreenState>(ExtensionStoreScreenState.Loading) {
+
+    private var createRepoJob: Job? = null
 
     private inline fun updateSuccessState(
         func: (ExtensionStoreScreenState.Success) -> ExtensionStoreScreenState.Success,
@@ -73,42 +76,31 @@ class ExtensionStoresScreenModel(
      */
     fun createRepo(baseUrl: String) {
         val normalizedUrl = baseUrl.trim()
-        if (normalizedUrl.isEmpty()) return
+        if (normalizedUrl.isEmpty() || createRepoJob?.isActive == true) return
 
-        val successState = state.value as? ExtensionStoreScreenState.Success ?: return
-        val processingDialog = when (val dialog = successState.dialog) {
-            is ExtensionStoreDialog.Create -> {
-                if (dialog.processing) return
-                dialog.copy(processing = true, errorMessage = null)
-            }
-            is ExtensionStoreDialog.Confirm -> {
-                if (dialog.processing) return
-                dialog.copy(processing = true, errorMessage = null)
-            }
-            else -> return
-        }
-        updateSuccessState { it.copy(dialog = processingDialog) }
+        val currentDialog = (state.value as? ExtensionStoreScreenState.Success)?.dialog ?: return
+        dismissDialog()
 
-        screenModelScope.launchIO {
+        createRepoJob = screenModelScope.launchIO {
             addExtensionStore(normalizedUrl)
                 .onSuccess {
                     extensionManager.reloadInstalledExtensions()
                     extensionManager.findAvailableExtensions()
-                    dismissDialog()
                 }
                 .onFailure { throwable ->
+                    val message = throwable.message ?: "unknown error"
                     updateSuccessState { state ->
                         state.copy(
-                            dialog = when (val dialog = state.dialog) {
-                                is ExtensionStoreDialog.Create -> dialog.copy(
+                            dialog = when (currentDialog) {
+                                is ExtensionStoreDialog.Confirm -> currentDialog.copy(
                                     processing = false,
-                                    errorMessage = throwable.message ?: "unknown error",
+                                    errorMessage = message,
                                 )
-                                is ExtensionStoreDialog.Confirm -> dialog.copy(
+                                else -> ExtensionStoreDialog.Confirm(
+                                    url = normalizedUrl,
                                     processing = false,
-                                    errorMessage = throwable.message ?: "unknown error",
+                                    errorMessage = message,
                                 )
-                                else -> dialog
                             },
                         )
                     }
