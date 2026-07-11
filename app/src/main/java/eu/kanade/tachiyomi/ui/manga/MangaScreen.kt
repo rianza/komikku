@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -428,7 +429,13 @@ class MangaScreen(
                 .takeIf { successState.source !is StubSource },
             onRelatedMangasScreenClick = {
                 if (successState.isRelatedMangasFetched == null) {
-                    scope.launchIO { screenModel.fetchRelatedMangasFromSource(onDemand = true) }
+                    // Use screenModelScope instead of Compose rememberCoroutineScope
+                    // to avoid ForgottenCoroutineScopeException when user navigates away
+                    // before the fetch completes. screenModelScope is tied to the
+                    // screen model lifecycle, not the composable lifecycle.
+                    screenModel.screenModelScope.launchIO {
+                        screenModel.fetchRelatedMangasFromSource(onDemand = true)
+                    }
                 }
                 showRelatedMangasScreen()
             },

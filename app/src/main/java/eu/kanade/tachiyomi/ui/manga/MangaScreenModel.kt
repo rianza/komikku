@@ -1175,6 +1175,9 @@ class MangaScreenModel(
         setRelatedMangasFetchedStatus(false)
 
         fun exceptionHandler(e: Throwable) {
+            // Don't treat CancellationException as a real error — it simply means the
+            // user navigated away before the fetch finished.
+            if (e is CancellationException) return
             logcat(LogPriority.ERROR, e)
             val message = with(context) { e.formattedMessage }
 
@@ -1188,6 +1191,11 @@ class MangaScreenModel(
         try {
             if (state.source !is StubSource && relatedMangasEnabled) {
                 state.source.getRelatedMangaList(state.manga.toSManga(), { e -> exceptionHandler(e) }) { pair, _ ->
+                    // Skip updating state if the screen model scope is no longer active
+                    // (user already navigated away). This avoids ForgottenCoroutine-
+                    // ScopeException when pushing results after the composable is gone.
+                    if (!screenModelScope.isActive) return@getRelatedMangaList
+
                     /* Push found related mangas into collection */
                     val relatedManga = RelatedManga.Success.fromPair(pair) { mangaList ->
                         mangaList
@@ -1206,6 +1214,9 @@ class MangaScreenModel(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            // Normal cancellation (user navigated away) — just mark as finished silently
+            logcat(LogPriority.DEBUG) { "Related mangas fetch cancelled" }
         } catch (e: Exception) {
             exceptionHandler(e)
         } finally {
