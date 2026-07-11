@@ -17,9 +17,6 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher.Companion.USE_CUSTOM_COVER_KEY
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.online.HttpSource
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import logcat.LogPriority
 import okhttp3.CacheControl
 import okhttp3.Call
@@ -71,7 +68,6 @@ class MangaCoverFetcher(
 ) : Fetcher {
 
     // KMK -->
-    private val scope by lazy { CoroutineScope(Dispatchers.IO) }
     private val uiPreferences = Injekt.get<UiPreferences>()
     private val themeCoverBased = uiPreferences.themeCoverBased.get()
     private val preloadLibraryColor = uiPreferences.preloadLibraryColor.get()
@@ -355,11 +351,13 @@ class MangaCoverFetcher(
             bufferedSource?.close()
             return
         }
-        scope.launch {
-            bufferedSource.use { source ->
-                MangaCoverMetadata.setRatioAndColors(mangaCover, source, ogFile, onlyFavorite, force)
-            }
-        }
+        MangaCoverMetadata.enqueue(
+            mangaCover = mangaCover,
+            bufferedSource = bufferedSource,
+            ogFile = ogFile,
+            onlyDominantColor = onlyFavorite,
+            force = force,
+        )
     }
     // KMK <--
 

@@ -36,7 +36,11 @@ data class MangaCover(
     var vibrantCoverColor: Int?
         get() = vibrantCoverColorMap[mangaId]
         set(value) {
-            vibrantCoverColorMap[mangaId] = value
+            if (value == null) {
+                vibrantCoverColorMap.remove(mangaId)
+            } else {
+                vibrantCoverColorMap[mangaId] = value
+            }
         }
 
     /**
@@ -73,7 +77,7 @@ data class MangaCover(
          * [vibrantCoverColorMap] store color generated while browsing library.
          * It always empty at beginning each time app starts, then add more color while browsing.
          */
-        val vibrantCoverColorMap: HashMap<Long, Int?> = hashMapOf()
+        val vibrantCoverColorMap = ConcurrentHashMap<Long, Int>()
 
         /**
          * [dominantCoverColorMap] stores favorite manga's cover & text's color as a joined string in Prefs.
