@@ -278,7 +278,7 @@ internal object ExtensionLoader {
      * @param context The application context.
      * @param extensionInfo The extension to load.
      */
-    private fun loadExtension(
+    private suspend fun loadExtension(
         context: Context,
         extensionInfo: ExtensionInfo,
         // KMK -->
