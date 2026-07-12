@@ -17,6 +17,7 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher.Companion.USE_CUSTOM_COVER_KEY
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.online.HttpSource
+import kotlinx.coroutines.flow.first
 import logcat.LogPriority
 import okhttp3.CacheControl
 import okhttp3.Call
@@ -62,7 +63,10 @@ class MangaCoverFetcher(
     private val coverFileLazy: Lazy<File?>,
     private val customCoverFileLazy: Lazy<File>,
     private val diskCacheKeyLazy: Lazy<String>,
-    private val sourceLazy: Lazy<HttpSource?>,
+    // KMK -->
+    private val sourceManager: SourceManager,
+    private val sourceId: Long,
+    // KMK <--
     private val callFactoryLazy: Lazy<Call.Factory>,
     private val imageLoader: ImageLoader,
 ) : Fetcher {
@@ -210,8 +214,9 @@ class MangaCoverFetcher(
     }
 
     private suspend fun executeNetworkRequest(): Response {
-        val client = sourceLazy.value?.client ?: callFactoryLazy.value
-        val response = client.newCall(newRequest()).await()
+        val source = awaitSource()
+        val client = source?.client ?: callFactoryLazy.value
+        val response = client.newCall(newRequest(source)).await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
             response.close()
             throw IOException(response.message)
@@ -219,11 +224,26 @@ class MangaCoverFetcher(
         return response
     }
 
-    private fun newRequest(): Request {
+    // KMK -->
+    /**
+     * Network covers need the extension client and headers. Disk-backed covers never reach this
+     * path, while uncached grid items wait for the deferred source map instead of caching a null
+     * source and issuing a potentially invalid generic request.
+     */
+    private suspend fun awaitSource(): HttpSource? {
+        (sourceManager.get(sourceId) as? HttpSource)?.let { return it }
+        if (!sourceManager.isInitialized.value) {
+            sourceManager.isInitialized.first { it }
+        }
+        return sourceManager.get(sourceId) as? HttpSource
+    }
+    // KMK <--
+
+    private fun newRequest(source: HttpSource?): Request {
         val request = Request.Builder().apply {
             url(url!!)
 
-            val sourceHeaders = sourceLazy.value?.headers
+            val sourceHeaders = source?.headers
             if (sourceHeaders != null) {
                 headers(sourceHeaders)
             }
@@ -385,7 +405,10 @@ class MangaCoverFetcher(
                 coverFileLazy = lazy { coverCache.getCoverFile(data.thumbnailUrl) },
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.id) },
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.source) as? HttpSource },
+                // KMK -->
+                sourceManager = sourceManager,
+                sourceId = data.source,
+                // KMK <--
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )
@@ -410,7 +433,10 @@ class MangaCoverFetcher(
                 coverFileLazy = lazy { coverCache.getCoverFile(data.url) },
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.mangaId) },
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.sourceId) as? HttpSource },
+                // KMK -->
+                sourceManager = sourceManager,
+                sourceId = data.sourceId,
+                // KMK <--
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )

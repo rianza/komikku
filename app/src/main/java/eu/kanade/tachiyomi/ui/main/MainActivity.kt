@@ -85,6 +85,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
+import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
@@ -161,6 +162,10 @@ class MainActivity : BaseActivity() {
     private val downloadCache: DownloadCache by injectLazy()
     private val chapterCache: ChapterCache by injectLazy()
 
+    // KMK -->
+    private val extensionManager: ExtensionManager by injectLazy()
+    // KMK <--
+
     private val getIncognitoState: GetIncognitoState by injectLazy()
 
     // To be checked by splash screen. If true then splash screen will be removed.
@@ -214,6 +219,9 @@ class MainActivity : BaseActivity() {
             super.onCreate(savedInstanceState)
         } finally {
             Trace.endSection()
+        }
+        fullyDrawnReporter.addOnReportDrawnListener {
+            extensionManager.onFirstUiFullyDrawn()
         }
         // KMK <--
 

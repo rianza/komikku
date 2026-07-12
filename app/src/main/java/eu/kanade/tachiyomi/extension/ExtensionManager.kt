@@ -22,6 +22,7 @@ import exh.source.EHENTAI_EXT_SOURCES
 import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.ExhPreferences
 import exh.source.MERGED_SOURCE_ID
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -46,6 +48,10 @@ import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.Locale
+
+// KMK -->
+private const val INITIAL_EXTENSION_LOAD_MAX_DEFER_MS = 3_000L
+// KMK <--
 
 /**
  * The manager of extensions installed as another apk which extend the available sources. It handles
@@ -64,6 +70,7 @@ class ExtensionManager(
 
     // KMK -->
     private val extensionLoadMutex = Mutex()
+    private val firstUiFullyDrawn = CompletableDeferred<Unit>()
     // KMK <--
 
     private val _isInitialized = MutableStateFlow(false)
@@ -84,6 +91,12 @@ class ExtensionManager(
     private val installedExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Installed>())
     val installedExtensionsFlow = installedExtensionMapFlow.mapExtensions(scope)
 
+    // KMK -->
+    internal fun getInstalledExtensionsSnapshot(): List<Extension.Installed> {
+        return installedExtensionMapFlow.value.values.toList()
+    }
+    // KMK <--
+
     private val availableExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Available>())
 
     // SY -->
@@ -96,10 +109,13 @@ class ExtensionManager(
 
     init {
         // KMK -->
-        // Launch extension loading in background to avoid blocking app startup.
-        // Consumers that depend on extensions must wait on isInitialized flow.
         scope.launch(Dispatchers.IO) {
-            initExtensions()
+            // Trusted extension construction verifies external dex and drives JIT. Keep that work
+            // outside the first-draw path, but retain a timeout for headless/background starts.
+            withTimeoutOrNull(INITIAL_EXTENSION_LOAD_MAX_DEFER_MS) {
+                firstUiFullyDrawn.await()
+            }
+            initExtensions(skipIfInitialized = true)
         }
         // KMK <--
         ExtensionInstallReceiver(InstallationListener()).register(context)
@@ -155,12 +171,22 @@ class ExtensionManager(
 
     fun getSourceData(id: Long) = availableExtensionsSourcesData[id]
 
+    // KMK -->
+    /** Starts the initial load after AndroidX has reported the first UI as fully drawn. */
+    fun onFirstUiFullyDrawn() {
+        firstUiFullyDrawn.complete(Unit)
+    }
+    // KMK <--
+
     /**
      * Loads and registers the installed extensions.
      */
-    private suspend fun initExtensions() {
+    private suspend fun initExtensions(skipIfInitialized: Boolean = false) {
         extensionLoadMutex.withLock {
             // KMK -->
+            // A repository restore may have initialized the manager while the startup gate waited.
+            if (skipIfInitialized && _isInitialized.value) return@withLock
+
             val extensions = startupTrace("Extensions.loadInstalled") {
                 ExtensionLoader.loadExtensions(context)
             }
