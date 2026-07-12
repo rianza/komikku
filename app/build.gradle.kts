@@ -213,7 +213,6 @@ dependencies {
     implementation(libs.androidx.compose.uiToolingPreview)
     implementation(libs.androidx.compose.uiUtil)
     // KMK -->
-    add("previewImplementation", libs.androidx.compose.runtimeTracing)
     add("benchmarkImplementation", libs.androidx.compose.runtimeTracing)
     // KMK <--
 
