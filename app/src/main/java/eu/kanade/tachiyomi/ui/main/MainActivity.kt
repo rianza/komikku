@@ -221,7 +221,11 @@ class MainActivity : BaseActivity() {
             Trace.endSection()
         }
         fullyDrawnReporter.addOnReportDrawnListener {
-            extensionManager.onFirstUiFullyDrawn()
+            // FullyDrawnReporter invokes listeners from OnDrawListener.onDraw(). Posting to the
+            // decor view keeps extension class loading out of the traversal that is still drawing.
+            window.decorView.post {
+                extensionManager.onFirstUiFullyDrawn()
+            }
         }
         // KMK <--
 
