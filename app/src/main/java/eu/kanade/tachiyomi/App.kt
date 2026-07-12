@@ -126,17 +126,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Trace.beginSection("KMK:App.onCreate")
         // KMK <--
 
-        // Diagnostic only: report the allocation stack of closeable resources finalized without
-        // being closed. Do not enable penaltyDeath or ship this policy in stable release builds.
-        if (isDebugBuildType || isPreviewBuildType) {
-            StrictMode.setVmPolicy(
-                StrictMode.VmPolicy.Builder(StrictMode.getVmPolicy())
-                    .detectLeakedClosableObjects()
-                    .penaltyLog()
-                    .build(),
-            )
-        }
-
         startupTrace("App.patchInjekt") { patchInjekt() }
         startupTrace("App.telemetry") {
             TelemetryConfig.init(
