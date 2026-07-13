@@ -261,7 +261,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         // KMK -->
         startupTrace("App.coverMetadataLoad") { MangaCoverMetadata.load() }
-        startupTrace("App.downloaderInit") { Injekt.get<eu.kanade.tachiyomi.data.download.DownloadManager>() }
         // KMK <--
 
         // Updates widget update
@@ -350,8 +349,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
             // Coil spawns a new thread for every image load by default
-            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(5))
-            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(3))
+            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(3))
+            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(2))
         }
             .build()
         // KMK -->

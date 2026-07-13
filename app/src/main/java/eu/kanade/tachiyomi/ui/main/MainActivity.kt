@@ -50,6 +50,7 @@ import androidx.core.util.Consumer
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 import androidx.lifecycle.lifecycleScope
+import androidx.work.ExistingPeriodicWorkPolicy
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
@@ -556,10 +557,9 @@ class MainActivity : BaseActivity() {
 
         LaunchedEffect(Unit) {
             launchIO {
-                kotlinx.coroutines.delay(1_000)
                 try {
                     if (!LibraryUpdateJob.isPeriodicUpdateScheduled(context)) {
-                        LibraryUpdateJob.setupTask(context)
+                        LibraryUpdateJob.setupTask(context, policy = ExistingPeriodicWorkPolicy.KEEP)
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e)
@@ -600,11 +600,10 @@ class MainActivity : BaseActivity() {
             if (updaterEnabled) {
                 try {
                     // KMK -->
-                    launchIO {
-                        kotlinx.coroutines.delay(1_500)
-                        if (!AppUpdateJob.isPeriodicUpdateScheduled(context)) {
-                            AppUpdateJob.setupTask(context)
-                        }
+                    // Use KEEP policy to avoid 275ms ReschedulingWork on every cold boot.
+                    // Only schedule if not already scheduled.
+                    if (!AppUpdateJob.isPeriodicUpdateScheduled(context)) {
+                        AppUpdateJob.setupTask(context, ExistingPeriodicWorkPolicy.KEEP)
                     }
                     // KMK <--
                     val result = AppUpdateChecker().checkForUpdate(context)

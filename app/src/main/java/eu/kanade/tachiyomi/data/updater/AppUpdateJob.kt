@@ -45,7 +45,9 @@ class AppUpdateJob(private val context: Context, workerParams: WorkerParameters)
             return exh.util.WorkerUtil.isPeriodicJobScheduled(context, TAG)
         }
 
-        fun setupTask(context: Context) {
+        // KMK -->
+        fun setupTask(context: Context, policy: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.UPDATE) {
+            // KMK <--
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -60,7 +62,7 @@ class AppUpdateJob(private val context: Context, workerParams: WorkerParameters)
                 .setConstraints(constraints)
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(TAG, ExistingPeriodicWorkPolicy.UPDATE, request)
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(TAG, /* KMK --> */ policy /* KMK <-- */, request)
         }
 
         fun cancelTask(context: Context) {

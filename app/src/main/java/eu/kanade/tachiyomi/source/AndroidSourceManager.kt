@@ -128,19 +128,26 @@ class AndroidSourceManager(
                         extension.sources.mapNotNull { it.toInternalSource(/* KMK --> */isHentaiEnabled/* KMK <-- */) }.forEach { source ->
                             mutableMap[source.id] = source
                             registerStubSource(StubSource.from(source))
-                            // KMK -->
-                            // Pre-warm client and headers asynchronously or sequentially before emitting so
-                            // first-time cover fetchers never hit SynchronizedLazyImpl.getValue() contention!
-                            if (source is HttpSource) {
-                                try {
-                                    val _client = source.client
-                                    val _headers = source.headers
-                                } catch (_: Exception) {}
-                            }
-                            // KMK <--
                         }
                     }
+                    // Emit source map immediately so cover fetchers can resolve sources without delay.
+                    // This eliminates the 105ms DiskLruCache contentions caused by cover fetchers
+                    // waiting for source map emission while pre-warming was blocking the loop.
                     sourcesMapFlow.value = mutableMap
+                    // KMK -->
+                    // Pre-warm OkHttp clients and headers in background AFTER emitting the source map.
+                    // This avoids blocking source map emission and eliminates SynchronizedLazyImpl contention
+                    // for the first batch of cover fetchers that race against extension init.
+                    scope.launch {
+                        mutableMap.values.filterIsInstance<HttpSource>().forEach { source ->
+                            try {
+                                val _client = source.client
+                                val _headers = source.headers
+                            } catch (_: Exception) {}
+                            kotlinx.coroutines.yield()
+                        }
+                    }
+                    // KMK <--
                     if (extensionsInitialized) {
                         _isInitialized.value = true
                     }

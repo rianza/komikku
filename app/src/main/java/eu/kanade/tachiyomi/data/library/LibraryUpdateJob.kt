@@ -807,6 +807,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         fun setupTask(
             context: Context,
             prefInterval: Int? = null,
+            // KMK -->
+            policy: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.UPDATE,
+            // KMK <--
         ) {
             val preferences = Injekt.get<LibraryPreferences>()
             val interval = prefInterval ?: preferences.autoUpdateInterval.get()
@@ -848,7 +851,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
                 context.workManager.enqueueUniquePeriodicWork(
                     WORK_NAME_AUTO,
-                    ExistingPeriodicWorkPolicy.UPDATE,
+                    // KMK -->
+                    policy,
+                    // KMK <--
                     request,
                 )
             } else {
