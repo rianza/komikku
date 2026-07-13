@@ -399,7 +399,7 @@ internal object ExtensionLoader {
             isNsfw = isNsfw,
             sources = sources,
             pkgFactory = appInfo.metaData.getString(METADATA_SOURCE_FACTORY),
-            icon = appInfo.loadIcon(pkgManager),
+            icon = null,
             isShared = extensionInfo.isShared,
             // KMK -->
             signatureHash = signatures.last(),

@@ -42,12 +42,12 @@ internal class ExtensionApi {
     suspend fun checkForUpdates(
         context: Context,
         fromAvailableExtensionList: Boolean = false,
-    ): List<Extension.Installed>? {
+    ): List<Extension.Installed>? = withIOContext {
         // Limit checks to once a day at most
         if (!fromAvailableExtensionList &&
             Instant.now().toEpochMilli() < lastExtCheck.get() + 1.days.inWholeMilliseconds
         ) {
-            return null
+            return@withIOContext null
         }
 
         // KMK -->
@@ -89,7 +89,7 @@ internal class ExtensionApi {
             ExtensionUpdateNotifier(context).promptUpdates(extensionsWithUpdate.map { it.name })
         }
 
-        return extensionsWithUpdate
+        extensionsWithUpdate
     }
 
     // SY -->
