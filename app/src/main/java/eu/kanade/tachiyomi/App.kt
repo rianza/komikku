@@ -81,8 +81,10 @@ import exh.log.EnhancedFilePrinter
 import exh.log.XLogLogcatLogger
 import exh.log.xLogD
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
@@ -116,6 +118,16 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     // KMK -->
     private var logFilePrinter: EnhancedFilePrinter? = null
+    private val coilFetcherDispatcher by lazy {
+        java.util.concurrent.Executors.newFixedThreadPool(8) { runnable ->
+            Thread(runnable, "coil-fetcher-thread")
+        }.asCoroutineDispatcher()
+    }
+    private val coilDecoderDispatcher by lazy {
+        java.util.concurrent.Executors.newFixedThreadPool(3) { runnable ->
+            Thread(runnable, "coil-decoder-thread")
+        }.asCoroutineDispatcher()
+    }
     // KMK <--
 
     @SuppressLint("LaunchActivityFromNotification")
@@ -260,7 +272,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         // KMK -->
-        startupTrace("App.coverMetadataLoad") { MangaCoverMetadata.load() }
+        ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.IO) {
+            MangaCoverMetadata.load()
+        }
         // KMK <--
 
         // Updates widget update
@@ -349,8 +363,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
             // Coil spawns a new thread for every image load by default
-            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(8))
-            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(3))
+            fetcherCoroutineContext(coilFetcherDispatcher)
+            decoderCoroutineContext(coilDecoderDispatcher)
         }
             .build()
         // KMK -->
