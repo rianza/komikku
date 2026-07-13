@@ -178,7 +178,7 @@ class LibraryScreenModel(
                 combine(
                     state.map { it.searchQuery }.distinctUntilChanged().debounce(0.25.seconds),
                     getCategories.subscribe(),
-                    getFavoritesFlow(),
+                    getFavoritesFlow().debounce(0.25.seconds),
                     ::Triple,
                 ),
                 combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),

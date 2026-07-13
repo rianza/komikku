@@ -125,9 +125,19 @@ class AndroidSourceManager(
                     }
 
                     extensions.forEach { extension ->
-                        extension.sources.mapNotNull { it.toInternalSource(/* KMK --> */isHentaiEnabled/* KMK <-- */) }.forEach {
-                            mutableMap[it.id] = it
-                            registerStubSource(StubSource.from(it))
+                        extension.sources.mapNotNull { it.toInternalSource(/* KMK --> */isHentaiEnabled/* KMK <-- */) }.forEach { source ->
+                            mutableMap[source.id] = source
+                            registerStubSource(StubSource.from(source))
+                            // KMK -->
+                            // Pre-warm client and headers asynchronously or sequentially before emitting so
+                            // first-time cover fetchers never hit SynchronizedLazyImpl.getValue() contention!
+                            if (source is HttpSource) {
+                                try {
+                                    val _client = source.client
+                                    val _headers = source.headers
+                                } catch (_: Exception) {}
+                            }
+                            // KMK <--
                         }
                     }
                     sourcesMapFlow.value = mutableMap

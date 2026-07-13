@@ -41,6 +41,10 @@ class AppUpdateJob(private val context: Context, workerParams: WorkerParameters)
     companion object {
         private const val TAG = "AppUpdateChecker"
 
+        suspend fun isPeriodicUpdateScheduled(context: Context): Boolean {
+            return exh.util.WorkerUtil.isPeriodicJobScheduled(context, TAG)
+        }
+
         fun setupTask(context: Context) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)

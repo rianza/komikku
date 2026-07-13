@@ -87,7 +87,9 @@ class UpdateMangaFromRemote(
                 }
                 // SY <--
             }
+            kotlinx.coroutines.yield()
             awaitUpdateFromSource(manga, update.manga, manualFetch)
+            kotlinx.coroutines.yield()
             // SY -->
             val newChapters = if (source is MergedSource) {
                 source.fetchChaptersAndSync(manga, downloadChapters = manualFetch)
@@ -100,6 +102,7 @@ class UpdateMangaFromRemote(
                     fetchWindow = fetchWindow,
                 )
             }
+            kotlinx.coroutines.yield()
             // SY <--
             val updatedManga = mangaRepository.getMangaById(manga.id)
 

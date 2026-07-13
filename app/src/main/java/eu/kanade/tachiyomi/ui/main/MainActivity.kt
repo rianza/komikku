@@ -556,6 +556,7 @@ class MainActivity : BaseActivity() {
 
         LaunchedEffect(Unit) {
             launchIO {
+                kotlinx.coroutines.delay(1_000)
                 try {
                     if (!LibraryUpdateJob.isPeriodicUpdateScheduled(context)) {
                         LibraryUpdateJob.setupTask(context)
@@ -599,7 +600,12 @@ class MainActivity : BaseActivity() {
             if (updaterEnabled) {
                 try {
                     // KMK -->
-                    AppUpdateJob.setupTask(context)
+                    launchIO {
+                        kotlinx.coroutines.delay(1_500)
+                        if (!AppUpdateJob.isPeriodicUpdateScheduled(context)) {
+                            AppUpdateJob.setupTask(context)
+                        }
+                    }
                     // KMK <--
                     val result = AppUpdateChecker().checkForUpdate(context)
                     if (result is GetApplicationRelease.Result.NewUpdate) {

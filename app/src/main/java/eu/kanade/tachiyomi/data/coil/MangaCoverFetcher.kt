@@ -72,6 +72,7 @@ class MangaCoverFetcher(
 ) : Fetcher {
 
     // KMK -->
+    private val sourceLazy: Lazy<HttpSource?> = lazy { sourceManager.get(sourceId) as? HttpSource }
     private val uiPreferences = Injekt.get<UiPreferences>()
     private val themeCoverBased = uiPreferences.themeCoverBased.get()
     private val preloadLibraryColor = uiPreferences.preloadLibraryColor.get()
@@ -214,7 +215,7 @@ class MangaCoverFetcher(
     }
 
     private suspend fun executeNetworkRequest(): Response {
-        val source = awaitSource()
+        val source = sourceLazy.value ?: awaitSource()
         val client = source?.client ?: callFactoryLazy.value
         val response = client.newCall(newRequest(source)).await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
@@ -231,6 +232,7 @@ class MangaCoverFetcher(
      * source and issuing a potentially invalid generic request.
      */
     private suspend fun awaitSource(): HttpSource? {
+        sourceLazy.value?.let { return it }
         (sourceManager.get(sourceId) as? HttpSource)?.let { return it }
         if (!sourceManager.isInitialized.value) {
             sourceManager.isInitialized.first { it }
@@ -243,7 +245,7 @@ class MangaCoverFetcher(
         val request = Request.Builder().apply {
             url(url!!)
 
-            val sourceHeaders = source?.headers
+            val sourceHeaders = (source ?: sourceLazy.value)?.headers
             if (sourceHeaders != null) {
                 headers(sourceHeaders)
             }

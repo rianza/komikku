@@ -254,8 +254,14 @@ object MangaCoverMetadata {
         }
 
         private suspend fun processRequests() {
+            // KMK -->
+            try {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+            } catch (_: Exception) {}
+            // KMK <--
             for (request in requests) {
                 try {
+                    kotlinx.coroutines.yield()
                     request.bufferedSource.use { source ->
                         MangaCoverMetadata.setRatioAndColors(
                             mangaCover = request.mangaCover,
@@ -265,6 +271,7 @@ object MangaCoverMetadata {
                             force = request.force,
                         )
                     }
+                    kotlinx.coroutines.yield()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -296,10 +303,10 @@ object MangaCoverMetadata {
         preferences.coverColors.set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
     }
 
-    private const val SUB_SAMPLE = 4
+    private const val SUB_SAMPLE = 8
 
     // KMK -->
-    private const val MAX_CONCURRENT_METADATA_REQUESTS = 2
+    private const val MAX_CONCURRENT_METADATA_REQUESTS = 1
     private const val MAX_PENDING_METADATA_REQUESTS = 2
     // KMK <--
 }

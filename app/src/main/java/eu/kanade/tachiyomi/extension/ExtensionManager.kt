@@ -110,11 +110,6 @@ class ExtensionManager(
     init {
         // KMK -->
         scope.launch(Dispatchers.IO) {
-            // Trusted extension construction verifies external dex and drives JIT. Keep that work
-            // outside the first-draw path, but retain a timeout for headless/background starts.
-            withTimeoutOrNull(INITIAL_EXTENSION_LOAD_MAX_DEFER_MS) {
-                firstUiFullyDrawn.await()
-            }
             initExtensions(skipIfInitialized = true)
         }
         // KMK <--
