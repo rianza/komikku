@@ -235,7 +235,12 @@ object MangaCoverMetadata {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
             onUndeliveredElement = { request -> release(request) },
         )
-        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        // KMK -->
+        // Use dedicated single-threaded dispatcher to isolate metadata processing from Coil decoders.
+        // This prevents decodeBitmap contention (470ms+ in v13 log) on the shared IO dispatcher.
+        private val metadataDispatcher = Dispatchers.IO.limitedParallelism(1)
+        private val scope = CoroutineScope(SupervisorJob() + metadataDispatcher)
+        // KMK <--
 
         init {
             repeat(MAX_CONCURRENT_METADATA_REQUESTS) {
@@ -303,7 +308,7 @@ object MangaCoverMetadata {
         preferences.coverColors.set(mapColorCopy.map { "${it.key}|${it.value.first}|${it.value.second}" }.toSet())
     }
 
-    private const val SUB_SAMPLE = 8
+    private const val SUB_SAMPLE = 16
 
     // KMK -->
     private const val MAX_CONCURRENT_METADATA_REQUESTS = 1
