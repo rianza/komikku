@@ -140,6 +140,9 @@ internal object ExtensionLoader {
     suspend fun loadExtensions(context: Context): List<LoadResult> {
         return extensionLoadMutex.withLock {
             withContext(extensionLoadDispatcher) {
+                try {
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                } catch (_: Exception) {}
                 loadExtensionsInternal(context)
             }
         }
@@ -196,6 +199,7 @@ internal object ExtensionLoader {
         val trustedSigningKeys = extRepos.map { it.signingKey }.toHashSet()
         // KMK <--
         return extPkgs.map {
+            kotlinx.coroutines.yield()
             loadExtension(
                 context,
                 it,
@@ -214,6 +218,9 @@ internal object ExtensionLoader {
     suspend fun loadExtensionFromPkgName(context: Context, pkgName: String): LoadResult {
         return extensionLoadMutex.withLock {
             withContext(extensionLoadDispatcher) {
+                try {
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                } catch (_: Exception) {}
                 val extensionPackage = getExtensionInfoFromPkgName(context, pkgName)
                 if (extensionPackage == null) {
                     logcat(LogPriority.ERROR) { "Extension package is not found ($pkgName)" }

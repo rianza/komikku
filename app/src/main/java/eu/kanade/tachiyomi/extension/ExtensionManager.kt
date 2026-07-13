@@ -110,9 +110,12 @@ class ExtensionManager(
     init {
         // KMK -->
         scope.launch(Dispatchers.IO) {
-            // Trusted extension construction verifies external dex and drives JIT. Keep that work
-            // outside the first-draw path, but retain a timeout for headless/background starts.
-            withTimeoutOrNull(INITIAL_EXTENSION_LOAD_MAX_DEFER_MS) {
+            // Wait for first UI frame to render before starting heavy extension loading.
+            // This prevents Extensions.loadInstalled (673ms) from blocking IO dispatcher during
+            // bindApplication (640ms) and first frame render, reducing SynchronizedLazyImpl and
+            // DiskLruCache contentions. Timeout 1000ms ensures extensions start even if FullyDrawn
+            // reporter is delayed.
+            withTimeoutOrNull(1000) {
                 firstUiFullyDrawn.await()
             }
             initExtensions(skipIfInitialized = true)

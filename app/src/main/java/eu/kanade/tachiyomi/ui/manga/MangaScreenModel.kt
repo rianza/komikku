@@ -510,10 +510,16 @@ class MangaScreenModel(
             }
 
             // KMK -->
-            launch { syncTrackers() }
+            launch {
+                kotlinx.coroutines.yield()
+                syncTrackers()
+            }
             // Related manga is UI state, not refresh state. Fetch it on every initial
             // screen load even when cached manga info/chapters are still fresh.
-            launch { fetchRelatedMangasFromSource() }
+            launch {
+                kotlinx.coroutines.yield()
+                fetchRelatedMangasFromSource()
+            }
             // KMK <--
 
             // Initial loading finished
@@ -536,25 +542,29 @@ class MangaScreenModel(
             .allowHardware(false)
 
         val generatePalette: (Image) -> Unit = { image ->
-            val bitmap = image.asDrawable(context.resources).getBitmapOrNull()
-            if (bitmap != null) {
-                Palette.from(bitmap).generate {
-                    screenModelScope.launchIO {
-                        if (it == null) return@launchIO
-                        val mangaCover = when (model) {
-                            is Manga -> model.asMangaCover()
-                            is MangaCover -> model
-                            else -> return@launchIO
-                        }
-                        if (mangaCover.isMangaFavorite) {
-                            it.dominantSwatch?.let { swatch ->
-                                mangaCover.dominantCoverColors = swatch.rgb to swatch.titleTextColor
+            val mangaCover = when (model) {
+                is Manga -> model.asMangaCover()
+                is MangaCover -> model
+                else -> null
+            }
+            if (mangaCover == null || mangaCover.vibrantCoverColor == null || (mangaCover.isMangaFavorite && mangaCover.dominantCoverColors == null)) {
+                val bitmap = image.asDrawable(context.resources).getBitmapOrNull()
+                if (bitmap != null) {
+                    Palette.from(bitmap).generate {
+                        screenModelScope.launchIO {
+                            if (it == null) return@launchIO
+                            if (mangaCover != null && mangaCover.isMangaFavorite) {
+                                it.dominantSwatch?.let { swatch ->
+                                    mangaCover.dominantCoverColors = swatch.rgb to swatch.titleTextColor
+                                }
                             }
-                        }
-                        val vibrantColor = it.getBestColor() ?: return@launchIO
-                        mangaCover.vibrantCoverColor = vibrantColor
-                        updateSuccessState { state ->
-                            state.copy(seedColor = Color(vibrantColor))
+                            val vibrantColor = it.getBestColor() ?: return@launchIO
+                            if (mangaCover != null) {
+                                mangaCover.vibrantCoverColor = vibrantColor
+                            }
+                            updateSuccessState { state ->
+                                if (state.seedColor == Color(vibrantColor)) state else state.copy(seedColor = Color(vibrantColor))
+                            }
                         }
                     }
                 }

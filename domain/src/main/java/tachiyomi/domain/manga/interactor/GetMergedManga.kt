@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.MergedMangaReference
 import tachiyomi.domain.manga.repository.MangaMergeRepository
 
 class GetMergedManga(
@@ -13,6 +14,15 @@ class GetMergedManga(
     suspend fun await(): List<Manga> {
         return try {
             mangaMergeRepository.getMergedManga()
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            emptyList()
+        }
+    }
+
+    suspend fun awaitAllReferences(): List<MergedMangaReference> {
+        return try {
+            mangaMergeRepository.getAllReferences()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             emptyList()

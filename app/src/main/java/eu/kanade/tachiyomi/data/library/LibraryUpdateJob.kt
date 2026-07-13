@@ -410,6 +410,11 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 .map { mangaInSource ->
                     async {
                         semaphore.withPermit {
+                            // KMK -->
+                            try {
+                                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                            } catch (_: Exception) {}
+                            // KMK <--
                             if (
                                 mdlistLogged &&
                                 mangaInSource.firstOrNull()
@@ -429,12 +434,14 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                                             if (e is CancellationException) throw e
                                             xLogE("Error adding initial track for ${manga.title}", e)
                                         }
+                                        kotlinx.coroutines.yield()
                                     }
                                 }
                             }
                             mangaInSource.forEach { libraryManga ->
                                 val manga = libraryManga.manga
                                 ensureActive()
+                                kotlinx.coroutines.yield()
 
                                 // Don't continue to update if manga is not in library
                                 if (getManga.await(manga.id)?.favorite != true) {
@@ -557,9 +564,15 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
                 .map { mangaInSource ->
                     async {
                         semaphore.withPermit {
+                            // KMK -->
+                            try {
+                                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                            } catch (_: Exception) {}
+                            // KMK <--
                             mangaInSource.forEach { libraryManga ->
                                 val manga = libraryManga.manga
                                 ensureActive()
+                                kotlinx.coroutines.yield()
 
                                 withUpdateNotification(
                                     currentlyUpdatingManga,
@@ -794,6 +807,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         fun setupTask(
             context: Context,
             prefInterval: Int? = null,
+            // KMK -->
+            policy: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.UPDATE,
+            // KMK <--
         ) {
             val preferences = Injekt.get<LibraryPreferences>()
             val interval = prefInterval ?: preferences.autoUpdateInterval.get()
@@ -835,7 +851,9 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
                 context.workManager.enqueueUniquePeriodicWork(
                     WORK_NAME_AUTO,
-                    ExistingPeriodicWorkPolicy.UPDATE,
+                    // KMK -->
+                    policy,
+                    // KMK <--
                     request,
                 )
             } else {

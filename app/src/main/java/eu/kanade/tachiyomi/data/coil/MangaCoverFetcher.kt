@@ -214,7 +214,7 @@ class MangaCoverFetcher(
     }
 
     private suspend fun executeNetworkRequest(): Response {
-        val source = awaitSource()
+        val source = (sourceManager.get(sourceId) as? HttpSource) ?: awaitSource()
         val client = source?.client ?: callFactoryLazy.value
         val response = client.newCall(newRequest(source)).await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
@@ -243,7 +243,7 @@ class MangaCoverFetcher(
         val request = Request.Builder().apply {
             url(url!!)
 
-            val sourceHeaders = source?.headers
+            val sourceHeaders = (source ?: (sourceManager.get(sourceId) as? HttpSource))?.headers
             if (sourceHeaders != null) {
                 headers(sourceHeaders)
             }
