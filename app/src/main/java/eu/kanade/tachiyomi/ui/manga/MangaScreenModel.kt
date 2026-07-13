@@ -534,6 +534,22 @@ class MangaScreenModel(
     fun setPaletteColor(model: Any) {
         if (model is ImageRequest && model.defined.sizeResolver != null) return
 
+        val mangaCover = when (model) {
+            is Manga -> model.asMangaCover()
+            is MangaCover -> model
+            is ImageRequest -> when (val data = model.data) {
+                is Manga -> data.asMangaCover()
+                is MangaCover -> data
+                else -> null
+            }
+            else -> null
+        }
+
+        if (mangaCover != null && mangaCover.vibrantCoverColor != null && (!mangaCover.isMangaFavorite || mangaCover.dominantCoverColors != null)) {
+            // Colors are already cached, skip redundant image loading and palette extraction!
+            return
+        }
+
         val imageRequestBuilder = if (model is ImageRequest) {
             model.newBuilder()
         } else {
@@ -542,11 +558,6 @@ class MangaScreenModel(
             .allowHardware(false)
 
         val generatePalette: (Image) -> Unit = { image ->
-            val mangaCover = when (model) {
-                is Manga -> model.asMangaCover()
-                is MangaCover -> model
-                else -> null
-            }
             if (mangaCover == null || mangaCover.vibrantCoverColor == null || (mangaCover.isMangaFavorite && mangaCover.dominantCoverColors == null)) {
                 val bitmap = image.asDrawable(context.resources).getBitmapOrNull()
                 if (bitmap != null) {

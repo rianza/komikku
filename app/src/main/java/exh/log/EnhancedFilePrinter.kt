@@ -193,6 +193,9 @@ class EnhancedFilePrinter internal constructor(
 
         override fun run() {
             try {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+            } catch (_: Exception) {}
+            try {
                 while (true) {
                     doPrintln(logs.take())
                 }
