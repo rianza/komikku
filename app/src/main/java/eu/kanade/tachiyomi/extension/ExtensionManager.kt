@@ -113,9 +113,8 @@ class ExtensionManager(
             // Wait for first UI frame to render before starting heavy extension loading.
             // This prevents Extensions.loadInstalled (673ms) from blocking IO dispatcher during
             // bindApplication (640ms) and first frame render, reducing SynchronizedLazyImpl and
-            // DiskLruCache contentions. Timeout 1000ms ensures extensions start even if FullyDrawn
-            // reporter is delayed.
-            withTimeoutOrNull(1000) {
+            // DiskLruCache contentions. Timeout 5000ms ensures extensions wait until home screen is drawn.
+            withTimeoutOrNull(5000) {
                 firstUiFullyDrawn.await()
             }
             initExtensions(skipIfInitialized = true)
