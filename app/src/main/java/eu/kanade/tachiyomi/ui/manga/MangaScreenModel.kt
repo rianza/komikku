@@ -20,9 +20,9 @@ import androidx.palette.graphics.Palette
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import coil3.Image
+import coil3.Size
 import coil3.asDrawable
 import coil3.imageLoader
-import coil3.Size
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import eu.kanade.core.preference.asState
