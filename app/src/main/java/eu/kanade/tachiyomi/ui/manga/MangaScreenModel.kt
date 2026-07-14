@@ -22,6 +22,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import coil3.Image
 import coil3.asDrawable
 import coil3.imageLoader
+import coil3.Size
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import eu.kanade.core.preference.asState
@@ -555,6 +556,10 @@ class MangaScreenModel(
         } else {
             ImageRequest.Builder(context).data(model)
         }
+            // Palette extraction only needs a tiny bitmap; decode it subsampled instead of
+            // at OriginalSize. A full-resolution software decode here was a major contributor
+            // to the 379 ms decodeBitmap slices and the 2x GC seen in the v8 traces.
+            .size(Size(256, 256))
             .allowHardware(false)
 
         val generatePalette: (Image) -> Unit = { image ->

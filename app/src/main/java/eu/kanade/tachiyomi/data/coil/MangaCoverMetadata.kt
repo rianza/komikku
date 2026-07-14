@@ -236,9 +236,12 @@ object MangaCoverMetadata {
             onUndeliveredElement = { request -> release(request) },
         )
         // KMK -->
-        // Use dedicated single-threaded dispatcher to isolate metadata processing from Coil decoders.
-        // This prevents decodeBitmap contention (470ms+ in v13 log) on the shared IO dispatcher.
-        private val metadataDispatcher = Dispatchers.IO.limitedParallelism(1)
+        // Use a bounded (2-thread) dispatcher to isolate metadata processing from Coil
+        // decoders while keeping enough throughput that fast library scrolling doesn't
+        // serialize all cover ratio/color extraction behind a single worker (which caused
+        // late layout jumps). The metadata bitmap is already subsampled (SUB_SAMPLE), so
+        // the per-decode cost is tiny and 2 workers stay well under the contention budget.
+        private val metadataDispatcher = Dispatchers.IO.limitedParallelism(2)
         private val scope = CoroutineScope(SupervisorJob() + metadataDispatcher)
         // KMK <--
 
@@ -311,7 +314,7 @@ object MangaCoverMetadata {
     private const val SUB_SAMPLE = 16
 
     // KMK -->
-    private const val MAX_CONCURRENT_METADATA_REQUESTS = 1
+    private const val MAX_CONCURRENT_METADATA_REQUESTS = 2
     private const val MAX_PENDING_METADATA_REQUESTS = 2
     // KMK <--
 }

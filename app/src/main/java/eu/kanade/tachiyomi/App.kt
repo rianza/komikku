@@ -80,8 +80,10 @@ import exh.log.EHLogLevel
 import exh.log.EnhancedFilePrinter
 import exh.log.XLogLogcatLogger
 import exh.log.xLogD
+import androidx.core.app.NotificationManagerCompat
+import eu.kanade.tachiyomi.extension.ExtensionManager
+import eu.kanade.tachiyomi.source.AndroidSourceManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -118,16 +120,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     // KMK -->
     private var logFilePrinter: EnhancedFilePrinter? = null
-    private val coilFetcherDispatcher by lazy {
-        java.util.concurrent.Executors.newFixedThreadPool(8) { runnable ->
-            Thread(runnable, "coil-fetcher-thread")
-        }.asCoroutineDispatcher()
-    }
-    private val coilDecoderDispatcher by lazy {
-        java.util.concurrent.Executors.newFixedThreadPool(3) { runnable ->
-            Thread(runnable, "coil-decoder-thread")
-        }.asCoroutineDispatcher()
-    }
     // KMK <--
 
     @SuppressLint("LaunchActivityFromNotification")
@@ -275,6 +267,17 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.IO) {
             MangaCoverMetadata.load()
         }
+
+        // Warm the heavy, Binder-backed singletons on the main thread *before* the first
+        // frame so the first burst of concurrent cover-fetch / source-lookup coroutines
+        // (Dispatchers.Default / IO) don't all pile up on a SynchronizedLazyImpl whose
+        // initializer performs a blocking Binder IPC. In the v8 traces this pattern alone
+        // accounted for a 375 ms monitor-contention block with up to 8 waiters.
+        startupTrace("App.warmCoreSingletons") {
+            Injekt.get<AndroidSourceManager>()
+            Injekt.get<ExtensionManager>()
+            NotificationManagerCompat.from(this)
+        }
         // KMK <--
 
         // Updates widget update
@@ -362,9 +365,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             allowRgb565(DeviceUtil.isLowRamDevice(this@App))
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
-            // Coil spawns a new thread for every image load by default
-            fetcherCoroutineContext(coilFetcherDispatcher)
-            decoderCoroutineContext(coilDecoderDispatcher)
+            // Coil spawns a new thread for every image load by default. Use bounded
+            // parallelism on the shared IO pool (upstream-stable): this avoids the
+            // extra thread pools and the SynchronizedLazyImpl monitor objects that the
+            // previous dedicated-pool approach introduced (a contributor to the
+            // lock-contention profile seen in v8 traces).
+            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(8))
+            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(3))
         }
             .build()
         // KMK -->
