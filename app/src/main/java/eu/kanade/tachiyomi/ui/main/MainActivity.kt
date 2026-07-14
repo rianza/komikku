@@ -9,10 +9,12 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.os.Trace
 import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -48,6 +50,7 @@ import androidx.core.util.Consumer
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 import androidx.lifecycle.lifecycleScope
+import androidx.work.ExistingPeriodicWorkPolicy
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
@@ -83,6 +86,7 @@ import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
+import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
@@ -101,6 +105,7 @@ import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
+import eu.kanade.tachiyomi.util.system.startupTrace
 import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import exh.debug.DebugToggles
@@ -158,10 +163,17 @@ class MainActivity : BaseActivity() {
     private val downloadCache: DownloadCache by injectLazy()
     private val chapterCache: ChapterCache by injectLazy()
 
+    // KMK -->
+    private val extensionManager: ExtensionManager by injectLazy()
+    // KMK <--
+
     private val getIncognitoState: GetIncognitoState by injectLazy()
 
     // To be checked by splash screen. If true then splash screen will be removed.
-    var ready = false
+    // KMK -->
+    var ready by mutableStateOf(false)
+    private var firstComposition = true
+    // KMK <--
 
     private var navigator: Navigator? = null
 
@@ -198,14 +210,32 @@ class MainActivity : BaseActivity() {
         val isLaunch = savedInstanceState == null
 
         // Prevent splash screen showing up on configuration changes
-        val splashScreen = if (isLaunch) installSplashScreen() else null
+        val splashScreen = startupTrace("MainActivity.installSplash") {
+            if (isLaunch) installSplashScreen() else null
+        }
 
-        super.onCreate(savedInstanceState)
+        // KMK -->
+        Trace.beginSection("KMK:MainActivity.superOnCreate")
+        try {
+            super.onCreate(savedInstanceState)
+        } finally {
+            Trace.endSection()
+        }
+        fullyDrawnReporter.addOnReportDrawnListener {
+            // FullyDrawnReporter invokes listeners from OnDrawListener.onDraw(). Posting to the
+            // decor view keeps extension class loading out of the traversal that is still drawing.
+            window.decorView.post {
+                extensionManager.onFirstUiFullyDrawn()
+            }
+        }
+        // KMK <--
 
-        val didMigration = if (isLaunch) {
-            Migrator.awaitAndRelease()
-        } else {
-            false
+        val didMigration = startupTrace("MainActivity.awaitMigration") {
+            if (isLaunch) {
+                Migrator.awaitAndRelease()
+            } else {
+                false
+            }
         }
 
         // Do not let the launcher create a new activity http://stackoverflow.com/questions/16283079
@@ -220,6 +250,14 @@ class MainActivity : BaseActivity() {
         // SY <--
 
         setComposeContent {
+            // KMK -->
+            val traceFirstComposition = firstComposition
+            if (traceFirstComposition) {
+                Trace.beginSection("KMK:MainActivity.firstComposition")
+            }
+            ReportDrawnWhen { ready }
+            // KMK <--
+
             val context = LocalContext.current
 
             var incognito by remember { mutableStateOf(getIncognitoState.await(null)) }
@@ -461,6 +499,12 @@ class MainActivity : BaseActivity() {
             // SY -->
             ConfigureExhDialog(run = runExhConfigureDialog, onRunning = { runExhConfigureDialog = false })
             // SY <--
+            // KMK -->
+            if (traceFirstComposition) {
+                firstComposition = false
+                Trace.endSection()
+            }
+            // KMK <--
         }
 
         val startTime = System.currentTimeMillis()
@@ -515,7 +559,7 @@ class MainActivity : BaseActivity() {
             launchIO {
                 try {
                     if (!LibraryUpdateJob.isPeriodicUpdateScheduled(context)) {
-                        LibraryUpdateJob.setupTask(context)
+                        LibraryUpdateJob.setupTask(context, policy = ExistingPeriodicWorkPolicy.KEEP)
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e)
@@ -556,7 +600,11 @@ class MainActivity : BaseActivity() {
             if (updaterEnabled) {
                 try {
                     // KMK -->
-                    AppUpdateJob.setupTask(context)
+                    // Use KEEP policy to avoid 275ms ReschedulingWork on every cold boot.
+                    // Only schedule if not already scheduled.
+                    if (!AppUpdateJob.isPeriodicUpdateScheduled(context)) {
+                        AppUpdateJob.setupTask(context, ExistingPeriodicWorkPolicy.KEEP)
+                    }
                     // KMK <--
                     val result = AppUpdateChecker().checkForUpdate(context)
                     if (result is GetApplicationRelease.Result.NewUpdate) {

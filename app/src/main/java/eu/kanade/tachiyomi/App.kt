@@ -10,6 +10,8 @@ import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Looper
+import android.os.StrictMode
+import android.os.Trace
 import android.webkit.WebView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -71,6 +73,7 @@ import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import eu.kanade.tachiyomi.util.system.notify
+import eu.kanade.tachiyomi.util.system.startupTrace
 import eu.kanade.tachiyomi.util.system.telemetryIncluded
 import exh.log.CrashlyticsPrinter
 import exh.log.EHLogLevel
@@ -78,8 +81,10 @@ import exh.log.EnhancedFilePrinter
 import exh.log.XLogLogcatLogger
 import exh.log.xLogD
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
@@ -111,17 +116,39 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
+    // KMK -->
+    private var logFilePrinter: EnhancedFilePrinter? = null
+    private val coilFetcherDispatcher by lazy {
+        java.util.concurrent.Executors.newFixedThreadPool(8) { runnable ->
+            Thread(runnable, "coil-fetcher-thread")
+        }.asCoroutineDispatcher()
+    }
+    private val coilDecoderDispatcher by lazy {
+        java.util.concurrent.Executors.newFixedThreadPool(3) { runnable ->
+            Thread(runnable, "coil-decoder-thread")
+        }.asCoroutineDispatcher()
+    }
+    // KMK <--
+
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
-        patchInjekt()
-        TelemetryConfig.init(
-            applicationContext,
-            isPreviewBuildType,
-            BuildConfig.COMMIT_COUNT,
-        )
 
         // KMK -->
+        Trace.beginSection("KMK:App.onCreate")
+        // KMK <--
+
+        startupTrace("App.patchInjekt") { patchInjekt() }
+        startupTrace("App.telemetry") {
+            TelemetryConfig.init(
+                applicationContext,
+                isPreviewBuildType,
+                BuildConfig.COMMIT_COUNT,
+            )
+        }
+
+        // KMK -->
+        Trace.beginSection("KMK:App.platformSetup")
         if (isDebugBuildType) Timber.plant(Timber.DebugTree())
         // KMK <--
 
@@ -137,7 +164,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             val process = getProcessName()
             if (packageName != process) WebView.setDataDirectorySuffix(process)
         }
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
+        // KMK -->
+        Trace.beginSection("KMK:App.importModules")
+        // KMK <--
         Injekt.importModule(PreferenceModule(this))
         Injekt.importModule(AppModule(this))
         Injekt.importModule(DomainModule())
@@ -148,7 +181,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Injekt.importModule(SYPreferenceModule(this))
         Injekt.importModule(SYDomainModule())
         // SY <--
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
+        // KMK -->
+        Trace.beginSection("KMK:App.logging")
+        // KMK <--
         setupExhLogging() // EXH logging
         if (!LogcatLogger.isInstalled) {
             val minLogPriority = when {
@@ -160,12 +199,22 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             LogcatLogger.loggers += XLogLogcatLogger() // SY Redirect Logcat to XLog
             LogcatLogger.loggers += AndroidLogcatLogger(minLogPriority)
         }
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
-        setupNotificationChannels()
+        startupTrace("App.notificationChannels") { setupNotificationChannels() }
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         val scope = ProcessLifecycleOwner.get().lifecycleScope
+
+        // KMK -->
+        val storageManager = Injekt.get<StorageManager>()
+        storageManager.changes
+            .onEach { logFilePrinter?.updateFolder(storageManager.getLogsDirectory()) }
+            .launchIn(scope)
+        // KMK <--
 
         // Show notification to disable Incognito Mode when it's enabled
         basePreferences.incognitoMode.changes()
@@ -208,23 +257,34 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .onEach(TelemetryConfig::setCrashlyticsEnabled)
             .launchIn(scope)
 
-        basePreferences.hardwareBitmapThreshold.let { preference ->
-            if (!preference.isSet()) preference.set(GLUtil.DEVICE_TEXTURE_LIMIT)
+        startupTrace("App.hardwareBitmap") {
+            basePreferences.hardwareBitmapThreshold.let { preference ->
+                if (!preference.isSet()) preference.set(GLUtil.DEVICE_TEXTURE_LIMIT)
+            }
         }
 
         basePreferences.hardwareBitmapThreshold.changes()
             .onEach { ImageUtil.hardwareBitmapThreshold = it }
             .launchIn(scope)
 
-        setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
+        startupTrace("App.theme") {
+            setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode.get())
+        }
 
         // KMK -->
-        MangaCoverMetadata.load()
+        ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.IO) {
+            MangaCoverMetadata.load()
+        }
         // KMK <--
 
         // Updates widget update
-        WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
+        startupTrace("App.widgetManager") {
+            WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
+        }
 
+        // KMK -->
+        Trace.beginSection("KMK:App.workAndSync")
+        // KMK <--
         if (!WorkManager.isInitialized()) {
             WorkManager.initialize(this, Configuration.Builder().build())
         }
@@ -233,8 +293,15 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (syncPreferences.isSyncEnabled() && syncTriggerOpt.syncOnAppStart) {
             SyncDataJob.startNow(this@App)
         }
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
 
-        initializeMigrator()
+        startupTrace("App.migrator") { initializeMigrator() }
+
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
     }
 
     private fun initializeMigrator() {
@@ -255,7 +322,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
-        return ImageLoader.Builder(this).apply {
+        // KMK -->
+        Trace.beginSection("KMK:App.newImageLoader")
+        // KMK <--
+        val imageLoader = ImageLoader.Builder(this).apply {
             val callFactoryLazy = lazy { Injekt.get<NetworkHelper>().client }
             components {
                 // NetworkFetcher.Factory
@@ -293,13 +363,24 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
             // Coil spawns a new thread for every image load by default
-            fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(8))
-            decoderCoroutineContext(Dispatchers.IO.limitedParallelism(3))
+            fetcherCoroutineContext(coilFetcherDispatcher)
+            decoderCoroutineContext(coilDecoderDispatcher)
         }
             .build()
+        // KMK -->
+        Trace.endSection()
+        // KMK <--
+        return imageLoader
     }
 
     override fun onStart(owner: LifecycleOwner) {
+        // KMK -->
+        val storageManager = Injekt.get<StorageManager>()
+        if (storageManager.refresh()) {
+            logFilePrinter?.updateFolder(storageManager.getLogsDirectory())
+        }
+        logFilePrinter?.resumeFileLogging()
+        // KMK <--
         SecureActivityDelegate.onApplicationStart()
 
         val syncPreferences: SyncPreferences = Injekt.get()
@@ -314,6 +395,11 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun onStop(owner: LifecycleOwner) {
+        // Close SAF descriptors before the process becomes cached. The printer remains paused,
+        // so queued/background logs cannot immediately reopen ExternalStorageProvider.
+        // KMK -->
+        logFilePrinter?.pauseFileLogging()
+        // KMK <--
         SecureActivityDelegate.onApplicationStopped()
 
         // AM (DISCORD) -->
@@ -372,21 +458,22 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (logFolder != null) {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
-            printers += EnhancedFilePrinter
-                .Builder(logFolder) {
-                    fileNameGenerator = object : DateFileNameGenerator() {
-                        override fun generateFileName(logLevel: Int, timestamp: Long): String {
-                            return super.generateFileName(
-                                logLevel,
-                                timestamp,
-                            ) + "-${BuildConfig.BUILD_TYPE}.txt"
-                        }
+            val printer = EnhancedFilePrinter.Builder(logFolder) {
+                fileNameGenerator = object : DateFileNameGenerator() {
+                    override fun generateFileName(logLevel: Int, timestamp: Long): String {
+                        return super.generateFileName(
+                            logLevel,
+                            timestamp,
+                        ) + "-${BuildConfig.BUILD_TYPE}.txt"
                     }
-                    flattener { timeMillis, level, tag, message ->
-                        "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
-                    }
-                    backupStrategy = NeverBackupStrategy()
                 }
+                flattener { timeMillis, level, tag, message ->
+                    "${dateFormat.format(timeMillis)} ${LogLevel.getShortLevelName(level)}/$tag: $message"
+                }
+                backupStrategy = NeverBackupStrategy()
+            }
+            logFilePrinter = printer
+            printers += printer
         }
 
         // Install Crashlytics in prod

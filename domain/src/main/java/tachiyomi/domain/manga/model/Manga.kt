@@ -3,7 +3,9 @@ package tachiyomi.domain.manga.model
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Immutable
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import mihon.core.common.extensions.EMPTY
@@ -48,6 +50,7 @@ data class Manga(
 ) : JavaSerializable {
 
     // SY -->
+    @Contextual
     private val customMangaInfo = if (favorite) {
         getCustomMangaInfo.get(id)
     } else {

@@ -197,10 +197,10 @@ fun Screen.feedTab(
                             sources = dialog.options,
                             onDismiss = onDismissRequest,
                             onClickAdd = {
+                                onDismissRequest()
                                 if (it != null) {
                                     screenModel.openAddSearchDialog(it)
                                 }
-                                onDismissRequest()
                             },
                         )
                     }

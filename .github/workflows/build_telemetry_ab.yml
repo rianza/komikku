@@ -1,0 +1,119 @@
+name: Telemetry A/B Preview Builder
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.variant }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: telemetry-on
+            telemetry_flag: -Pinclude-telemetry
+          - variant: telemetry-off
+            telemetry_flag: ""
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Set up JDK
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Write google-services.json
+        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
+        with:
+          path: app/google-services.json
+          contents: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          write-mode: overwrite
+
+      - name: Write client_secrets.json
+        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
+        with:
+          path: app/src/main/assets/client_secrets.json
+          contents: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}
+          write-mode: overwrite
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Build preview
+        run: ./gradlew assemblePreview ${{ matrix.telemetry_flag }} -Penable-updater
+
+      - name: Sign APKs
+        uses: r0adkll/sign-android-release@f30bdd30588842ac76044ecdbd4b6d0e3e813478
+        with:
+          releaseDirectory: app/build/outputs/apk/preview
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "35.0.1"
+
+      - name: Collect and verify artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          output_dir="app/build/outputs/apk/preview"
+          artifact_dir="telemetry-ab-artifacts"
+          mkdir -p "$artifact_dir"
+
+          universal_apk=$(find "$output_dir" -maxdepth 1 -type f -name '*universal-preview-signed.apk' -print -quit)
+          arm64_apk=$(find "$output_dir" -maxdepth 1 -type f -name '*arm64-v8a-preview-signed.apk' -print -quit)
+          test -n "$universal_apk"
+          test -n "$arm64_apk"
+
+          universal_output="$artifact_dir/Komikku-${{ matrix.variant }}-universal.apk"
+          arm64_output="$artifact_dir/Komikku-${{ matrix.variant }}-arm64-v8a.apk"
+          cp "$universal_apk" "$universal_output"
+          cp "$arm64_apk" "$arm64_output"
+
+          {
+            echo "variant=${{ matrix.variant }}"
+            echo "commit=${{ github.sha }}"
+            echo "ref=${{ github.ref }}"
+            sha256sum "$universal_output" "$arm64_output"
+          } > "$artifact_dir/build-info.txt"
+
+          apkanalyzer_bin=$(find "$ANDROID_HOME" -type f -path '*/bin/apkanalyzer' -print | sort -V | tail -n 1)
+          if [ -n "$apkanalyzer_bin" ]; then
+            "$apkanalyzer_bin" manifest print "$universal_output" > "$artifact_dir/manifest.xml"
+            if [ "${{ matrix.variant }}" = "telemetry-on" ]; then
+              grep -q 'com.google.firebase.provider.FirebaseInitProvider' "$artifact_dir/manifest.xml"
+            else
+              if grep -q 'com.google.firebase.provider.FirebaseInitProvider' "$artifact_dir/manifest.xml"; then
+                echo "Telemetry-off APK unexpectedly contains FirebaseInitProvider" >&2
+                exit 1
+              fi
+            fi
+          else
+            echo "apkanalyzer was not found; manifest verification skipped" > "$artifact_dir/manifest-verification.txt"
+          fi
+
+      - name: Upload ${{ matrix.variant }} APKs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Komikku-${{ matrix.variant }}-${{ github.sha }}
+          path: telemetry-ab-artifacts/
+          if-no-files-found: error
+          retention-days: 7

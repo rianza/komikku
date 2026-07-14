@@ -31,6 +31,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.model.screenModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -238,6 +239,8 @@ class MangaScreen(
                     withIOContext {
                         assistUrl = getMangaUrl(screenModel.manga, screenModel.source)
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Failed to get manga URL" }
                 }
@@ -428,7 +431,13 @@ class MangaScreen(
                 .takeIf { successState.source !is StubSource },
             onRelatedMangasScreenClick = {
                 if (successState.isRelatedMangasFetched == null) {
-                    scope.launchIO { screenModel.fetchRelatedMangasFromSource(onDemand = true) }
+                    // Use screenModelScope instead of Compose rememberCoroutineScope
+                    // to avoid ForgottenCoroutineScopeException when user navigates away
+                    // before the fetch completes. screenModelScope is tied to the
+                    // screen model lifecycle, not the composable lifecycle.
+                    screenModel.screenModelScope.launchIO {
+                        screenModel.fetchRelatedMangasFromSource(onDemand = true)
+                    }
                 }
                 showRelatedMangasScreen()
             },

@@ -87,14 +87,12 @@ abstract class AbstractStartupBenchmark(private val startupMode: StartupMode) {
             measureBlock = {
                 startActivityAndWait()
 
-                // TODO Add interactions to wait for when your app is fully drawn.
-                // The app is fully drawn when Activity.reportFullyDrawn is called.
-                // For Jetpack Compose, you can use ReportDrawn, ReportDrawnWhen and ReportDrawnAfter
-                // from the AndroidX Activity library.
-
-                // Check the UiAutomator documentation for more information on how to
-                // interact with the app.
-                // https://d.android.com/training/testing/other-components/ui-automator
+                // KMK -->
+                // MainActivity reports fully drawn after the active startup tab finishes loading.
+                // Keep the measurement open until Compose and accessibility events become idle so
+                // StartupTimingMetric can capture timeToFullDisplayMs as well as initial display.
+                device.waitForIdle()
+                // KMK <--
             }
         )
     }

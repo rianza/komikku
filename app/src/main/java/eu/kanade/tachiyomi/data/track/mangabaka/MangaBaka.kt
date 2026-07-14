@@ -49,6 +49,8 @@ class MangaBaka(id: Long) : BaseTracker(id, "MangaBaka"), DeletableTracker {
 
     override fun getCompletionStatus(): Long = COMPLETED
 
+    override fun hasNotStartedReading(status: Long): Boolean = status == PLAN_TO_READ || status == CONSIDERING
+
     override fun getScoreList(): ImmutableList<String> {
         return when (scorePreference.get()) {
             // 1, 2, ..., 99, 100

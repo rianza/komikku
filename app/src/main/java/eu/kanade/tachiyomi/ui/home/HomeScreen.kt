@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.home
 
+import android.os.Trace
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -72,6 +73,10 @@ object HomeScreen : Screen() {
     private val openTabEvent = Channel<Tab>()
     private val showBottomNavEvent = Channel<Boolean>()
 
+    // KMK -->
+    private var firstComposition = true
+    // KMK <--
+
     private const val TAB_FADE_DURATION = 200
     private const val TAB_NAVIGATOR_KEY = "HomeTabs"
 
@@ -85,6 +90,12 @@ object HomeScreen : Screen() {
 
     @Composable
     override fun Content() {
+        // KMK -->
+        val traceFirstComposition = firstComposition
+        if (traceFirstComposition) {
+            Trace.beginSection("KMK:HomeScreen.firstComposition")
+        }
+        // KMK <--
         val navigator = LocalNavigator.currentOrThrow
 
         // SY -->
@@ -207,6 +218,12 @@ object HomeScreen : Screen() {
                 }
             }
         }
+        // KMK -->
+        if (traceFirstComposition) {
+            firstComposition = false
+            Trace.endSection()
+        }
+        // KMK <--
     }
 
     @Composable

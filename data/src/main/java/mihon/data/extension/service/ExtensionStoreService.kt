@@ -26,66 +26,44 @@ class ExtensionStoreService(
     private val protoBuf: ProtoBuf,
 ) {
     suspend fun fetch(indexUrl: String): Result<ExtensionStore> {
-        return fetch(indexUrl, forceV2 = false)
-    }
-
-    private suspend fun fetch(indexUrl: String, forceV2: Boolean): Result<ExtensionStore> {
         var updatedIndexUrl = indexUrl
         return try {
             val store = network.noCookiesClient
-                .newCall(GET(indexUrl))
+                .newCall(GET(updatedIndexUrl))
                 .awaitSuccess()
                 .body
                 .source()
                 .decompressIfGzipped()
                 .use { source ->
-                    try {
-                        protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.peek().readByteArray())
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        logcat(LogPriority.ERROR, e) {
-                            "Failed to parse extension store as protobuf '$updatedIndexUrl'"
+                    val networkStore = when (source.peek().readByte()) {
+                        // "[..." is a legacy extension list, whose metadata lives in repo.json.
+                        0x5B.toByte() -> {
+                            if (!indexUrl.endsWith("/index.min.json")) {
+                                throw IllegalArgumentException("Provided legacy store URL is not valid")
+                            }
+                            updatedIndexUrl = indexUrl.replace("/index.min.json", "/repo.json")
+                            network.noCookiesClient
+                                .newCall(GET(updatedIndexUrl))
+                                .awaitSuccess()
+                                .body
+                                .source()
+                                .decompressIfGzipped()
+                                .use { json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(it) }
                         }
-
-                        try {
-                            json.decodeFromBufferedSource<NetworkExtensionStore>(source.peek())
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            if (forceV2) throw e
-                            logcat(LogPriority.ERROR, e) {
-                                "Failed to parse extension store as v2 json '$updatedIndexUrl'"
-                            }
-
-                            val legacyIndex = try {
-                                json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(source.peek())
-                            } catch (e: IllegalArgumentException) {
-                                if (!indexUrl.endsWith("/index.min.json")) {
-                                    throw e
-                                }
-                                logcat(LogPriority.ERROR, e) {
-                                    "Failed to parse legacy extension repo from '$updatedIndexUrl'"
-                                }
-
-                                updatedIndexUrl = indexUrl.replace("/index.min.json", "/repo.json")
-                                network.noCookiesClient
-                                    .newCall(GET(updatedIndexUrl))
-                                    .awaitSuccess()
-                                    .body
-                                    .source()
-                                    .decompressIfGzipped()
-                                    .use {
-                                        json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(it)
-                                    }
-                            }
-
-                            if (legacyIndex.indexV2 != null) {
-                                return fetch(legacyIndex.indexV2, forceV2 = true)
-                            } else {
-                                legacyIndex
-                            }
+                        // JSON metadata may be either a legacy repo or a v2 extension store.
+                        0x7B.toByte() -> try {
+                            json.decodeFromBufferedSource<NetworkLegacyExtensionRepo>(source.peek())
+                        } catch (_: IllegalArgumentException) {
+                            json.decodeFromBufferedSource<NetworkExtensionStore>(source)
                         }
+                        else -> protoBuf.decodeFromByteArray<NetworkExtensionStore>(source.readByteArray())
                     }
-                        .toExtensionStore(updatedIndexUrl)
+
+                    if (networkStore is NetworkLegacyExtensionRepo && networkStore.indexV2 != null) {
+                        return fetch(networkStore.indexV2)
+                    }
+
+                    networkStore.toExtensionStore(updatedIndexUrl)
                 }
 
             Result.success(store)

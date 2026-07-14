@@ -69,28 +69,33 @@ class FeedSavedSearchRepositoryImpl(
 
     override suspend fun insert(feedSavedSearch: FeedSavedSearch): Long {
         // KMK -->
-        // Use targeted query instead of loading all feeds for duplicate check
-        val currentFeeds = if (feedSavedSearch.global) {
-            database.feed_saved_searchQueries
-                .selectAllGlobal(FeedSavedSearchMapper::map)
-                .awaitAsList()
-        } else {
-            database.feed_saved_searchQueries
-                .selectBySource(feedSavedSearch.source, FeedSavedSearchMapper::map)
-                .awaitAsList()
-        }
-        val existedFeedId = currentFeeds.find { currentFeed ->
-            currentFeed.source == feedSavedSearch.source &&
-                currentFeed.savedSearch == feedSavedSearch.savedSearch &&
-                currentFeed.global == feedSavedSearch.global
-        }?.id
+        // Keep duplicate detection, insertion, and query invalidation in one transaction. This
+        // prevents Feed observers from seeing the pre-insert list until a later mutation occurs.
+        return database.transactionWithResult {
+            val currentFeeds = if (feedSavedSearch.global) {
+                database.feed_saved_searchQueries
+                    .selectAllGlobal(FeedSavedSearchMapper::map)
+                    .awaitAsList()
+            } else {
+                database.feed_saved_searchQueries
+                    .selectBySource(feedSavedSearch.source, FeedSavedSearchMapper::map)
+                    .awaitAsList()
+            }
+            val existingId = currentFeeds.find { currentFeed ->
+                currentFeed.source == feedSavedSearch.source &&
+                    currentFeed.savedSearch == feedSavedSearch.savedSearch &&
+                    currentFeed.global == feedSavedSearch.global
+            }?.id
 
-        return existedFeedId
-            ?: database.feed_saved_searchQueries.insertReturningId(
-                feedSavedSearch.source,
-                feedSavedSearch.savedSearch,
-                feedSavedSearch.global,
-            ).awaitAsOne()
+            existingId ?: run {
+                database.feed_saved_searchQueries.insert(
+                    feedSavedSearch.source,
+                    feedSavedSearch.savedSearch,
+                    feedSavedSearch.global,
+                )
+                database.feed_saved_searchQueries.selectLastInsertedRowId().awaitAsOne()
+            }
+        }
         // KMK <--
     }
 

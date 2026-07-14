@@ -16,23 +16,18 @@ class UniFileTempFileManager(
     fun createTempFile(file: UniFile): File {
         dir.mkdirs()
 
-        val inputStream = context.contentResolver.openInputStream(file.uri)!!
         val tempFile = File.createTempFile(
             file.nameWithoutExtension.orEmpty().padEnd(3), // Prefix must be 3+ chars
             null,
             dir,
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            FileUtils.copy(inputStream, tempFile.outputStream())
-        } else {
-            BufferedOutputStream(tempFile.outputStream()).use { tmpOut ->
-                inputStream.use { input ->
-                    val buffer = ByteArray(8192)
-                    var count: Int
-                    while (input.read(buffer).also { count = it } > 0) {
-                        tmpOut.write(buffer, 0, count)
-                    }
+        context.contentResolver.openInputStream(file.uri)!!.use { input ->
+            BufferedOutputStream(tempFile.outputStream()).use { output ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    FileUtils.copy(input, output)
+                } else {
+                    input.copyTo(output)
                 }
             }
         }

@@ -6,10 +6,13 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import com.hippo.unifile.UniFile
@@ -29,14 +32,19 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.i18n.MR
 import java.io.File
+import android.os.storage.StorageManager as AndroidStorageManager
 
 class StorageManager(
     private val context: Context,
-    storagePreferences: StoragePreferences,
+    private val storagePreferences: StoragePreferences,
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
+    @Volatile
+    private var allFilesAccess = hasAllFilesAccess()
+
+    @Volatile
     private var baseDir: UniFile? = getBaseDir(storagePreferences.baseStorageDirectory.get())
 
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
@@ -49,25 +57,43 @@ class StorageManager(
             .distinctUntilChanged()
             .onEach { uri ->
                 baseDir = getBaseDir(uri)
-                baseDir?.let { parent ->
-                    parent.createDirectory(AUTOMATIC_BACKUPS_PATH)
-                    parent.createDirectory(LOCAL_SOURCE_PATH)
-                    parent.createDirectory(DOWNLOADS_PATH).also {
-                        DiskUtil.createNoMediaFile(it, context)
-                    }
-                }
+                prepareBaseDirectories()
                 _changes.send(Unit)
             }
             .launchIn(scope)
     }
 
     private fun getBaseDir(uri: String): UniFile? {
-        return UniFile.fromUri(context, uri.toUri())
-            .takeIf {
-                // KMK -->
-                it?.isAccessibleDirectory == true
-                // KMK <--
+        return resolveStorageDirectory(context, uri)
+    }
+
+    /**
+     * Re-resolves the configured storage backend after returning from system settings.
+     * This switches between SAF and direct file access when All files access changes,
+     * while keeping the persisted SAF URI as the canonical preference value.
+     */
+    fun refresh(): Boolean {
+        val updatedAllFilesAccess = hasAllFilesAccess()
+        if (updatedAllFilesAccess == allFilesAccess) return false
+
+        allFilesAccess = updatedAllFilesAccess
+        val updatedBaseDir = getBaseDir(storagePreferences.baseStorageDirectory.get())
+        if (updatedBaseDir?.uri == baseDir?.uri) return false
+
+        baseDir = updatedBaseDir
+        prepareBaseDirectories()
+        _changes.trySend(Unit)
+        return true
+    }
+
+    private fun prepareBaseDirectories() {
+        baseDir?.let { parent ->
+            parent.createDirectory(AUTOMATIC_BACKUPS_PATH)
+            parent.createDirectory(LOCAL_SOURCE_PATH)
+            parent.createDirectory(DOWNLOADS_PATH).also {
+                DiskUtil.createNoMediaFile(it, context)
             }
+        }
     }
 
     fun getAutomaticBackupsDirectory(): UniFile? {
@@ -91,17 +117,90 @@ class StorageManager(
     companion object {
         // KMK -->
         /**
-         * Extension property to check if a UniFile is an accessible directory
+         * Extension property to check if a UniFile is an accessible directory.
+         * Some DocumentsProvider implementations throw for stale or revoked URIs.
          */
         val UniFile.isAccessibleDirectory: Boolean
-            get() = exists() && isDirectory && canWrite() && canRead()
+            get() = runCatching { exists() && isDirectory && canWrite() && canRead() }
+                .getOrDefault(false)
 
         /**
-         * Check if a directory is accessible
+         * Check if a directory is accessible through the same backend used at runtime.
          */
         fun directoryAccessible(context: Context, uri: String): Boolean {
-            return UniFile.fromUri(context, uri.toUri())?.isAccessibleDirectory == true
+            return resolveStorageDirectory(context, uri) != null
         }
+
+        private fun hasAllFilesAccess(): Boolean {
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()
+        }
+
+        /**
+         * Keep SAF as the canonical storage permission, but bypass ExternalStorageProvider
+         * at runtime when Android 11+ grants direct shared-storage access. Open descriptors
+         * from a content URI hold a stable provider reference until they are closed; using
+         * a direct file path avoids cascading client-process death if that provider is killed.
+         */
+        private fun resolveStorageDirectory(context: Context, uriValue: String): UniFile? {
+            return runCatching {
+                val uri = uriValue.toUri()
+                val directDirectory = uri.toDirectFileDirectory(context)
+                    ?.let { UniFile.fromFile(it) }
+                    ?.takeIf { it.isAccessibleDirectory }
+
+                directDirectory ?: UniFile.fromUri(context, uri)
+                    ?.takeIf { it.isAccessibleDirectory }
+            }.getOrNull()
+        }
+
+        private fun Uri.toDirectFileDirectory(context: Context): File? {
+            if (scheme == "file") {
+                val directory = File(path ?: return null)
+                if (!directory.exists()) directory.mkdirs()
+                return directory.takeIf { it.isAccessibleDirectory }
+            }
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
+                !Environment.isExternalStorageManager() ||
+                scheme != "content" ||
+                authority != EXTERNAL_STORAGE_PROVIDER_AUTHORITY ||
+                !DocumentsContract.isTreeUri(this)
+            ) {
+                return null
+            }
+
+            val documentId = runCatching { DocumentsContract.getTreeDocumentId(this) }
+                .getOrNull()
+                ?: return null
+            val (volumeId, relativePath) = documentId.split(":", limit = 2)
+                .let { parts -> parts.first() to parts.getOrElse(1) { "" } }
+            val volumeRoot = context.findStorageVolumeRoot(volumeId) ?: return null
+            val canonicalRoot = runCatching { volumeRoot.canonicalFile }.getOrNull() ?: return null
+            val directory = runCatching {
+                if (relativePath.isBlank()) canonicalRoot else File(canonicalRoot, relativePath).canonicalFile
+            }.getOrNull() ?: return null
+
+            val rootPath = canonicalRoot.path.trimEnd(File.separatorChar) + File.separator
+            if (directory != canonicalRoot && !directory.path.startsWith(rootPath)) return null
+
+            return directory.takeIf { it.isAccessibleDirectory }
+        }
+
+        @RequiresApi(Build.VERSION_CODES.R)
+        private fun Context.findStorageVolumeRoot(volumeId: String): File? {
+            if (volumeId.equals("primary", ignoreCase = true)) {
+                return Environment.getExternalStorageDirectory()
+            }
+
+            val storageManager = getSystemService(Context.STORAGE_SERVICE) as? AndroidStorageManager
+                ?: return null
+            return storageManager.storageVolumes
+                .firstOrNull { it.uuid.equals(volumeId, ignoreCase = true) }
+                ?.directory
+        }
+
+        private val File.isAccessibleDirectory: Boolean
+            get() = exists() && isDirectory && canRead() && canWrite()
 
         /**
          * Call FilePicker to allow access to storage or request All Files Access Permission if not available.
@@ -182,8 +281,12 @@ class StorageManager(
             context: Context,
             storageDirPref: Preference<String>,
         ) {
-            UniFile.fromUri(context, storageDirPref.get().toUri())?.let {
-                it.mkdir()
+            val uri = storageDirPref.get().toUri()
+            if (uri.scheme == "file") {
+                uri.path?.let(::File)?.mkdirs()
+            }
+
+            UniFile.fromUri(context, uri)?.let {
                 storageDirPref.set("") // Trigger recompose
                 storageDirPref.set(it.uri.toString())
             }
@@ -219,6 +322,7 @@ class StorageManager(
     }
 }
 
+private const val EXTERNAL_STORAGE_PROVIDER_AUTHORITY = "com.android.externalstorage.documents"
 private const val AUTOMATIC_BACKUPS_PATH = "autobackup"
 private const val DOWNLOADS_PATH = "downloads"
 private const val LOCAL_SOURCE_PATH = "local"

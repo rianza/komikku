@@ -17,14 +17,13 @@ import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher.Companion.USE_CUSTOM_COVER_KEY
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.source.online.HttpSource
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import logcat.LogPriority
 import okhttp3.CacheControl
 import okhttp3.Call
 import okhttp3.Request
 import okhttp3.Response
+import okio.Buffer
 import okio.BufferedSource
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
@@ -64,13 +63,15 @@ class MangaCoverFetcher(
     private val coverFileLazy: Lazy<File?>,
     private val customCoverFileLazy: Lazy<File>,
     private val diskCacheKeyLazy: Lazy<String>,
-    private val sourceLazy: Lazy<HttpSource?>,
+    // KMK -->
+    private val sourceManager: SourceManager,
+    private val sourceId: Long,
+    // KMK <--
     private val callFactoryLazy: Lazy<Call.Factory>,
     private val imageLoader: ImageLoader,
 ) : Fetcher {
 
     // KMK -->
-    private val scope by lazy { CoroutineScope(Dispatchers.IO) }
     private val uiPreferences = Injekt.get<UiPreferences>()
     private val themeCoverBased = uiPreferences.themeCoverBased.get()
     private val preloadLibraryColor = uiPreferences.preloadLibraryColor.get()
@@ -165,9 +166,9 @@ class MangaCoverFetcher(
             }
 
             // Fetch from network
-            val response = executeNetworkRequest()
-            val responseBody = checkNotNull(response.body) { "Null response source" }
-            try {
+            executeNetworkRequest().use { response ->
+                val responseBody = checkNotNull(response.body) { "Null response source" }
+
                 // Read from cover cache after library manga cover updated
                 val responseCoverCache = writeResponseToCoverCache(response, libraryCoverCacheFile)
                 if (responseCoverCache != null) {
@@ -188,23 +189,23 @@ class MangaCoverFetcher(
                 }
 
                 // KMK -->
-                setRatioAndColorsInScope(
-                    mangaCover,
-                    bufferedSource = ImageSource(
-                        source = responseBody.source(),
-                        fileSystem = FileSystem.SYSTEM,
-                    ).source(),
-                )
+                // A live OkHttp body cannot outlive this fetch safely: cancelled image requests
+                // may leave its transparent GzipSource/Inflater open. Consume it while Response.use
+                // owns it, then give Coil an independent in-memory source.
+                val responseBuffer = Buffer()
+                responseBody.source().use { responseBuffer.writeAll(it) }
+                if (responseBuffer.size <= MAX_COVER_METADATA_BYTES) {
+                    setRatioAndColorsInScope(
+                        mangaCover,
+                        bufferedSource = responseBuffer.clone(),
+                    )
+                }
                 // KMK <--
-                // Read from response if cache is unused or unusable
                 return SourceFetchResult(
-                    source = ImageSource(source = responseBody.source(), fileSystem = FileSystem.SYSTEM),
+                    source = ImageSource(source = responseBuffer, fileSystem = FileSystem.SYSTEM),
                     mimeType = "image/*",
                     dataSource = if (response.cacheResponse != null) DataSource.DISK else DataSource.NETWORK,
                 )
-            } catch (e: Exception) {
-                responseBody.close()
-                throw e
             }
         } catch (e: Exception) {
             snapshot?.close()
@@ -213,8 +214,9 @@ class MangaCoverFetcher(
     }
 
     private suspend fun executeNetworkRequest(): Response {
-        val client = sourceLazy.value?.client ?: callFactoryLazy.value
-        val response = client.newCall(newRequest()).await()
+        val source = (sourceManager.get(sourceId) as? HttpSource) ?: awaitSource()
+        val client = source?.client ?: callFactoryLazy.value
+        val response = client.newCall(newRequest(source)).await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
             response.close()
             throw IOException(response.message)
@@ -222,11 +224,26 @@ class MangaCoverFetcher(
         return response
     }
 
-    private fun newRequest(): Request {
+    // KMK -->
+    /**
+     * Network covers need the extension client and headers. Disk-backed covers never reach this
+     * path, while uncached grid items wait for the deferred source map instead of caching a null
+     * source and issuing a potentially invalid generic request.
+     */
+    private suspend fun awaitSource(): HttpSource? {
+        (sourceManager.get(sourceId) as? HttpSource)?.let { return it }
+        if (!sourceManager.isInitialized.value) {
+            sourceManager.isInitialized.first { it }
+        }
+        return sourceManager.get(sourceId) as? HttpSource
+    }
+    // KMK <--
+
+    private fun newRequest(source: HttpSource?): Request {
         val request = Request.Builder().apply {
             url(url!!)
 
-            val sourceHeaders = sourceLazy.value?.headers
+            val sourceHeaders = (source ?: (sourceManager.get(sourceId) as? HttpSource))?.headers
             if (sourceHeaders != null) {
                 headers(sourceHeaders)
             }
@@ -350,10 +367,17 @@ class MangaCoverFetcher(
         onlyFavorite: Boolean = !themeCoverBased,
         force: Boolean = false,
     ) {
-        if (!preloadLibraryColor) return
-        scope.launch {
-            MangaCoverMetadata.setRatioAndColors(mangaCover, bufferedSource, ogFile, onlyFavorite, force)
+        if (!preloadLibraryColor) {
+            bufferedSource?.close()
+            return
         }
+        MangaCoverMetadata.enqueue(
+            mangaCover = mangaCover,
+            bufferedSource = bufferedSource,
+            ogFile = ogFile,
+            onlyDominantColor = onlyFavorite,
+            force = force,
+        )
     }
     // KMK <--
 
@@ -381,7 +405,10 @@ class MangaCoverFetcher(
                 coverFileLazy = lazy { coverCache.getCoverFile(data.thumbnailUrl) },
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.id) },
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.source) as? HttpSource },
+                // KMK -->
+                sourceManager = sourceManager,
+                sourceId = data.source,
+                // KMK <--
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )
@@ -406,7 +433,10 @@ class MangaCoverFetcher(
                 coverFileLazy = lazy { coverCache.getCoverFile(data.url) },
                 customCoverFileLazy = lazy { coverCache.getCustomCoverFile(data.mangaId) },
                 diskCacheKeyLazy = lazy { imageLoader.components.key(data, options)!! },
-                sourceLazy = lazy { sourceManager.get(data.sourceId) as? HttpSource },
+                // KMK -->
+                sourceManager = sourceManager,
+                sourceId = data.sourceId,
+                // KMK <--
                 callFactoryLazy = callFactoryLazy,
                 imageLoader = imageLoader,
             )
@@ -420,5 +450,9 @@ class MangaCoverFetcher(
         private val CACHE_CONTROL_NO_NETWORK_NO_CACHE = CacheControl.Builder().noCache().onlyIfCached().build()
 
         private const val HTTP_NOT_MODIFIED = 304
+
+        // KMK -->
+        private const val MAX_COVER_METADATA_BYTES = 5L * 1024 * 1024 // 5 MiB
+        // KMK <--
     }
 }

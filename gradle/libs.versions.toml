@@ -82,7 +82,7 @@ timber = "5.0.1"
 # KMK <--
 unifile = "08f224c8f9"
 voyager = "2.2.21-1.10.3"
-xmlutil = "1.0.0"
+xmlutil = "1.0.1"
 
 [libraries]
 aboutLibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
@@ -101,6 +101,9 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-materialIcons = { module = "androidx.compose.material:material-icons-extended" }
 androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
 androidx-compose-runtimeAnnotation = { module = "androidx.compose.runtime:runtime-annotation" }
+# KMK -->
+androidx-compose-runtimeTracing = { module = "androidx.compose.runtime:runtime-tracing" }
+# KMK <--
 androidx-compose-uiTooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-uiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-uiUtil = { module = "androidx.compose.ui:ui-util" }

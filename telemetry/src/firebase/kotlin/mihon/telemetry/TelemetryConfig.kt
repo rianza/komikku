@@ -12,7 +12,9 @@ object TelemetryConfig {
     private var analytics: FirebaseAnalytics? = null
     private var crashlytics: FirebaseCrashlytics? = null
 
-    fun init(context: Context) {
+    // KMK -->
+    fun init(context: Context, isPreviewBuildType: Boolean, commitCount: String) {
+        // KMK <--
         // To stop forks/test builds from polluting our data
         if (!context.isMihonProductionApp()) return
 
@@ -26,6 +28,11 @@ object TelemetryConfig {
             analytics = FirebaseAnalytics.getInstance(context)
             FirebaseApp.initializeApp(context)
             crashlytics = FirebaseCrashlytics.getInstance()
+            // KMK -->
+            if (isPreviewBuildType) {
+                analytics?.setUserProperty("preview_version", commitCount)
+            }
+            // KMK <--
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Failed to initialize Firebase" }
         }

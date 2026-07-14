@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,6 +28,8 @@ class ExtensionStoresScreenModel(
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<ExtensionStoreScreenState>(ExtensionStoreScreenState.Loading) {
+
+    private var createRepoJob: Job? = null
 
     private inline fun updateSuccessState(
         func: (ExtensionStoreScreenState.Success) -> ExtensionStoreScreenState.Success,
@@ -72,21 +75,33 @@ class ExtensionStoresScreenModel(
      * @param baseUrl The baseUrl of the repo to create.
      */
     fun createRepo(baseUrl: String) {
-        screenModelScope.launchIO {
-            // Dismiss dialog immediately for smooth UX - validation runs in background
-            dismissDialog()
-            addExtensionStore(baseUrl)
+        val normalizedUrl = baseUrl.trim()
+        if (normalizedUrl.isEmpty() || createRepoJob?.isActive == true) return
+
+        val currentDialog = (state.value as? ExtensionStoreScreenState.Success)?.dialog ?: return
+        dismissDialog()
+
+        createRepoJob = screenModelScope.launchIO {
+            addExtensionStore(normalizedUrl)
                 .onSuccess {
+                    extensionManager.reloadInstalledExtensions()
                     extensionManager.findAvailableExtensions()
                 }
                 .onFailure { throwable ->
-                    // Re-show dialog with error if validation fails
-                    updateSuccessState {
-                        it.copy(
-                            dialog = ExtensionStoreDialog.Create(
-                                processing = false,
-                                errorMessage = throwable.message ?: "unknown error",
-                            ),
+                    val message = throwable.message ?: "unknown error"
+                    updateSuccessState { state ->
+                        state.copy(
+                            dialog = when (currentDialog) {
+                                is ExtensionStoreDialog.Confirm -> currentDialog.copy(
+                                    processing = false,
+                                    errorMessage = message,
+                                )
+                                else -> ExtensionStoreDialog.Confirm(
+                                    url = normalizedUrl,
+                                    processing = false,
+                                    errorMessage = message,
+                                )
+                            },
                         )
                     }
                 }
@@ -102,6 +117,8 @@ class ExtensionStoresScreenModel(
         if (status is ExtensionStoreScreenState.Success) {
             screenModelScope.launchIO {
                 updateExtensionStores()
+                extensionManager.reloadInstalledExtensions()
+                extensionManager.findAvailableExtensions()
             }
         }
     }
@@ -112,6 +129,7 @@ class ExtensionStoresScreenModel(
     fun deleteRepo(baseUrl: String) {
         screenModelScope.launchIO {
             removeExtensionStore(baseUrl)
+            extensionManager.reloadInstalledExtensions()
             extensionManager.findAvailableExtensions()
         }
     }

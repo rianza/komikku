@@ -244,12 +244,14 @@ class ShikimoriApi(
                             thumbnailUrl = manga.poster.originalUrl,
                             description = manga.description,
                             authors = manga.personRoles
-                                .filter { it.rolesEn.fastAny { "Story" in it } }
-                                .joinToString(", ") { it.person.name }
+                                .filter { it.roles.contains("Story") || it.roles.contains("Story & Art") }
+                                .map { it.person.name }
+                                .joinToString(", ")
                                 .ifEmpty { null },
                             artists = manga.personRoles
-                                .filter { it.rolesEn.fastAny { "Art" in it } }
-                                .joinToString(", ") { it.person.name }
+                                .filter { it.roles.contains("Art") || it.roles.contains("Story & Art") }
+                                .map { it.person.name }
+                                .joinToString(", ")
                                 .ifEmpty { null },
                         )
                     }

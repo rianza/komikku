@@ -48,8 +48,8 @@ android {
             isPseudoLocalesEnabled = true
         }
         val release = getByName("release") {
-            isMinifyEnabled = Config.enableCodeShrink
-            isShrinkResources = Config.enableCodeShrink
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             isProfileable = true
 
@@ -212,6 +212,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.uiTooling)
     implementation(libs.androidx.compose.uiToolingPreview)
     implementation(libs.androidx.compose.uiUtil)
+    // KMK -->
+    add("benchmarkImplementation", libs.androidx.compose.runtimeTracing)
+    // KMK <--
 
     implementation(libs.androidx.interpolator)
 

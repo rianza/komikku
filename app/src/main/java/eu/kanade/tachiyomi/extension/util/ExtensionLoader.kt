@@ -15,9 +15,10 @@ import eu.kanade.tachiyomi.source.SourceFactory
 import eu.kanade.tachiyomi.util.lang.Hash
 import eu.kanade.tachiyomi.util.storage.copyAndSetReadOnlyTo
 import eu.kanade.tachiyomi.util.system.ChildFirstPathClassLoader
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.domain.extension.interactor.GetExtensionStores
 import mihon.domain.extension.model.ExtensionStore
@@ -46,6 +47,11 @@ internal object ExtensionLoader {
 
     // KMK -->
     private val getExtensionStores: GetExtensionStores by injectLazy()
+
+    // Class loading verifies external dex files and constructs source factories. Keep every
+    // full reload and package event in one lane so they cannot amplify ART/JIT contention.
+    private val extensionLoadMutex = Mutex()
+    private val extensionLoadDispatcher = Dispatchers.IO.limitedParallelism(1)
     // KMK <--
 
     private val loadNsfwSource by lazy {
@@ -127,11 +133,22 @@ internal object ExtensionLoader {
     }
 
     /**
-     * Return a list of all the available extensions initialized concurrently.
+     * Returns all available extensions initialized in a single class-loading lane.
      *
      * @param context The application context.
      */
-    fun loadExtensions(context: Context): List<LoadResult> {
+    suspend fun loadExtensions(context: Context): List<LoadResult> {
+        return extensionLoadMutex.withLock {
+            withContext(extensionLoadDispatcher) {
+                try {
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                } catch (_: Exception) {}
+                loadExtensionsInternal(context)
+            }
+        }
+    }
+
+    private suspend fun loadExtensionsInternal(context: Context): List<LoadResult> {
         val pkgManager = context.packageManager
 
         val installedPkgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -176,27 +193,21 @@ internal object ExtensionLoader {
 
         if (extPkgs.isEmpty()) return emptyList()
 
-        // Load each extension concurrently and wait for completion
-        return runBlocking {
-            // KMK -->
-            // Fetch extension repos ONCE before concurrent extension loading
-            // to avoid repeated DB queries inside each loadExtension call
-            val extRepos = getExtensionStores.get()
-            val trustedSigningKeys = extRepos.map { it.signingKey }.toHashSet()
-            // KMK <--
-            val deferred = extPkgs.map {
-                async {
-                    loadExtension(
-                        context,
-                        it,
-                        // KMK -->
-                        extRepos,
-                        trustedSigningKeys,
-                        // KMK <--
-                    )
-                }
-            }
-            deferred.awaitAll()
+        // KMK -->
+        // Fetch stores once so every package in this snapshot uses identical trust inputs.
+        val extRepos = getExtensionStores.get()
+        val trustedSigningKeys = extRepos.map { it.signingKey }.toHashSet()
+        // KMK <--
+        return extPkgs.map {
+            kotlinx.coroutines.yield()
+            loadExtension(
+                context,
+                it,
+                // KMK -->
+                extRepos,
+                trustedSigningKeys,
+                // KMK <--
+            )
         }
     }
 
@@ -205,12 +216,31 @@ internal object ExtensionLoader {
      * contains the required feature flag before trying to load it.
      */
     suspend fun loadExtensionFromPkgName(context: Context, pkgName: String): LoadResult {
-        val extensionPackage = getExtensionInfoFromPkgName(context, pkgName)
-        if (extensionPackage == null) {
-            logcat(LogPriority.ERROR) { "Extension package is not found ($pkgName)" }
-            return LoadResult.Error
+        return extensionLoadMutex.withLock {
+            withContext(extensionLoadDispatcher) {
+                try {
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                } catch (_: Exception) {}
+                val extensionPackage = getExtensionInfoFromPkgName(context, pkgName)
+                if (extensionPackage == null) {
+                    logcat(LogPriority.ERROR) { "Extension package is not found ($pkgName)" }
+                    return@withContext LoadResult.Error
+                }
+
+                // KMK -->
+                val extRepos = getExtensionStores.get()
+                val trustedSigningKeys = extRepos.map { it.signingKey }.toHashSet()
+                // KMK <--
+                loadExtension(
+                    context,
+                    extensionPackage,
+                    // KMK -->
+                    extRepos,
+                    trustedSigningKeys,
+                    // KMK <--
+                )
+            }
         }
-        return loadExtension(context, extensionPackage)
     }
 
     fun getExtensionPackageInfoFromPkgName(context: Context, pkgName: String): PackageInfo? {
@@ -259,14 +289,10 @@ internal object ExtensionLoader {
         context: Context,
         extensionInfo: ExtensionInfo,
         // KMK -->
-        extRepos: List<ExtensionStore>? = null,
-        trustedSigningKeys: Set<String>? = null,
+        extRepos: List<ExtensionStore>,
+        trustedSigningKeys: Set<String>,
         // KMK <--
     ): LoadResult {
-        // KMK -->
-        val repos = extRepos ?: getExtensionStores.get()
-        val trustedKeys = trustedSigningKeys ?: repos.map { it.signingKey }.toHashSet()
-        // KMK <--
         val pkgManager = context.packageManager
         val pkgInfo = extensionInfo.packageInfo
         val appInfo = pkgInfo.applicationInfo!!
@@ -283,16 +309,12 @@ internal object ExtensionLoader {
         }
 
         // Validate lib version
-        val libVersion = appInfo.metaData.get(METADATA_EXTENSION_LIB).let { value ->
-            when (value) {
-                // Use toString() for Float to avoid 1.4f becoming 1.399999976... as Double.
-                is Number -> value.toString().toDoubleOrNull()
-                is String -> value.toDoubleOrNull()
-                else -> null
-            }
-        } ?: versionName.substringBeforeLast('.').toDoubleOrNull()
-
-        if (libVersion == null || !isSupportedLibVersion(libVersion)) {
+        val libVersion = appInfo.metaData.getFloat(METADATA_EXTENSION_LIB)
+            .takeUnless { it == 0.0f }
+            ?.toString()
+            ?.toDouble()
+            ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+        if (libVersion == null || libVersion !in SUPPORTED_LIB_VERSIONS) {
             logcat(LogPriority.WARN) {
                 "Lib version is $libVersion, while only version(s) ${SUPPORTED_LIB_VERSIONS.joinToString()} are supported"
             }
@@ -303,7 +325,7 @@ internal object ExtensionLoader {
         if (signatures.isNullOrEmpty()) {
             logcat(LogPriority.WARN) { "Package $pkgName isn't signed" }
             return LoadResult.Error
-        } else if (!trustExtension.isTrusted(pkgInfo, signatures, trustedKeys)) {
+        } else if (!trustExtension.isTrusted(pkgInfo, signatures, trustedSigningKeys)) {
             val extension = Extension.Untrusted(
                 extName,
                 pkgName,
@@ -312,7 +334,7 @@ internal object ExtensionLoader {
                 libVersion,
                 signatures.last(),
                 // KMK -->
-                repoName = repos.firstOrNull { repo ->
+                repoName = extRepos.firstOrNull { repo ->
                     signatures.all { it == repo.signingKey }
                 }?.let { repo ->
                     repo.badgeLabel.takeIf { it.isNotBlank() } ?: repo.name
@@ -377,11 +399,11 @@ internal object ExtensionLoader {
             isNsfw = isNsfw,
             sources = sources,
             pkgFactory = appInfo.metaData.getString(METADATA_SOURCE_FACTORY),
-            icon = appInfo.loadIcon(pkgManager),
+            icon = null,
             isShared = extensionInfo.isShared,
             // KMK -->
             signatureHash = signatures.last(),
-            repoName = repos.firstOrNull { repo ->
+            repoName = extRepos.firstOrNull { repo ->
                 signatures.all { it == repo.signingKey }
             }?.let { repo ->
                 repo.badgeLabel.takeIf { it.isNotBlank() } ?: repo.name

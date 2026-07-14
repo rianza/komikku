@@ -24,6 +24,14 @@ class BaselineProfileGenerator {
             pressHome()
             startActivityAndWait()
 
+            // KMK -->
+            // Scroll down on Pustaka (Library) to record scrolling and cover loading/recycling paths
+            val width = device.displayWidth
+            val height = device.displayHeight
+            device.swipe(width / 2, height * 3 / 4, width / 2, height / 4, 15)
+            device.waitForIdle()
+            // KMK <--
+
             device.waitAndClick(By.text("Updates"))
             device.waitForIdle()
 

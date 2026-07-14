@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.manga
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -69,6 +70,7 @@ import eu.kanade.tachiyomi.ui.manga.RelatedManga.Companion.sorted
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
+import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.toast
 import exh.debug.DebugToggles
@@ -85,8 +87,6 @@ import exh.source.mangaDexSourceIds
 import exh.util.nullIfEmpty
 import exh.util.trimOrNull
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
@@ -166,6 +166,7 @@ import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import java.io.File
 import kotlin.math.floor
 import androidx.compose.runtime.State as RuntimeState
 
@@ -184,7 +185,6 @@ class MangaScreenModel(
     private val uiPreferences: UiPreferences = Injekt.get(),
     // KMK -->
     private val sourcePreferences: SourcePreferences = Injekt.get(),
-    private val refreshTracks: RefreshTracks = Injekt.get(),
     private val downloadProvider: DownloadProvider = Injekt.get(),
     // KMK <--
     private val trackerManager: TrackerManager = Injekt.get(),
@@ -501,21 +501,26 @@ class MangaScreenModel(
             observeTrackers()
 
             // Fetch info-chapters when needed
-            if (screenModelScope.isActive) {
-                // KMK -->
-                launch { syncTrackers() }
-                // KMK <--
-            }
             if ((needRefreshInfo || needRefreshChapter) && screenModelScope.isActive) {
                 fetchAllFromSource(
                     manualFetch = false,
                     fetchDetails = needRefreshInfo,
                     fetchChapters = needRefreshChapter,
                 )
-                // KMK -->
-                launch { fetchRelatedMangasFromSource() }
-                // KMK <--
             }
+
+            // KMK -->
+            launch {
+                kotlinx.coroutines.yield()
+                syncTrackers()
+            }
+            // Related manga is UI state, not refresh state. Fetch it on every initial
+            // screen load even when cached manga info/chapters are still fresh.
+            launch {
+                kotlinx.coroutines.yield()
+                fetchRelatedMangasFromSource()
+            }
+            // KMK <--
 
             // Initial loading finished
             updateSuccessState { it.copy(isRefreshingData = false) }
@@ -529,6 +534,22 @@ class MangaScreenModel(
     fun setPaletteColor(model: Any) {
         if (model is ImageRequest && model.defined.sizeResolver != null) return
 
+        val mangaCover = when (model) {
+            is Manga -> model.asMangaCover()
+            is MangaCover -> model
+            is ImageRequest -> when (val data = model.data) {
+                is Manga -> data.asMangaCover()
+                is MangaCover -> data
+                else -> null
+            }
+            else -> null
+        }
+
+        if (mangaCover != null && mangaCover.vibrantCoverColor != null && (!mangaCover.isMangaFavorite || mangaCover.dominantCoverColors != null)) {
+            // Colors are already cached, skip redundant image loading and palette extraction!
+            return
+        }
+
         val imageRequestBuilder = if (model is ImageRequest) {
             model.newBuilder()
         } else {
@@ -537,25 +558,24 @@ class MangaScreenModel(
             .allowHardware(false)
 
         val generatePalette: (Image) -> Unit = { image ->
-            val bitmap = image.asDrawable(context.resources).getBitmapOrNull()
-            if (bitmap != null) {
-                Palette.from(bitmap).generate {
-                    screenModelScope.launchIO {
-                        if (it == null) return@launchIO
-                        val mangaCover = when (model) {
-                            is Manga -> model.asMangaCover()
-                            is MangaCover -> model
-                            else -> return@launchIO
-                        }
-                        if (mangaCover.isMangaFavorite) {
-                            it.dominantSwatch?.let { swatch ->
-                                mangaCover.dominantCoverColors = swatch.rgb to swatch.titleTextColor
+            if (mangaCover == null || mangaCover.vibrantCoverColor == null || (mangaCover.isMangaFavorite && mangaCover.dominantCoverColors == null)) {
+                val bitmap = image.asDrawable(context.resources).getBitmapOrNull()
+                if (bitmap != null) {
+                    Palette.from(bitmap).generate {
+                        screenModelScope.launchIO {
+                            if (it == null) return@launchIO
+                            if (mangaCover != null && mangaCover.isMangaFavorite) {
+                                it.dominantSwatch?.let { swatch ->
+                                    mangaCover.dominantCoverColors = swatch.rgb to swatch.titleTextColor
+                                }
                             }
-                        }
-                        val vibrantColor = it.getBestColor() ?: return@launchIO
-                        mangaCover.vibrantCoverColor = vibrantColor
-                        updateSuccessState { state ->
-                            state.copy(seedColor = Color(vibrantColor))
+                            val vibrantColor = it.getBestColor() ?: return@launchIO
+                            if (mangaCover != null) {
+                                mangaCover.vibrantCoverColor = vibrantColor
+                            }
+                            updateSuccessState { state ->
+                                if (state.seedColor == Color(vibrantColor)) state else state.copy(seedColor = Color(vibrantColor))
+                            }
                         }
                     }
                 }
@@ -581,37 +601,20 @@ class MangaScreenModel(
 
     private suspend fun syncTrackers() {
         if (!trackPreferences.autoSyncProgressFromTrackers.get()) return
-
-        refreshTracks.await(mangaId, enhancedTrackersOnly = false)
-            .filter { it.first != null }
-            .forEach { (track, e) ->
-                logcat(LogPriority.ERROR, e) {
-                    "Failed to refresh track data mangaId=$mangaId for service ${track!!.id}"
-                }
-                withUIContext {
-                    context.toast(
-                        context.stringResource(
-                            MR.strings.track_error,
-                            track!!.name,
-                            e.message ?: "",
-                        ),
-                    )
-                }
-            }
+        refreshTrackers(enhancedTrackersOnly = false)
     }
-    // KMK <--
 
     fun fetchAllFromSource(manualFetch: Boolean = true) {
         screenModelScope.launch {
             updateSuccessState { it.copy(isRefreshingData = true) }
-            // KMK -->
-            launch { syncTrackers() }
-            // KMK <--
             fetchAllFromSource(
                 manualFetch = manualFetch,
                 fetchDetails = true,
                 fetchChapters = true,
             )
+            // KMK -->
+            launch { syncTrackers() }
+            // KMK <--
             updateSuccessState { it.copy(isRefreshingData = false) }
         }
     }
@@ -954,8 +957,9 @@ class MangaScreenModel(
             if (currentManga == null || currentSource == null || currentSource is StubSource) return
 
             val mangaDir = downloadProvider.findMangaDir(/* SY --> */ currentManga.ogTitle /* SY <-- */, currentSource) ?: return
+            val folderUri = mangaDir.uri.toFileProviderUri(context) ?: mangaDir.uri
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(mangaDir.uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                setDataAndType(folderUri, DocumentsContract.Document.MIME_TYPE_DIR)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(intent)
@@ -963,6 +967,15 @@ class MangaScreenModel(
             logcat(LogPriority.ERROR, e)
             context.toast(e.message ?: context.stringResource(KMR.strings.error_opening_folder))
         }
+    }
+
+    /** Convert internal direct-file storage to a one-shot URI safe to share with file managers. */
+    private fun Uri.toFileProviderUri(context: Context): Uri? {
+        if (scheme != "file") return null
+        val directory = File(path ?: return null)
+            .takeIf { it.exists() && it.isDirectory }
+            ?: return null
+        return runCatching { directory.getUriCompat(context) }.getOrNull()
     }
 
     /**
@@ -1175,6 +1188,9 @@ class MangaScreenModel(
         setRelatedMangasFetchedStatus(false)
 
         fun exceptionHandler(e: Throwable) {
+            // Don't treat CancellationException as a real error — it simply means the
+            // user navigated away before the fetch finished.
+            if (e is CancellationException) return
             logcat(LogPriority.ERROR, e)
             val message = with(context) { e.formattedMessage }
 
@@ -1188,6 +1204,11 @@ class MangaScreenModel(
         try {
             if (state.source !is StubSource && relatedMangasEnabled) {
                 state.source.getRelatedMangaList(state.manga.toSManga(), { e -> exceptionHandler(e) }) { pair, _ ->
+                    // Skip updating state if the screen model scope is no longer active
+                    // (user already navigated away). This avoids ForgottenCoroutine-
+                    // ScopeException when pushing results after the composable is gone.
+                    if (!screenModelScope.isActive) return@getRelatedMangaList
+
                     /* Push found related mangas into collection */
                     val relatedManga = RelatedManga.Success.fromPair(pair) { mangaList ->
                         mangaList
@@ -1206,6 +1227,9 @@ class MangaScreenModel(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            // Normal cancellation (user navigated away) — just mark as finished silently
+            logcat(LogPriority.DEBUG) { "Related mangas fetch cancelled" }
         } catch (e: Exception) {
             exceptionHandler(e)
         } finally {
@@ -1424,9 +1448,14 @@ class MangaScreenModel(
     }
 
     private suspend fun refreshTrackers(
+        // KMK -->
+        enhancedTrackersOnly: Boolean = true,
+        // KMK <--
         refreshTracks: RefreshTracks = Injekt.get(),
     ) {
-        refreshTracks.await(mangaId)
+        // KMK -->
+        refreshTracks.await(mangaId, enhancedTrackersOnly = enhancedTrackersOnly)
+            // KMK <--
             .filter { it.first != null }
             .forEach { (track, e) ->
                 logcat(LogPriority.ERROR, e) {

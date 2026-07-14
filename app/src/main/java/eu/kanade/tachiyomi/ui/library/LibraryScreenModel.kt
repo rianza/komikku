@@ -104,6 +104,7 @@ import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetIdsOfFavoriteMangaWithMetadata
 import tachiyomi.domain.manga.interactor.GetLibraryManga
+import tachiyomi.domain.manga.interactor.GetMergedManga
 import tachiyomi.domain.manga.interactor.GetMergedMangaById
 import tachiyomi.domain.manga.interactor.GetSearchTags
 import tachiyomi.domain.manga.interactor.GetSearchTitles
@@ -159,6 +160,7 @@ class LibraryScreenModel(
     // SY <--
     // KMK -->
     private val smartSearchMerge: SmartSearchMerge = Injekt.get(),
+    private val getMergedManga: GetMergedManga = Injekt.get(),
     // KMK <--
 ) : StateScreenModel<LibraryScreenModel.State>(State()) {
 
@@ -178,7 +180,7 @@ class LibraryScreenModel(
                 combine(
                     state.map { it.searchQuery }.distinctUntilChanged().debounce(0.25.seconds),
                     getCategories.subscribe(),
-                    getFavoritesFlow(),
+                    getFavoritesFlow().debounce(0.25.seconds),
                     ::Triple,
                 ),
                 combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
@@ -453,17 +455,7 @@ class LibraryScreenModel(
         val filterFnDownloaded: suspend (LibraryItem) -> Boolean = {
             applyFilter(filterDownloaded) {
                 it.libraryManga.manga.isLocal() ||
-                    it.downloadCount > 0 ||
-                    // KMK -->
-                    if (it.libraryManga.manga.source == MERGED_SOURCE_ID) {
-                        // FIXME: Calling await in filter could lead to N+1 performance issues.
-                        //  Should include all the merged references in library query instead.
-                        getMergedMangaById.await(it.libraryManga.manga.id)
-                            .sumOf { manga -> downloadManager.getDownloadCount(manga) } > 0
-                    } else {
-                        // KMK <--
-                        downloadManager.getDownloadCount(it.libraryManga.manga) > 0
-                    }
+                    it.downloadCount > 0
             }
         }
 
@@ -779,6 +771,17 @@ class LibraryScreenModel(
             getLibraryItemPreferencesFlow(),
             downloadCache.changes,
         ) { libraryManga, preferences, _ ->
+            val hasMergedManga = libraryManga.fastAny { it.manga.source == MERGED_SOURCE_ID }
+            val mergedMangaMap = if (hasMergedManga) {
+                val allReferences = getMergedManga.awaitAllReferences()
+                val allChildren = getMergedManga.await().associateBy { it.id }
+                allReferences.groupBy { it.mergeId }.mapValues { entry ->
+                    entry.value.mapNotNull { ref -> ref.mangaId?.let { allChildren[it] } }
+                }
+            } else {
+                emptyMap()
+            }
+
             libraryManga.map { manga ->
                 // Display mode based on user preference: take it from global library setting or category
                 // KMK -->
@@ -786,9 +789,8 @@ class LibraryScreenModel(
                 // KMK <--
                 // SY -->
                 val downloadCount = if (manga.manga.source == MERGED_SOURCE_ID) {
-                    // FIXME: N+1 performance issues.
-                    //  Should include all the merged references in library query instead.
-                    getMergedMangaById.await(manga.manga.id).sumOf { downloadManager.getDownloadCount(it) }
+                    val children = mergedMangaMap[manga.manga.id].orEmpty()
+                    children.sumOf { downloadManager.getDownloadCount(it) }
                 } else {
                     downloadManager.getDownloadCount(manga.manga)
                 }

@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.library
 
+import android.os.Trace
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -88,6 +89,10 @@ data object LibraryTab : Tab {
     @Suppress("unused")
     private fun readResolve(): Any = LibraryTab
 
+    // KMK -->
+    private var firstComposition = true
+    // KMK <--
+
     override val options: TabOptions
         @Composable
         get() {
@@ -106,6 +111,12 @@ data object LibraryTab : Tab {
 
     @Composable
     override fun Content() {
+        // KMK -->
+        val traceFirstComposition = firstComposition
+        if (traceFirstComposition) {
+            Trace.beginSection("KMK:LibraryTab.firstComposition")
+        }
+        // KMK <--
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -483,6 +494,13 @@ data object LibraryTab : Tab {
             launch { queryEvent.receiveAsFlow().collect(screenModel::search) }
             launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { screenModel.showSettingsDialog() } }
         }
+
+        // KMK -->
+        if (traceFirstComposition) {
+            firstComposition = false
+            Trace.endSection()
+        }
+        // KMK <--
     }
 
     // For invoking search from other screen

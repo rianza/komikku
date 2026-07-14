@@ -58,4 +58,5 @@ val migrations: List<Migration>
         DisabledRepoMigration(),
         SyncPrefKeyMigration(),
         // KMK <--
+        VerticalNavigatorMigration(),
     )

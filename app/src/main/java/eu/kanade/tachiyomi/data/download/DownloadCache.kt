@@ -117,8 +117,15 @@ class DownloadCache(
                         val diskCache = diskCacheFile.inputStream().use {
                             ProtoBuf.decodeFromByteArray<RootDirectory>(it.readBytes())
                         }
-                        rootDownloadsDir = diskCache
-                        lastRenew = System.currentTimeMillis()
+                        val currentRootUri = storageManager.getDownloadsDirectory()?.uri
+                        if (diskCache.dir?.uri == currentRootUri) {
+                            rootDownloadsDir = diskCache
+                            lastRenew = System.currentTimeMillis()
+                        } else {
+                            // Do not restore SAF-backed entries after switching to direct storage,
+                            // or direct entries after All files access has been revoked.
+                            diskCacheFile.delete()
+                        }
                     }
                 } catch (e: Throwable) {
                     logcat(LogPriority.ERROR, e) { "Failed to initialize from disk cache" }
@@ -427,7 +434,13 @@ class DownloadCache(
             rootDownloadsDirMutex.withLock {
                 val updatedRootDir = RootDirectory(storageManager.getDownloadsDirectory())
 
-                updatedRootDir.sourceDirs = updatedRootDir.dir?.listFiles().orEmpty()
+                val rootFiles = runCatching { updatedRootDir.dir?.listFiles().orEmpty() }
+                    .getOrElse {
+                        logcat(LogPriority.WARN, it) { "Failed to list downloads root" }
+                        emptyArray()
+                    }
+
+                updatedRootDir.sourceDirs = rootFiles
                     .filter { it.isDirectory && !it.name.isNullOrBlank() }
                     .mapNotNull { dir ->
                         val sourceId = sourceMap[dir.name!!.lowercase()]
@@ -437,12 +450,27 @@ class DownloadCache(
 
                 updatedRootDir.sourceDirs.values.map { sourceDir ->
                     async {
-                        sourceDir.mangaDirs = sourceDir.dir?.listFiles().orEmpty()
+                        // Wrap directory listing in try-catch: SAF-backed directories can
+                        // throw if the underlying files were deleted externally (e.g. via
+                        // file manager) between the exists() check and listFiles().
+                        val sourceFiles = runCatching { sourceDir.dir?.listFiles().orEmpty() }
+                            .getOrElse {
+                                logcat(LogPriority.WARN, it) { "Failed to list source dir" }
+                                emptyArray()
+                            }
+
+                        sourceDir.mangaDirs = sourceFiles
                             .filter { it.isDirectory && !it.name.isNullOrBlank() }
                             .associate { it.name!! to MangaDirectory(it) }
 
                         sourceDir.mangaDirs.values.forEach { mangaDir ->
-                            val chapterDirs = mangaDir.dir?.listFiles().orEmpty()
+                            val chapterFiles = runCatching { mangaDir.dir?.listFiles().orEmpty() }
+                                .getOrElse {
+                                    logcat(LogPriority.WARN, it) { "Failed to list manga dir" }
+                                    emptyArray()
+                                }
+
+                            val chapterDirs = chapterFiles
                                 .mapNotNull {
                                     when {
                                         // Ignore incomplete downloads

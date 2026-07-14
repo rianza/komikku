@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.extension.model.LoadResult
 import eu.kanade.tachiyomi.extension.util.ExtensionInstallReceiver
 import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.extension.util.ExtensionLoader
+import eu.kanade.tachiyomi.util.system.startupTrace
 import eu.kanade.tachiyomi.util.system.toast
 import exh.log.xLogD
 import exh.source.BlacklistedSources
@@ -21,6 +22,7 @@ import exh.source.EHENTAI_EXT_SOURCES
 import exh.source.EXHENTAI_EXT_SOURCES
 import exh.source.ExhPreferences
 import exh.source.MERGED_SOURCE_ID
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,8 +34,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -42,6 +48,10 @@ import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.Locale
+
+// KMK -->
+private const val INITIAL_EXTENSION_LOAD_MAX_DEFER_MS = 3_000L
+// KMK <--
 
 /**
  * The manager of extensions installed as another apk which extend the available sources. It handles
@@ -57,6 +67,11 @@ class ExtensionManager(
 ) {
 
     val scope = CoroutineScope(SupervisorJob())
+
+    // KMK -->
+    private val extensionLoadMutex = Mutex()
+    private val firstUiFullyDrawn = CompletableDeferred<Unit>()
+    // KMK <--
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
@@ -76,6 +91,12 @@ class ExtensionManager(
     private val installedExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Installed>())
     val installedExtensionsFlow = installedExtensionMapFlow.mapExtensions(scope)
 
+    // KMK -->
+    internal fun getInstalledExtensionsSnapshot(): List<Extension.Installed> {
+        return installedExtensionMapFlow.value.values.toList()
+    }
+    // KMK <--
+
     private val availableExtensionMapFlow = MutableStateFlow(emptyMap<String, Extension.Available>())
 
     // SY -->
@@ -88,10 +109,15 @@ class ExtensionManager(
 
     init {
         // KMK -->
-        // Launch extension loading in background to avoid blocking app startup.
-        // Consumers that depend on extensions must wait on isInitialized flow.
         scope.launch(Dispatchers.IO) {
-            initExtensions()
+            // Wait for first UI frame to render before starting heavy extension loading.
+            // This prevents Extensions.loadInstalled (673ms) from blocking IO dispatcher during
+            // bindApplication (640ms) and first frame render, reducing SynchronizedLazyImpl and
+            // DiskLruCache contentions. Timeout 5000ms ensures extensions wait until home screen is drawn.
+            withTimeoutOrNull(5000) {
+                firstUiFullyDrawn.await()
+            }
+            initExtensions(skipIfInitialized = true)
         }
         // KMK <--
         ExtensionInstallReceiver(InstallationListener()).register(context)
@@ -147,25 +173,53 @@ class ExtensionManager(
 
     fun getSourceData(id: Long) = availableExtensionsSourcesData[id]
 
+    // KMK -->
+    /** Starts the initial load after AndroidX has reported the first UI as fully drawn. */
+    fun onFirstUiFullyDrawn() {
+        firstUiFullyDrawn.complete(Unit)
+    }
+    // KMK <--
+
     /**
      * Loads and registers the installed extensions.
      */
-    private fun initExtensions() {
-        val extensions = ExtensionLoader.loadExtensions(context)
+    private suspend fun initExtensions(skipIfInitialized: Boolean = false) {
+        extensionLoadMutex.withLock {
+            // KMK -->
+            // A repository restore may have initialized the manager while the startup gate waited.
+            if (skipIfInitialized && _isInitialized.value) return@withLock
 
-        installedExtensionMapFlow.value = extensions
-            .filterIsInstance<LoadResult.Success>()
-            .associate { it.extension.pkgName to it.extension }
+            val extensions = startupTrace("Extensions.loadInstalled") {
+                ExtensionLoader.loadExtensions(context)
+            }
+            // KMK <--
 
-        untrustedExtensionMapFlow.value = extensions
-            .filterIsInstance<LoadResult.Untrusted>()
-            .associate { it.extension.pkgName to it.extension }
-            // SY -->
-            .filterNotBlacklisted()
-        // SY <--
+            installedExtensionMapFlow.value = extensions
+                .filterIsInstance<LoadResult.Success>()
+                .associate { it.extension.pkgName to it.extension }
 
-        _isInitialized.value = true
+            untrustedExtensionMapFlow.value = extensions
+                .filterIsInstance<LoadResult.Untrusted>()
+                .associate { it.extension.pkgName to it.extension }
+                // SY -->
+                .filterNotBlacklisted()
+            // SY <--
+
+            _isInitialized.value = true
+        }
     }
+
+    // KMK -->
+    /**
+     * Revalidates installed extension signatures after configured extension stores change.
+     * Updating the state flows also makes the source manager rebuild its source map.
+     */
+    suspend fun reloadInstalledExtensions() {
+        withContext(Dispatchers.IO) {
+            initExtensions()
+        }
+    }
+    // KMK <--
 
     // EXH -->
     private fun <T : Extension> Map<String, T>.filterNotBlacklisted(): Map<String, T> {
@@ -374,7 +428,7 @@ class ExtensionManager(
 
         trustExtension.trust(extension.pkgName, extension.versionCode, extension.signatureHash)
 
-        untrustedExtensionMapFlow.value -= extension.pkgName
+        untrustedExtensionMapFlow.update { it - extension.pkgName }
 
         withContext(Dispatchers.IO) {
             ExtensionLoader.loadExtensionFromPkgName(context, extension.pkgName)
@@ -396,7 +450,7 @@ class ExtensionManager(
         }
         // SY <--
 
-        installedExtensionMapFlow.value += extension
+        installedExtensionMapFlow.update { it + extension }
     }
 
     /**
@@ -413,7 +467,7 @@ class ExtensionManager(
         }
         // SY <--
 
-        installedExtensionMapFlow.value += extension
+        installedExtensionMapFlow.update { it + extension }
     }
 
     /**
@@ -423,8 +477,8 @@ class ExtensionManager(
      * @param pkgName The package name of the uninstalled application.
      */
     private fun unregisterExtension(pkgName: String) {
-        installedExtensionMapFlow.value -= pkgName
-        untrustedExtensionMapFlow.value -= pkgName
+        installedExtensionMapFlow.update { it - pkgName }
+        untrustedExtensionMapFlow.update { it - pkgName }
     }
 
     /**
@@ -443,8 +497,8 @@ class ExtensionManager(
         }
 
         override fun onExtensionUntrusted(extension: Extension.Untrusted) {
-            installedExtensionMapFlow.value -= extension.pkgName
-            untrustedExtensionMapFlow.value += extension
+            installedExtensionMapFlow.update { it - extension.pkgName }
+            untrustedExtensionMapFlow.update { it + extension }
             updatePendingUpdatesCount()
         }
 
