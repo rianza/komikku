@@ -49,6 +49,7 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.util.formattedMessage
+import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.getBestColor
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.download.DownloadManager
@@ -528,8 +529,13 @@ class MangaScreenModel(
     }
 
     // KMK -->
+    private val coverCache: CoverCache = Injekt.get()
+    // KMK <--
+
+    // KMK -->
     /**
-     * Get the color of the manga cover by loading cover with ImageRequest directly from network.
+     * Get the color of the manga cover. Tries cover cache file first to avoid redundant Coil load,
+     * falls back to loading via ImageRequest for uncached covers.
      */
     fun setPaletteColor(model: Any) {
         if (model is ImageRequest && model.defined.sizeResolver != null) return
@@ -548,6 +554,38 @@ class MangaScreenModel(
         if (mangaCover != null && mangaCover.vibrantCoverColor != null && (!mangaCover.isMangaFavorite || mangaCover.dominantCoverColors != null)) {
             // Colors are already cached, skip redundant image loading and palette extraction!
             return
+        }
+
+        // Try reading from cover cache file directly to avoid redundant Coil load
+        if (mangaCover != null) {
+            val file = coverCache.getCustomCoverFile(mangaCover.mangaId).takeIf { it.exists() }
+                ?: coverCache.getCoverFile(mangaCover.url)
+            if (file?.exists() == true) {
+                screenModelScope.launchIO {
+                    val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
+                    val bitmap = android.graphics.BitmapFactory.decodeFile(file.path, options)
+                    if (bitmap != null) {
+                        try {
+                            val palette = Palette.from(bitmap).generate()
+                            if (mangaCover.isMangaFavorite) {
+                                palette.dominantSwatch?.let { swatch ->
+                                    mangaCover.dominantCoverColors = swatch.rgb to swatch.titleTextColor
+                                }
+                            }
+                            val vibrantColor = palette.getBestColor()
+                            if (vibrantColor != null) {
+                                mangaCover.vibrantCoverColor = vibrantColor
+                                updateSuccessState { state ->
+                                    if (state.seedColor == Color(vibrantColor)) state else state.copy(seedColor = Color(vibrantColor))
+                                }
+                            }
+                        } finally {
+                            if (!bitmap.isRecycled) bitmap.recycle()
+                        }
+                    }
+                }
+                return
+            }
         }
 
         val imageRequestBuilder = if (model is ImageRequest) {

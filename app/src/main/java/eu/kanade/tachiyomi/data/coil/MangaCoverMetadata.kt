@@ -267,7 +267,7 @@ object MangaCoverMetadata {
             // KMK <--
             for (request in requests) {
                 try {
-                    kotlinx.coroutines.delay(50)
+                    kotlinx.coroutines.delay(80)
                     kotlinx.coroutines.yield()
                     request.bufferedSource.use { source ->
                         MangaCoverMetadata.setRatioAndColors(

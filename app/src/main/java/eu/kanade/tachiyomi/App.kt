@@ -119,7 +119,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     // KMK -->
     private var logFilePrinter: EnhancedFilePrinter? = null
     private val coilFetcherDispatcher by lazy {
-        java.util.concurrent.Executors.newFixedThreadPool(3) { runnable ->
+        java.util.concurrent.Executors.newFixedThreadPool(1) { runnable ->
             Thread(runnable, "coil-fetcher-thread")
         }.asCoroutineDispatcher()
     }
