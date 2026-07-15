@@ -119,7 +119,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     // KMK -->
     private var logFilePrinter: EnhancedFilePrinter? = null
     private val coilFetcherDispatcher by lazy {
-        java.util.concurrent.Executors.newFixedThreadPool(8) { runnable ->
+        java.util.concurrent.Executors.newFixedThreadPool(3) { runnable ->
             Thread(runnable, "coil-fetcher-thread")
         }.asCoroutineDispatcher()
     }
@@ -358,7 +358,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                     .build(),
             )
 
-            crossfade((300 * this@App.animatorDurationScale).toInt())
+            crossfade((150 * this@App.animatorDurationScale).toInt())
             allowRgb565(DeviceUtil.isLowRamDevice(this@App))
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 

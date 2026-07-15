@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import okio.BufferedSource
@@ -266,6 +267,7 @@ object MangaCoverMetadata {
             // KMK <--
             for (request in requests) {
                 try {
+                    kotlinx.coroutines.delay(50)
                     kotlinx.coroutines.yield()
                     request.bufferedSource.use { source ->
                         MangaCoverMetadata.setRatioAndColors(
@@ -312,6 +314,6 @@ object MangaCoverMetadata {
 
     // KMK -->
     private const val MAX_CONCURRENT_METADATA_REQUESTS = 1
-    private const val MAX_PENDING_METADATA_REQUESTS = 2
+    private const val MAX_PENDING_METADATA_REQUESTS = 10
     // KMK <--
 }
