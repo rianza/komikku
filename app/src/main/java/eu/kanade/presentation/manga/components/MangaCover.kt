@@ -9,8 +9,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -20,12 +25,14 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import coil3.request.ImageRequest
 import eu.kanade.presentation.manga.components.MangaCover.Companion.COVER_TEMPLATE_SIZE_BIG
 import eu.kanade.presentation.manga.components.MangaCover.Companion.COVER_TEMPLATE_SIZE_MEDIUM
 import eu.kanade.presentation.manga.components.MangaCover.Companion.COVER_TEMPLATE_SIZE_NORMAL
@@ -67,39 +74,68 @@ enum class MangaCover(val ratio: Float) {
         scale: ContentScale = ContentScale.Crop,
         // KMK <--
     ) {
-        val modifierColored = modifier
-            .aspectRatio(ratio)
-            .clip(shape)
-            // KMK -->
-            .alpha(alpha)
-            .background(bgColor ?: CoverPlaceholderColor)
-            // KMK <--
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(
-                        role = Role.Button,
-                        onClick = onClick,
-                    )
-                } else {
-                    Modifier
-                },
-            )
+        val context = LocalContext.current
+        val model = remember(data) {
+            if (data is ImageRequest) {
+                data
+            } else {
+                ImageRequest.Builder(context)
+                    .data(data)
+                    .size(coil3.size.Size(300, 450))
+                    .build()
+            }
+        }
 
-        AsyncImage(
-            model = data,
-            error = painterResource(R.drawable.cover_error_vector),
-            onSuccess = { result ->
-                if (onCoverLoaded != null) {
-                    when (data) {
-                        is Manga -> onCoverLoaded(data.asMangaCover(), result)
-                        is DomainMangaCover -> onCoverLoaded(data, result)
+        var isLoaded by remember(data) { mutableStateOf(false) }
+
+        Box(
+            modifier = modifier
+                .aspectRatio(ratio)
+                .clip(shape)
+                // KMK -->
+                .alpha(alpha)
+                .background(bgColor ?: CoverPlaceholderColor)
+                // KMK <--
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable(
+                            role = Role.Button,
+                            onClick = onClick,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
+            AsyncImage(
+                model = model,
+                error = painterResource(R.drawable.cover_error_vector),
+                onSuccess = { result ->
+                    isLoaded = true
+                    if (onCoverLoaded != null) {
+                        when (data) {
+                            is Manga -> onCoverLoaded(data.asMangaCover(), result)
+                            is DomainMangaCover -> onCoverLoaded(data, result)
+                        }
                     }
-                }
-            },
-            contentDescription = contentDescription,
-            modifier = modifierColored,
-            contentScale = scale,
-        )
+                },
+                onError = {
+                    isLoaded = true
+                },
+                contentDescription = contentDescription,
+                modifier = Modifier.matchParentSize(),
+                contentScale = scale,
+            )
+            if (!isLoaded) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp),
+                    color = CoverPlaceholderOnBgColor,
+                    strokeWidth = 2.dp,
+                )
+            }
+        }
     }
 
     companion object {
