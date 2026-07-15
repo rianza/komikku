@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -86,6 +87,7 @@ enum class MangaCover(val ratio: Float) {
 
         AsyncImage(
             model = data,
+            error = painterResource(R.drawable.cover_error_vector),
             onSuccess = { result ->
                 if (onCoverLoaded != null) {
                     when (data) {
