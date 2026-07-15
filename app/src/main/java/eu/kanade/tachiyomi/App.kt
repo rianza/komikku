@@ -124,7 +124,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }.asCoroutineDispatcher()
     }
     private val coilDecoderDispatcher by lazy {
-        java.util.concurrent.Executors.newFixedThreadPool(3) { runnable ->
+        java.util.concurrent.Executors.newFixedThreadPool(1) { runnable ->
             Thread(runnable, "coil-decoder-thread")
         }.asCoroutineDispatcher()
     }
@@ -360,6 +360,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
             crossfade((150 * this@App.animatorDurationScale).toInt())
             allowRgb565(DeviceUtil.isLowRamDevice(this@App))
+            bitmapFactoryMaxParallelism(1)
             if (networkPreferences.verboseLogging.get()) logger(DebugLogger())
 
             // Coil spawns a new thread for every image load by default

@@ -9,13 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -28,8 +23,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
-import coil3.compose.SubcomposeAsyncImage
 import eu.kanade.presentation.manga.components.MangaCover.Companion.COVER_TEMPLATE_SIZE_BIG
 import eu.kanade.presentation.manga.components.MangaCover.Companion.COVER_TEMPLATE_SIZE_MEDIUM
 import eu.kanade.presentation.manga.components.MangaCover.Companion.COVER_TEMPLATE_SIZE_NORMAL
@@ -71,15 +66,11 @@ enum class MangaCover(val ratio: Float) {
         scale: ContentScale = ContentScale.Crop,
         // KMK <--
     ) {
-        // KMK -->
-        var succeed by remember { mutableStateOf(false) }
-        // KMK <--
-
         val modifierColored = modifier
             .aspectRatio(ratio)
             .clip(shape)
             // KMK -->
-            .alpha(if (succeed) alpha else 1f)
+            .alpha(alpha)
             .background(bgColor ?: CoverPlaceholderColor)
             // KMK <--
             .then(
@@ -93,55 +84,9 @@ enum class MangaCover(val ratio: Float) {
                 },
             )
 
-        SubcomposeAsyncImage(
+        AsyncImage(
             model = data,
-            // KMK -->
-            loading = {
-                Box(
-                    modifier = modifierColored,
-                ) {
-                    CircularProgressIndicator(
-                        color = tint?.let { Color(it) } ?: CoverPlaceholderOnBgColor,
-                        modifier = Modifier
-                            .size(
-                                when (size) {
-                                    Size.Big -> COVER_TEMPLATE_SIZE_BIG
-                                    Size.Medium -> COVER_TEMPLATE_SIZE_MEDIUM
-                                    else -> COVER_TEMPLATE_SIZE_NORMAL
-                                },
-                            )
-                            .align(Alignment.Center),
-                        strokeWidth = when (size) {
-                            Size.Normal -> 3.dp
-                            else -> 2.dp
-                        },
-                    )
-                }
-            },
-            error = {
-                Box(
-                    modifier = modifierColored,
-                ) {
-                    Image(
-                        imageVector = ImageVector.vectorResource(R.drawable.cover_error_vector),
-                        contentDescription = contentDescription,
-                        modifier = Modifier
-                            .size(
-                                when (size) {
-                                    Size.Big -> COVER_TEMPLATE_SIZE_BIG
-                                    Size.Medium -> COVER_TEMPLATE_SIZE_MEDIUM
-                                    else -> COVER_TEMPLATE_SIZE_NORMAL
-                                },
-                            )
-                            .align(Alignment.Center),
-                        colorFilter = ColorFilter.tint(
-                            tint?.let { Color(it) } ?: CoverPlaceholderOnBgColor,
-                        ),
-                    )
-                }
-            },
             onSuccess = { result ->
-                succeed = true
                 if (onCoverLoaded != null) {
                     when (data) {
                         is Manga -> onCoverLoaded(data.asMangaCover(), result)
@@ -149,7 +94,6 @@ enum class MangaCover(val ratio: Float) {
                     }
                 }
             },
-            // KMK <--
             contentDescription = contentDescription,
             modifier = modifierColored,
             contentScale = scale,
