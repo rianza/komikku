@@ -1,0 +1,204 @@
+name: Baseline Profile Generator
+# Generates baseline-prof.txt and startup-prof.txt for app startup optimization
+# Run manually via workflow_dispatch or on schedule
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday 02:00 UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate-baseline:
+    name: Generate Baseline & Startup Profiles
+    runs-on: 'ubuntu-24.04'
+    timeout-minutes: 60
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Write google-services.json (required for build)
+        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
+        if: github.repository == 'rianza/komikku'
+        with:
+          path: app/google-services.json
+          contents: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          write-mode: overwrite
+
+      - name: Write client_secrets.json (required for build)
+        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
+        if: github.repository == 'rianza/komikku'
+        with:
+          path: app/src/main/assets/client_secrets.json
+          contents: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}
+          write-mode: overwrite
+
+      - name: Generate Baseline & Startup Profiles
+        id: generate
+        run: |
+          # This single test run executes both BaselineProfileGenerator
+          # and StartupProfileGenerator test classes (confirmed from previous run logs),
+          # so we only need to invoke it once.
+          ./gradlew :app:generateBaselineProfile \
+            -Pandroid.testInstrumentationRunnerArguments.targetAppId=app.komikkurnz \
+            --no-daemon \
+            --warning-mode=all
+        env:
+          GRADLE_OPTS: "-Xmx4g -Dorg.gradle.jvmargs=-Xmx4g"
+
+      - name: Locate generated baseline-prof.txt
+        id: locate-baseline
+        run: |
+          # Known locations, most likely first. Note: folder is "baselineProfiles" (camelCase),
+          # not "baseline-profiles".
+          BASELINE_FILES=(
+            "app/src/main/baselineProfiles/baseline-prof.txt"
+            "app/build/outputs/baselineProfile/baseline-prof.txt"
+            "app/src/main/baseline-profiles/baseline-prof.txt"
+            "app/build/outputs/managed_device_android_test_additional_output/baselineProfile/baseline-prof.txt"
+            "baseline-profile/build/outputs/baselineProfile/baseline-prof.txt"
+          )
+          FOUND=""
+          for f in "${BASELINE_FILES[@]}"; do
+            if [[ -f "$f" ]]; then
+              echo "Found baseline at: $f"
+              cp "$f" baseline-prof.txt
+              FOUND="true"
+              break
+            fi
+          done
+          if [[ -z "$FOUND" ]]; then
+            echo "Not found in known paths, searching automatically..."
+            AUTO_FOUND=$(find . -path "*/BaselineProfileGenerator*/*baseline-prof.txt" -o -name "baseline-prof.txt" -type f 2>/dev/null | head -1)
+            if [[ -n "$AUTO_FOUND" ]]; then
+              echo "Found via fallback search: $AUTO_FOUND"
+              cp "$AUTO_FOUND" baseline-prof.txt
+              FOUND="true"
+            fi
+          fi
+          if [[ -z "$FOUND" ]]; then
+            echo "::error::Could not locate baseline-prof.txt anywhere"
+            find . -iname "*baseline*prof*.txt" -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          echo "baseline_path=baseline-prof.txt" >> $GITHUB_OUTPUT
+
+      - name: Locate generated startup-prof.txt
+        id: locate-startup
+        run: |
+          STARTUP_FILES=(
+            "app/build/outputs/baselineProfile/startup-prof.txt"
+            "app/src/main/baseline-profiles/startup-prof.txt"
+            "app/build/outputs/managed_device_android_test_additional_output/baselineProfile/startup-prof.txt"
+            "baseline-profile/build/outputs/managed_device_android_test_additional_output/nonminifiedrelease/pixel6Api34/StartupProfileGenerator_generate-startup-prof.txt"
+          )
+          FOUND=""
+          for f in "${STARTUP_FILES[@]}"; do
+            if [[ -f "$f" ]]; then
+              echo "Found startup profile at: $f"
+              cp "$f" startup-prof.txt
+              FOUND="true"
+              break
+            fi
+          done
+          if [[ -z "$FOUND" ]]; then
+            echo "Not found in known paths, searching automatically..."
+            # IMPORTANT: search for the actual profile file (contains "-startup-prof"),
+            # explicitly excluding the "additionaltestoutput...generate.txt" report file,
+            # which only contains a text summary (run time, adb pull instructions) and
+            # NOT the real profile content.
+            AUTO_FOUND=$(find . -iname "*-startup-prof*.txt" -type f 2>/dev/null \
+              | grep -v "additionaltestoutput" \
+              | sort \
+              | head -1)
+            if [[ -n "$AUTO_FOUND" ]]; then
+              echo "Found via fallback search: $AUTO_FOUND"
+              cp "$AUTO_FOUND" startup-prof.txt
+              FOUND="true"
+            fi
+          fi
+          if [[ -z "$FOUND" ]]; then
+            echo "Startup profile not found in this build (non-fatal)"
+            find . -iname "*startup*prof*.txt" -o -iname "*StartupProfileGenerator*" -type f 2>/dev/null | head -20
+            echo "# Startup profile not found in this build" > startup-prof.txt
+            echo "# Check if StartupProfileGenerator ran correctly" >> startup-prof.txt
+          fi
+          echo "startup_path=startup-prof.txt" >> $GITHUB_OUTPUT
+
+      - name: Upload baseline-prof.txt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: baseline-profile
+          path: baseline-prof.txt
+          retention-days: 30
+
+      - name: Upload startup-prof.txt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: startup-profile
+          path: startup-prof.txt
+          retention-days: 30
+
+      #- name: Display baseline-prof.txt content
+      #  run: |
+      #    echo "=== baseline-prof.txt ==="
+      #    cat baseline-prof.txt
+      #    echo ""
+      #    echo "=== startup-prof.txt ==="
+      #    cat startup-prof.txt
+
+      - name: Create summary
+        run: |
+          BASELINE_LINES=$(wc -l < baseline-prof.txt)
+          STARTUP_LINES=$(wc -l < startup-prof.txt)
+          echo "## Baseline Profile Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Profile | Lines | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| baseline-prof.txt | $BASELINE_LINES | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
+          echo "| startup-prof.txt | $STARTUP_LINES | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+
+      #- name: Debug: List generated profile files
+      #  if: failure()
+      #  run: |
+      #    echo "=== All profile-related files ==="
+      #    find . -name "*baseline*" -o -name "*startup*" -o -name "*prof*.txt" 2>/dev/null | head -30
+
+      #- name: Upload debug artifacts on failure
+      #  if: failure()
+      #  uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      #  with:
+      #    name: baseline-debug-${{ github.sha }}
+      #    path: |
+      #      **/build/reports/**/*
+      #      **/build/outputs/**/baseline*prof*.txt
+      #      **/build/outputs/**/startup*prof*.txt
+      #    retention-days: 7
