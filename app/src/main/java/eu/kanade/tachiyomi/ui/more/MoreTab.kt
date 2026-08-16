@@ -68,7 +68,7 @@ data object MoreTab : Tab {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { MoreScreenModel() }
+val screenModel = rememberScreenModel { MoreScreenModel() }
         val downloadQueueState by screenModel.downloadQueueState.collectAsState()
         MoreScreen(
             downloadQueueStateProvider = { downloadQueueState },

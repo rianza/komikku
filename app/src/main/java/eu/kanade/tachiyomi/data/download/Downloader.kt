@@ -2,6 +2,9 @@ package eu.kanade.tachiyomi.data.download
 
 import android.content.Context
 import com.hippo.unifile.UniFile
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.chapter.model.toSChapter
 import eu.kanade.domain.manga.model.getComicInfo
 import eu.kanade.domain.source.service.SourcePreferences
@@ -75,36 +78,29 @@ import java.util.Locale
  * Its queue contains the list of chapters to download.
  */
 @OptIn(DelicateCoroutinesApi::class)
+@Inject
+@SingleIn(AppScope::class)
 class Downloader(
     private val context: Context,
     private val provider: DownloadProvider,
     private val cache: DownloadCache,
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val chapterCache: ChapterCache = Injekt.get(),
-    private val downloadPreferences: DownloadPreferences = Injekt.get(),
-    private val xml: XML = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val getTracks: GetTracks = Injekt.get(),
+    private val sourceManager: SourceManager,
+    private val chapterCache: ChapterCache,
+    private val downloadPreferences: DownloadPreferences,
+    private val xml: XML,
+    private val getCategories: GetCategories,
+    private val getTracks: GetTracks,
+    private val store: DownloadStore,
+    private val notifier: DownloadNotifier,
     // SY -->
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     // SY <--
 ) {
-
-    /**
-     * Store for persisting downloads across restarts.
-     */
-    private val store = DownloadStore(context)
-
     /**
      * Queue where active downloads are kept.
      */
     private val _queueState = MutableStateFlow<List<Download>>(emptyList())
     val queueState = _queueState.asStateFlow()
-
-    /**
-     * Notifier for the downloader state and progress.
-     */
-    private val notifier by lazy { DownloadNotifier(context) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var downloaderJob: Job? = null

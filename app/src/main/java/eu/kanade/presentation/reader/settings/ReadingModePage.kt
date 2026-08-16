@@ -41,7 +41,7 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         }
     }
 
-    val orientation = remember(manga) { ReaderOrientation.fromPreference(manga?.readerOrientation?.toInt()) }
+val orientation = remember(manga) { ReaderOrientation.fromPreference(manga?.readerOrientation?.toInt()) }
     SettingsChipRow(MR.strings.rotation_type) {
         ReaderOrientation.entries.map {
             FilterChip(

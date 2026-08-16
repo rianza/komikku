@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.data.updater
 
 import android.content.Context
 import android.os.Build
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.util.system.isFossBuildType
 import eu.kanade.tachiyomi.util.system.isPreviewBuildType
@@ -13,6 +14,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 
+@Inject
 class AppUpdateChecker(
     // KMK -->
     private val peekIntoPreview: Boolean = false,

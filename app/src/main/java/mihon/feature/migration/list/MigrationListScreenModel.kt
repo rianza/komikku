@@ -1,8 +1,15 @@
 package mihon.feature.migration.list
 
 import androidx.annotation.FloatRange
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.screenModelScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.getNameForMangaInfo
@@ -20,6 +27,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -39,23 +48,38 @@ import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
+@AssistedInject
 class MigrationListScreenModel(
-    mangaIds: Collection<Long>,
-    extraSearchQuery: String?,
+    @Assisted mangaIds: Collection<Long>,
+    @Assisted extraSearchQuery: String?,
     // KMK -->
-    runManually: Boolean = false,
+    @Assisted runManually: Boolean = false,
     // KMK <--
-    val preferences: SourcePreferences = Injekt.get(),
-    private val sourceManager: SourceManager = Injekt.get(),
-    private val getManga: GetManga = Injekt.get(),
-    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
-    private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
-    private val migrateManga: MigrateMangaUseCase = Injekt.get(),
-    private val updateMangaFromRemote: UpdateMangaFromRemote = Injekt.get(),
-) : StateScreenModel<MigrationListScreenModel.State>(State()) {
+    val preferences: SourcePreferences,
+    private val sourceManager: SourceManager,
+    private val getManga: GetManga,
+    private val networkToLocalManga: NetworkToLocalManga,
+    private val getChaptersByMangaId: GetChaptersByMangaId,
+    private val migrateManga: MigrateMangaUseCase,
+    private val updateMangaFromRemote: UpdateMangaFromRemote,
+) : ViewModel() {
+
+    private val mutableState = MutableStateFlow<MigrationListScreenModel.State>(State())
+    val state: StateFlow<MigrationListScreenModel.State> = mutableState.asStateFlow()
+
+    @AssistedFactory
+    @ManualViewModelAssistedFactoryKey
+    @ContributesIntoMap(AppScope::class)
+    interface Factory : ManualViewModelAssistedFactory {
+        fun create(
+            mangaIds: Collection<Long>,
+            extraSearchQuery: String?,
+            // KMK -->
+            runManually: Boolean = false,
+            // KMK <--
+        ): MigrationListScreenModel
+    }
 
     private val smartSearchEngine = SmartSourceSearchEngine(extraSearchQuery)
 
@@ -79,7 +103,7 @@ class MigrationListScreenModel(
     private var migrateJob: Job? = null
 
     init {
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             val manga = mangaIds
                 .map {
                     async {
@@ -98,7 +122,7 @@ class MigrationListScreenModel(
                                 },
                                 // KMK <--
                             ),
-                            parentContext = screenModelScope.coroutineContext,
+                            parentContext = viewModelScope.coroutineContext,
                             // KMK -->
                         ).apply {
                             if (runManually) searchResult.value = SearchResult.NotFound
@@ -267,7 +291,7 @@ class MigrationListScreenModel(
     fun useMangaForMigration(current: Long, target: Long, onMissingChapters: () -> Unit) {
         val migratingManga = items.find { it.manga.id == current } ?: return
         migratingManga.searchResult.value = SearchResult.Searching
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             val result = migratingManga.migrationScope.async {
                 val manga = getManga.await(target) ?: return@async null
                 try {
@@ -306,7 +330,7 @@ class MigrationListScreenModel(
     }
 
     private fun migrateMangas(replace: Boolean) {
-        migrateJob = screenModelScope.launchIO {
+        migrateJob = viewModelScope.launchIO {
             mutableState.update { it.copy(dialog = Dialog.Progress(0f)) }
             val items = items
             try {
@@ -357,7 +381,7 @@ class MigrationListScreenModel(
     }
 
     fun migrateNow(mangaId: Long, replace: Boolean) {
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             val manga = items.find { it.manga.id == mangaId } ?: return@launchIO
             val target = (manga.searchResult.value as? SearchResult.Success)?.manga ?: return@launchIO
             migrateManga(current = manga.manga, target = target, replace = replace)
@@ -369,7 +393,7 @@ class MigrationListScreenModel(
     // KMK -->
     /** Cancel searching without remove it from list so user can perform manual search */
     fun cancelManga(mangaId: Long) {
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             val item = items.find { it.manga.id == mangaId } ?: return@launchIO
             item.searchingJob?.cancel()
             item.searchingJob = null
@@ -380,7 +404,7 @@ class MigrationListScreenModel(
     // KMK <--
 
     fun removeManga(mangaId: Long) {
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             val item = items.find { it.manga.id == mangaId } ?: return@launchIO
             removeManga(item)
             item.migrationScope.cancel()
@@ -392,8 +416,8 @@ class MigrationListScreenModel(
         mutableState.update { it.copy(items = items.toPersistentList().remove(item)) }
     }
 
-    override fun onDispose() {
-        super.onDispose()
+    override fun onCleared() {
+        super.onCleared()
         items.forEach {
             it.migrationScope.cancel()
         }

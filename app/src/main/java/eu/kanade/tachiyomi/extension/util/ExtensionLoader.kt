@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.pm.PackageInfoCompat
 import eu.kanade.domain.extension.interactor.TrustExtension
-import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.LoadResult
 import eu.kanade.tachiyomi.source.Source
@@ -19,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
+import mihon.app.di.appGraph
 import mihon.domain.extension.interactor.GetExtensionStores
 import mihon.domain.extension.model.ExtensionStore
 import tachiyomi.core.common.util.system.logcat
@@ -41,16 +41,9 @@ import java.io.File
  */
 internal object ExtensionLoader {
 
-    private val preferences: SourcePreferences by injectLazy()
-    private val trustExtension: TrustExtension by injectLazy()
-
     // KMK -->
     private val getExtensionStores: GetExtensionStores by injectLazy()
     // KMK <--
-
-    private val loadNsfwSource by lazy {
-        preferences.showNsfwSource().get()
-    }
 
     private const val EXTENSION_FEATURE = "tachiyomi.extension"
     private const val METADATA_SOURCE_CLASS = "tachiyomi.extension.class"
@@ -254,6 +247,9 @@ internal object ExtensionLoader {
         // KMK -->
         val stores = extStores ?: getExtensionStores.get()
         // KMK <--
+        val trustExtension: TrustExtension = context.appGraph.trustExtension
+        val loadNsfwSource: Boolean = context.appGraph.sourcePreferences.showNsfwSource().get()
+
         val pkgManager = context.packageManager
         val pkgInfo = extensionInfo.packageInfo
         val appInfo = pkgInfo.applicationInfo!!

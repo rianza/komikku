@@ -1,9 +1,12 @@
 package eu.kanade.domain.manga.interactor
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import tachiyomi.data.DatabaseHandler
 
+@Inject
 class GetExcludedScanlators(
     private val handler: DatabaseHandler,
 ) {

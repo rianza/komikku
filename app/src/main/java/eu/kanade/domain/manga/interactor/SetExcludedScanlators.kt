@@ -1,7 +1,11 @@
 package eu.kanade.domain.manga.interactor
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import dev.zacsweers.metro.Inject
+import tachiyomi.data.Database
 import tachiyomi.data.DatabaseHandler
 
+@Inject
 class SetExcludedScanlators(
     private val handler: DatabaseHandler,
 ) {

@@ -21,7 +21,7 @@ class NewUpdateScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
-        val changelogInfoNoChecksum = remember {
+val changelogInfoNoChecksum = remember {
             changelogInfo
         }
 

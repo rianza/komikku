@@ -24,7 +24,7 @@ class StatsScreen : Screen() {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { StatsScreenModel() }
+val screenModel = rememberScreenModel { StatsScreenModel() }
         val state by screenModel.state.collectAsState()
 
         Scaffold(

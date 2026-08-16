@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.manga.interactor.UpdateManga
 import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
@@ -35,17 +36,17 @@ import java.util.Date
 import kotlin.math.max
 import kotlin.math.min
 
+@Inject
 class MangaRestorer(
     private var isSync: Boolean = false,
-
-    private val handler: DatabaseHandler = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val getMangaByUrlAndSourceId: GetMangaByUrlAndSourceId = Injekt.get(),
-    private val getChaptersByMangaId: GetChaptersByMangaId = Injekt.get(),
-    private val updateManga: UpdateManga = Injekt.get(),
-    private val getTracks: GetTracks = Injekt.get(),
-    private val insertTrack: InsertTrack = Injekt.get(),
-    fetchInterval: FetchInterval = Injekt.get(),
+    private val handler: DatabaseHandler,
+    private val getCategories: GetCategories,
+    private val getMangaByUrlAndSourceId: GetMangaByUrlAndSourceId,
+    private val getChaptersByMangaId: GetChaptersByMangaId,
+    private val updateManga: UpdateManga,
+    private val getTracks: GetTracks,
+    private val insertTrack: InsertTrack,
+    fetchInterval: FetchInterval,
     // SY -->
     private val setCustomMangaInfo: SetCustomMangaInfo = Injekt.get(),
     private val insertFlatMetadata: InsertFlatMetadata = Injekt.get(),

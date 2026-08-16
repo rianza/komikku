@@ -145,7 +145,7 @@ class MangaScreen(
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val lifecycleOwner = LocalLifecycleOwner.current
+val lifecycleOwner = LocalLifecycleOwner.current
         val screenModel = rememberScreenModel {
             MangaScreenModel(
                 context = context,
@@ -543,13 +543,13 @@ class MangaScreen(
                     onDismissRequest = onDismissRequest,
                 )
             }
-            MangaScreenModel.Dialog.FullCover -> {
-                val sm = rememberScreenModel { MangaCoverScreenModel(successState.manga.id) }
-                val manga by sm.state.collectAsState()
+MangaScreenModel.Dialog.FullCover -> {
+                val vm = rememberScreenModel { MangaCoverScreenModel(successState.manga.id) }
+                val manga by vm.state.collectAsState()
                 if (manga != null) {
                     val getContent = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
                         if (it == null) return@rememberLauncherForActivityResult
-                        sm.editCover(context, it)
+                        vm.editCover(context, it)
                     }
                     // KMK -->
                     val externalStoragePermissionNotGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
@@ -564,22 +564,22 @@ class MangaScreen(
                     // KMK <--
                     MangaCoverDialog(
                         manga = manga!!,
-                        snackbarHostState = sm.snackbarHostState,
+                        snackbarHostState = vm.snackbarHostState,
                         isCustomCover = remember(manga) { manga!!.hasCustomCover() },
-                        onShareClick = { sm.shareCover(context) },
+onShareClick = { vm.shareCover(context) },
                         onSaveClick = {
                             // KMK -->
                             if (externalStoragePermissionNotGranted) {
                                 saveCoverPermissionRequester.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                             } else {
                                 // KMK <--
-                                sm.saveCover(context)
+                                vm.saveCover(context)
                             }
                         },
                         onEditClick = {
                             when (it) {
                                 EditCoverAction.EDIT -> getContent.launch("image/*")
-                                EditCoverAction.DELETE -> sm.deleteCustomCover(context)
+                                EditCoverAction.DELETE -> vm.deleteCustomCover(context)
                             }
                         },
                         onDismissRequest = onDismissRequest,

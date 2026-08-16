@@ -3,6 +3,10 @@
 package eu.kanade.tachiyomi.source
 
 import android.content.Context
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
@@ -47,16 +51,18 @@ import uy.kohesive.injekt.injectLazy
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
+@Inject
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 class AndroidSourceManager(
     private val context: Context,
     private val extensionManager: ExtensionManager,
     private val sourceRepository: StubSourceRepository,
+    private val downloadManager: Lazy<DownloadManager>,
 ) : SourceManager {
 
     private val _isInitialized = MutableStateFlow(false)
     override val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
-
-    private val downloadManager: DownloadManager by injectLazy()
 
     private val scope = CoroutineScope(Job() + Dispatchers.IO)
 
@@ -245,7 +251,7 @@ class AndroidSourceManager(
             if (dbSource == source) return@launch
             sourceRepository.upsertStubSource(source.id, source.lang, source.name)
             if (dbSource != null) {
-                downloadManager.renameSource(dbSource, source)
+                downloadManager.value.renameSource(dbSource, source)
             }
         }
     }

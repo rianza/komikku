@@ -6,6 +6,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.data.track.TrackerManager
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import tachiyomi.core.common.preference.Preference
@@ -20,7 +21,6 @@ import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.service.LibraryPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import kotlin.time.Duration.Companion.seconds
 
 class LibrarySettingsScreenModel(
     val preferences: BasePreferences = Injekt.get(),

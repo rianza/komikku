@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.base.BasePreferences
@@ -21,9 +22,10 @@ class OnboardingScreen : Screen() {
 
     @Composable
     override fun Content() {
+        val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val basePreferences = remember { Injekt.get<BasePreferences>() }
+val basePreferences = remember { Injekt.get<BasePreferences>() }
         val shownOnboardingFlow by basePreferences.shownOnboardingFlow().collectAsState()
 
         val finishOnboarding: () -> Unit = {

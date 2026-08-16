@@ -35,7 +35,8 @@ import com.elvishew.xlog.printer.Printer
 import com.elvishew.xlog.printer.file.backup.NeverBackupStrategy
 import com.elvishew.xlog.printer.file.naming.DateFileNameGenerator
 import dev.mihon.injekt.patchInjekt
-import eu.kanade.domain.DomainModule
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.createGraphFactory
 import eu.kanade.domain.KMKDomainModule
 import eu.kanade.domain.SYDomainModule
 import eu.kanade.domain.base.BasePreferences
@@ -45,6 +46,7 @@ import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
 import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.crash.CrashActivity
 import eu.kanade.tachiyomi.crash.GlobalExceptionHandler
+import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.BufferedSourceFetcher
 import eu.kanade.tachiyomi.data.coil.MangaCoverFetcher
 import eu.kanade.tachiyomi.data.coil.MangaCoverKeyer
@@ -56,8 +58,7 @@ import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
-import eu.kanade.tachiyomi.di.AppModule
-import eu.kanade.tachiyomi.di.PreferenceModule
+import eu.kanade.tachiyomi.di.KMKAppModule
 import eu.kanade.tachiyomi.di.SYPreferenceModule
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.ui.base.delegate.SecureActivityDelegate
@@ -82,8 +83,11 @@ import kotlinx.coroutines.flow.onEach
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
+import mihon.app.di.AppGraph
+import mihon.app.di.injekt.MetroInteropModule
+import mihon.core.metro.GraphProvider
+import mihon.core.migration.Migration
 import mihon.core.migration.Migrator
-import mihon.core.migration.migrations.migrations
 import mihon.telemetry.TelemetryConfig
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
@@ -91,28 +95,59 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.widget.WidgetManager
 import timber.log.Timber
 import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
+import uy.kohesive.injekt.api.addSingleton
 import java.security.Security
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
+class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory, GraphProvider<AppGraph> {
 
-    private val basePreferences: BasePreferences by injectLazy()
-    private val privacyPreferences: PrivacyPreferences by injectLazy()
+    override val graph: AppGraph by lazy {
+        createGraphFactory<AppGraph.Factory>().create(context = this, isDebugBuild = isDebugBuildType)
+    }
+
+    @Inject private lateinit var preferenceStore: PreferenceStore
+
+    @Inject private lateinit var basePreferences: BasePreferences
+
+    @Inject private lateinit var privacyPreferences: PrivacyPreferences
+
+    @Inject private lateinit var uiPreferences: UiPreferences
+
+    @Inject private lateinit var coverCache: CoverCache
+
+    @Inject private lateinit var networkHelper: NetworkHelper
+
+    @Inject private lateinit var sourceManager: SourceManager
+
+    @Inject private lateinit var widgetManager: WidgetManager
+
+    @Inject private lateinit var injektMetroInteropModule: MetroInteropModule
+
+    @Inject private lateinit var migrations: Set<Migration>
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
         super<Application>.onCreate()
-        patchInjekt()
+
+        // Must run before the graph is built, since injecting dependencies initializes WebView and the
+        // suffix can't be set once a provider exists in the process. Secondary processes die otherwise.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val process = getProcessName()
+            if (packageName != process) WebView.setDataDirectorySuffix(process)
+        }
+
+        graph.inject(this)
+        setupInjekt()
+
         TelemetryConfig.init(
             applicationContext,
             isPreviewBuildType,
@@ -129,23 +164,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             Security.insertProviderAt(Conscrypt.newProvider(), 1)
         }
-
-        // Avoid potential crashes
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val process = getProcessName()
-            if (packageName != process) WebView.setDataDirectorySuffix(process)
-        }
-
-        Injekt.importModule(PreferenceModule(this))
-        Injekt.importModule(AppModule(this))
-        Injekt.importModule(DomainModule())
-        // KMK -->
-        Injekt.importModule(KMKDomainModule())
-        // KMK <--
-        // SY -->
-        Injekt.importModule(SYPreferenceModule(this))
-        Injekt.importModule(SYDomainModule())
-        // SY <--
 
         setupExhLogging() // EXH logging
         if (!LogcatLogger.isInstalled) {
@@ -216,14 +234,14 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .onEach { ImageUtil.hardwareBitmapThreshold = it }
             .launchIn(scope)
 
-        setAppCompatDelegateThemeMode(Injekt.get<UiPreferences>().themeMode().get())
+        setAppCompatDelegateThemeMode(uiPreferences.themeMode().get())
 
         // KMK -->
         MangaCoverMetadata.load()
         // KMK <--
 
         // Updates widget update
-        WidgetManager(Injekt.get(), Injekt.get()).apply { init(scope) }
+        widgetManager.init(scope)
 
         if (!WorkManager.isInitialized()) {
             WorkManager.initialize(this, Configuration.Builder().build())
@@ -237,16 +255,30 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         initializeMigrator()
     }
 
+    private fun setupInjekt() {
+        patchInjekt()
+        Injekt.addSingleton<Application>(this)
+        Injekt.addSingleton<Context>(this)
+        Injekt.importModule(injektMetroInteropModule)
+        Injekt.importModule(KMKAppModule(this))
+        // KMK -->
+        Injekt.importModule(KMKDomainModule())
+        // KMK <--
+        // SY -->
+        Injekt.importModule(SYPreferenceModule(this))
+        Injekt.importModule(SYDomainModule())
+        // SY <--
+    }
+
     private fun initializeMigrator() {
-        val preferenceStore = Injekt.get<PreferenceStore>()
         // SY -->
         val preference = preferenceStore.getInt(Preference.appStateKey("eh_last_version_code"), 0)
         // SY <--
-        logcat { "Migration from ${preference.get()} to ${BuildConfig.VERSION_CODE}" }
+        logcat { "Migration from ${preference.get()} to ${BuildConfig.VERSION_CODE} with ${migrations.size} migration(s)" }
         Migrator.initialize(
             old = preference.get(),
             new = BuildConfig.VERSION_CODE,
-            migrations = migrations,
+            migrations = migrations.toList(),
             onMigrationComplete = {
                 logcat { "Updating last version to ${BuildConfig.VERSION_CODE}" }
                 preference.set(BuildConfig.VERSION_CODE)
@@ -256,7 +288,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     override fun newImageLoader(context: Context): ImageLoader {
         return ImageLoader.Builder(this).apply {
-            val callFactoryLazy = lazy { Injekt.get<NetworkHelper>().client }
+            val callFactoryLazy = lazy { networkHelper.client }
             components {
                 // NetworkFetcher.Factory
                 add(OkHttpNetworkFetcherFactory(callFactoryLazy::value))
@@ -264,10 +296,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 add(TachiyomiImageDecoder.Factory())
                 // Fetcher.Factory
                 add(BufferedSourceFetcher.Factory())
-                add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy))
-                add(MangaCoverFetcher.MangaFactory(callFactoryLazy))
+                add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy, coverCache, sourceManager))
+                add(MangaCoverFetcher.MangaFactory(callFactoryLazy, coverCache, sourceManager))
                 // Keyer
-                add(MangaCoverKeyer())
+                add(MangaCoverKeyer(coverCache))
                 add(MangaKeyer())
                 // SY -->
                 add(PagePreviewKeyer())

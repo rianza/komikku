@@ -1,6 +1,6 @@
 package eu.kanade.domain.manga.model
 
-import eu.kanade.domain.base.BasePreferences
+import android.content.Context
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation

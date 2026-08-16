@@ -52,6 +52,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metro.Inject
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.connections.service.ConnectionsPreferences
 import eu.kanade.domain.source.interactor.GetIncognitoState
@@ -81,7 +82,6 @@ import eu.kanade.tachiyomi.data.connections.discord.DiscordRPCService
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
-import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
 import eu.kanade.tachiyomi.data.updater.AppUpdateJob
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
@@ -116,6 +116,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
+import mihon.app.di.AppGraph
+import mihon.app.di.appGraph
+import mihon.core.metro.metroGraph
 import mihon.core.migration.Migrator
 import mihon.core.migration.Migrator.scope
 import tachiyomi.core.common.Constants
@@ -138,8 +141,14 @@ import java.util.LinkedList
 
 class MainActivity : BaseActivity() {
 
-    private val libraryPreferences: LibraryPreferences by injectLazy()
-    private val preferences: BasePreferences by injectLazy()
+    private val graph: AppGraph by lazy { metroGraph() }
+
+    @Inject private lateinit var libraryPreferences: LibraryPreferences
+    @Inject private lateinit var preferences: BasePreferences
+    @Inject private lateinit var downloadCache: DownloadCache
+    @Inject private lateinit var chapterCache: ChapterCache
+    @Inject private lateinit var getIncognitoState: GetIncognitoState
+    @Inject private lateinit var extensionApi: ExtensionApi
 
     // SY -->
     private val exhPreferences: ExhPreferences by injectLazy()
@@ -152,11 +161,6 @@ class MainActivity : BaseActivity() {
     private val syncStatus: SyncStatus by injectLazy()
     private val libraryUpdateStatus: LibraryUpdateStatus by injectLazy()
     // KMK <--
-
-    private val downloadCache: DownloadCache by injectLazy()
-    private val chapterCache: ChapterCache by injectLazy()
-
-    private val getIncognitoState: GetIncognitoState by injectLazy()
 
     // To be checked by splash screen. If true then splash screen will be removed.
     var ready = false
@@ -199,6 +203,8 @@ class MainActivity : BaseActivity() {
         val splashScreen = if (isLaunch) installSplashScreen() else null
 
         super.onCreate(savedInstanceState)
+
+        graph.inject(this)
 
         val didMigration = if (isLaunch) {
             Migrator.awaitAndRelease()
@@ -554,7 +560,13 @@ class MainActivity : BaseActivity() {
                     // KMK -->
                     AppUpdateJob.setupTask(context)
                     // KMK <--
-                    val result = AppUpdateChecker().checkForUpdate(context)
+                    val updateChecker = context.appGraph.updateChecker
+                    val result = updateChecker.checkForUpdate(
+                        context = context,
+                        // KMK -->
+                        autoUpdate = false, // handled by AppUpdateJob
+                        // KMK <--
+                    )
                     if (result is GetApplicationRelease.Result.NewUpdate) {
                         val updateScreen = NewUpdateScreen(
                             versionName = result.release.version,
@@ -573,7 +585,7 @@ class MainActivity : BaseActivity() {
         // Extensions updates
         LaunchedEffect(Unit) {
             try {
-                ExtensionApi().checkForUpdates(context)
+                extensionApi.checkForUpdates(context)
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
             }

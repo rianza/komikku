@@ -28,6 +28,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
+import tachiyomi.source.local.image.LocalCoverManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -37,7 +38,7 @@ class MangaCoverScreenModel(
     private val imageSaver: ImageSaver = Injekt.get(),
     private val coverCache: CoverCache = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
-
+    private val coverManager: LocalCoverManager = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<Manga?>(null) {
 
@@ -122,7 +123,7 @@ class MangaCoverScreenModel(
         screenModelScope.launchIO {
             context.contentResolver.openInputStream(data)?.use {
                 try {
-                    manga.editCover(Injekt.get(), it, updateManga, coverCache)
+                    manga.editCover(coverManager, it, updateManga, coverCache)
                     notifyCoverUpdated(context)
                 } catch (e: Exception) {
                     notifyFailedCoverUpdate(context, e)

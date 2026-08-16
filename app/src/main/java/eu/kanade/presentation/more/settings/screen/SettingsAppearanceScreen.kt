@@ -27,6 +27,7 @@ import eu.kanade.presentation.more.settings.widget.AppThemePreferenceWidget
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableMap
+import mihon.app.di.appGraph
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
 import tachiyomi.i18n.sy.SYMR
@@ -47,7 +48,8 @@ object SettingsAppearanceScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val context = LocalContext.current
+        val uiPreferences = remember { context.appGraph.uiPreferences }
 
         return listOf(
             getThemeGroup(uiPreferences = uiPreferences),

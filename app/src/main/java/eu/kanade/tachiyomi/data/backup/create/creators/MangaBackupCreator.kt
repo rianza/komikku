@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.create.creators
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.models.BackupChapter
 import eu.kanade.tachiyomi.data.backup.models.BackupFlatMetadata
@@ -24,10 +25,11 @@ import tachiyomi.domain.source.service.SourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
+@Inject
 class MangaBackupCreator(
-    private val handler: DatabaseHandler = Injekt.get(),
-    private val getCategories: GetCategories = Injekt.get(),
-    private val getHistory: GetHistory = Injekt.get(),
+    private val handler: DatabaseHandler,
+    private val getCategories: GetCategories,
+    private val getHistory: GetHistory,
     // SY -->
     private val sourceManager: SourceManager = Injekt.get(),
     private val getCustomMangaInfo: GetCustomMangaInfo = Injekt.get(),

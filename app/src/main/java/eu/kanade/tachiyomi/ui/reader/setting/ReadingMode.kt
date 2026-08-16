@@ -67,7 +67,7 @@ enum class ReadingMode(
             return mode.type is ViewerType.Pager
         }
 
-        fun toViewer(
+fun toViewer(
             preference: Int?,
             activity: ReaderActivity,
             // KMK -->

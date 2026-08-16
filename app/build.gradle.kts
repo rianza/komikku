@@ -8,6 +8,8 @@ plugins {
     id("mihon.android.application")
     id("mihon.android.application.compose")
     kotlin("plugin.serialization")
+
+    alias(libs.plugins.metro)
     alias(libs.plugins.aboutLibraries)
     id("com.github.ben-manes.versions")
 }
@@ -212,6 +214,7 @@ dependencies {
     // SY <--
     implementation(projects.core.archive)
     implementation(projects.core.common)
+    implementation(projects.core.metro)
     implementation(projects.coreMetadata)
     implementation(projects.sourceApi)
     implementation(projects.sourceLocal)
@@ -287,6 +290,9 @@ dependencies {
 
     // Dependency injection
     implementation(libs.injekt)
+    implementation(libs.metro.runtime)
+    implementation(libs.metrox.viewmodel)
+    implementation(libs.metrox.viewmodel.compose)
 
     // Image loading
     implementation(platform(libs.coil.bom))

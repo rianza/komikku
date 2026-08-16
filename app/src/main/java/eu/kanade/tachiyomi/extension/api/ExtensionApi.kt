@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.extension.api
 
 import android.content.Context
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.model.Extension
@@ -19,12 +22,14 @@ import uy.kohesive.injekt.injectLazy
 import java.time.Instant
 import kotlin.time.Duration.Companion.days
 
-internal class ExtensionApi {
-
-    private val repository: ExtensionStoreRepository by injectLazy()
-
+@Inject
+@SingleIn(AppScope::class)
+class ExtensionApi(
+    private val repository: ExtensionStoreRepository,
+    private val updateExtensionStores: UpdateExtensionStores,
+    private val extensionUpdateNotifier: ExtensionUpdateNotifier,
+) {
     private val preferenceStore: PreferenceStore by injectLazy()
-    private val updateExtensionStores: UpdateExtensionStores by injectLazy()
     private val extensionManager: ExtensionManager by injectLazy()
 
     // SY -->
@@ -91,7 +96,7 @@ internal class ExtensionApi {
         }
 
         if (extensionsWithUpdate.isNotEmpty()) {
-            ExtensionUpdateNotifier(context).promptUpdates(extensionsWithUpdate.map { it.name })
+            extensionUpdateNotifier.promptUpdates(extensionsWithUpdate.map { it.name })
         }
 
         return extensionsWithUpdate

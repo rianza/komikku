@@ -14,7 +14,6 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.WebtoonLayoutManager
-import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -27,7 +26,6 @@ import kotlinx.coroutines.cancel
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import uy.kohesive.injekt.injectLazy
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.Duration
@@ -44,8 +42,6 @@ class WebtoonViewer(
     private val readerPreferences: ReaderPreferences = Injekt.get(),
     // KMK <--
 ) : Viewer {
-
-    val downloadManager: DownloadManager by injectLazy()
 
     private val scope = MainScope()
 
@@ -72,7 +68,7 @@ class WebtoonViewer(
     /**
      * Configuration used by this viewer, like allow taps, or crop image borders.
      */
-    val config = WebtoonConfig(scope)
+    val config = WebtoonConfig(scope, readerPreferences)
 
     /**
      * Adapter of the recycler view.
@@ -90,7 +86,7 @@ class WebtoonViewer(
     /* [EXH] private */
     var currentPage: Any? = null
 
-    private val threshold: Int =
+private val threshold: Int =
         // KMK -->
         readerPreferences
             // KMK <--

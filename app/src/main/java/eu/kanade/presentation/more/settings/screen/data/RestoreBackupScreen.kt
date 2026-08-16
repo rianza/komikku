@@ -20,10 +20,17 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.core.net.toUri
-import cafe.adriel.voyager.core.model.StateScreenModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.ViewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Assisted
+import dev.zacsweers.metro.AssistedFactory
+import dev.zacsweers.metro.AssistedInject
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactory
+import dev.zacsweers.metrox.viewmodel.ManualViewModelAssistedFactoryKey
+import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.util.Screen
@@ -31,6 +38,9 @@ import eu.kanade.tachiyomi.data.backup.BackupFileValidator
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.util.system.DeviceUtil
+import eu.kanade.tachiyomi.util.system.workManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
@@ -48,8 +58,9 @@ class RestoreBackupScreen(
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val model = rememberScreenModel { RestoreBackupScreenModel(context, uri) }
-        val state by model.state.collectAsState()
+val viewModel =
+            assistedMetroViewModel<RestoreBackupViewModel, RestoreBackupViewModel.Factory> { create(uri = uri) }
+        val state by viewModel.state.collectAsState()
 
         Scaffold(
             topBar = {
@@ -65,7 +76,7 @@ class RestoreBackupScreen(
                 actionLabel = stringResource(MR.strings.action_restore),
                 actionEnabled = state.canRestore && state.options.canRestore(),
                 onClickAction = {
-                    model.startRestore()
+                    viewModel.startRestore()
                     navigator.pop()
                 },
             ) {
@@ -83,7 +94,7 @@ class RestoreBackupScreen(
                                     label = stringResource(option.label),
                                     checked = option.getter(state.options),
                                     onCheckedChange = {
-                                        model.toggle(option.setter, it)
+                                        viewModel.toggle(option.setter, it)
                                     },
                                 )
                             }
@@ -164,10 +175,22 @@ class RestoreBackupScreen(
     }
 }
 
-private class RestoreBackupScreenModel(
+@AssistedInject
+class RestoreBackupViewModel(
+    @Assisted private val uri: String,
+    private val backupFileValidator: BackupFileValidator,
     private val context: Context,
-    private val uri: String,
-) : StateScreenModel<RestoreBackupScreenModel.State>(State()) {
+) : ViewModel() {
+
+    private val mutableState = MutableStateFlow<RestoreBackupViewModel.State>(State())
+    val state: StateFlow<RestoreBackupViewModel.State> = mutableState
+
+    @AssistedFactory
+    @ManualViewModelAssistedFactoryKey
+    @ContributesIntoMap(AppScope::class)
+    interface Factory : ManualViewModelAssistedFactory {
+        fun create(uri: String): RestoreBackupViewModel
+    }
 
     init {
         validate(uri.toUri())
@@ -183,7 +206,7 @@ private class RestoreBackupScreenModel(
 
     fun startRestore() {
         BackupRestoreJob.start(
-            context = context,
+            workManager = context.workManager,
             uri = uri.toUri(),
             options = state.value.options,
         )
@@ -191,7 +214,7 @@ private class RestoreBackupScreenModel(
 
     private fun validate(uri: Uri) {
         val results = try {
-            BackupFileValidator(context).validate(uri)
+            backupFileValidator.validate(uri)
         } catch (e: Exception) {
             setError(
                 error = InvalidRestore(uri, e.message.toString()),

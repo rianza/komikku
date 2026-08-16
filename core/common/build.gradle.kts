@@ -18,6 +18,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(projects.core.metro)
     implementation(projects.i18n)
     // SY -->
     implementation(projects.i18nSy)
@@ -59,4 +60,6 @@ dependencies {
     implementation(sylibs.xlog)
     implementation(sylibs.exifinterface)
     // SY <--
+
+    implementation(libs.metro.runtime)
 }

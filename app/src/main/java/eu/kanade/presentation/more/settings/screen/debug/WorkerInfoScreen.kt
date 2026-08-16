@@ -18,12 +18,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
+import androidx.lifecycle.ViewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkQuery
-import cafe.adriel.voyager.core.model.ScreenModel
-import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
@@ -57,10 +61,10 @@ class WorkerInfoScreen : Screen() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { Model(context) }
-        val enqueued by screenModel.enqueued.collectAsState()
-        val finished by screenModel.finished.collectAsState()
-        val running by screenModel.running.collectAsState()
+        val viewModel = metroViewModel<WorkerInfoViewModel>()
+        val enqueued by viewModel.enqueued.collectAsState()
+        val finished by viewModel.finished.collectAsState()
+        val running by viewModel.running.collectAsState()
 
         Scaffold(
             topBar = {
@@ -118,7 +122,13 @@ class WorkerInfoScreen : Screen() {
         )
     }
 
-    private class Model(context: Context) : ScreenModel {
+    @Inject
+    @ViewModelKey
+    @ContributesIntoMap(AppScope::class)
+    class WorkerInfoViewModel(
+        private val context: Context,
+    ) : ViewModel() {
+
         private val workManager = context.workManager
 
         val finished = workManager

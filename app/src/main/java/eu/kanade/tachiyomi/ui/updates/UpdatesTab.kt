@@ -76,7 +76,7 @@ data object UpdatesTab : Tab {
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel { UpdatesScreenModel() }
+val screenModel = rememberScreenModel { UpdatesScreenModel() }
         val settingsScreenModel = rememberScreenModel { UpdatesSettingsScreenModel() }
         val state by screenModel.state.collectAsState()
 

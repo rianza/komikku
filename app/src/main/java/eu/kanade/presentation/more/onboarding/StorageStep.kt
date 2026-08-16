@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.more.settings.screen.SettingsDataScreen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.flow.collectLatest
+import mihon.app.di.appGraph
 import tachiyomi.domain.storage.service.StorageManager.Companion.directoryAccessible
 import tachiyomi.domain.storage.service.StoragePreferences
 import tachiyomi.i18n.MR
@@ -45,6 +46,7 @@ internal class StorageStep : OnboardingStep {
         val context = LocalContext.current
         val handler = LocalUriHandler.current
 
+        val storagePref = remember { context.appGraph.storagePreferences.baseStorageDirectory() }
         val pickStorageLocation = SettingsDataScreen.storageLocationPicker(storagePref)
 
         // KMK -->

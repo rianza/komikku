@@ -1,5 +1,6 @@
 package mihon.domain.upcoming.interactor
 
+import dev.zacsweers.metro.Inject
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,7 @@ import uy.kohesive.injekt.api.get
 import java.time.LocalDate
 import java.time.ZoneId
 
+@Inject
 class GetUpcomingManga(
     private val mangaRepository: MangaRepository,
 ) {

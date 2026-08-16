@@ -5,6 +5,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.profileinstaller.ProfileVerifier
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -18,7 +20,9 @@ import eu.kanade.tachiyomi.util.system.WebViewUtil
 import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.guava.await
+import mihon.app.di.appGraph
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.util.collectAsState
 
 class DebugInfoScreen : Screen() {
 
@@ -47,6 +51,12 @@ class DebugInfoScreen : Screen() {
 
     @Composable
     private fun getAppInfoGroup(): Preference.PreferenceGroup {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+
+        val installationIdPref = remember { context.appGraph.basePreferences.installationId }
+        val installationId by installationIdPref.collectAsState()
+
         return Preference.PreferenceGroup(
             title = "App info",
             preferenceItems = persistentListOf(

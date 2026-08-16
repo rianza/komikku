@@ -28,7 +28,7 @@ class ExtensionStoresScreen(
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
 
-        val screenModel = rememberScreenModel { ExtensionStoresScreenModel() }
+val screenModel = rememberScreenModel { ExtensionStoresScreenModel() }
         val state by screenModel.state.collectAsState()
 
         LaunchedEffect(url) {

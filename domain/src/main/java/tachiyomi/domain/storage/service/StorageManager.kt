@@ -14,6 +14,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import com.hippo.unifile.UniFile
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +34,8 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.i18n.MR
 import java.io.File
 
+@Inject
+@SingleIn(AppScope::class)
 class StorageManager(
     private val context: Context,
     storagePreferences: StoragePreferences,

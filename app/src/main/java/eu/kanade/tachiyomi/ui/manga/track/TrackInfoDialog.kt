@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -112,7 +111,6 @@ data class TrackInfoDialogHomeScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val context = LocalContext.current
         val screenModel = rememberScreenModel { Model(mangaId, sourceId) }
 
         val dateFormat = remember { UiPreferences.dateFormat(Injekt.get<UiPreferences>().dateFormat().get()) }
@@ -226,7 +224,7 @@ data class TrackInfoDialogHomeScreen(
         }
     }
 
-    private class Model(
+private class Model(
         private val mangaId: Long,
         private val sourceId: Long,
         private val getTracks: GetTracks = Injekt.get(),
@@ -237,6 +235,8 @@ data class TrackInfoDialogHomeScreen(
         // KMK -->
         private val sourceManager: SourceManager = Injekt.get(),
         // KMK <--
+        private val refreshTracks: RefreshTracks = Injekt.get(),
+        private val context: Application = Injekt.get(),
     ) : StateScreenModel<Model.State>(State()) {
         // KMK -->
         private val getFlatMetadataById: GetFlatMetadataById by injectLazy()
@@ -281,7 +281,9 @@ data class TrackInfoDialogHomeScreen(
                     val matchResult = item.tracker.match(manga) ?: throw Exception()
                     item.tracker.register(matchResult, mangaId)
                 } catch (_: Exception) {
-                    withUIContext { Injekt.get<Application>().toast(MR.strings.error_no_match) }
+                    withUIContext {
+                        context.toast(MR.strings.error_no_match)
+                    }
                 }
             }
         }
@@ -358,9 +360,6 @@ data class TrackInfoDialogHomeScreen(
         // SY <--
 
         private suspend fun refreshTrackers() {
-            val refreshTracks = Injekt.get<RefreshTracks>()
-            val context = Injekt.get<Application>()
-
             refreshTracks.await(mangaId)
                 .filter { it.first != null }
                 .forEach { (track, e) ->
@@ -385,7 +384,7 @@ data class TrackInfoDialogHomeScreen(
             }
         }
 
-        private suspend fun List<Track>.mapToTrackItem(): List<TrackItem> {
+private suspend fun List<Track>.mapToTrackItem(): List<TrackItem> {
             val loggedInTrackers = trackerManager.loggedInTrackers()
             val source = sourceManager.getOrStub(sourceId)
             return loggedInTrackers
@@ -414,7 +413,7 @@ data class TrackInfoDialogHomeScreen(
     }
 }
 
-private data class TrackStatusSelectorScreen(
+data class TrackStatusSelectorScreen(
     private val track: Track,
     private val serviceId: Long,
 ) : Screen() {
@@ -422,13 +421,14 @@ private data class TrackStatusSelectorScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 track = track,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
             )
         }
         val state by screenModel.state.collectAsState()
+
         TrackStatusSelector(
             selection = state.selection,
             onSelectionChange = screenModel::setSelection,
@@ -441,7 +441,7 @@ private data class TrackStatusSelectorScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val track: Track,
         private val tracker: Tracker,
     ) : StateScreenModel<Model.State>(State(track.status)) {
@@ -467,7 +467,7 @@ private data class TrackStatusSelectorScreen(
     }
 }
 
-private data class TrackChapterSelectorScreen(
+data class TrackChapterSelectorScreen(
     private val track: Track,
     private val serviceId: Long,
 ) : Screen() {
@@ -475,7 +475,7 @@ private data class TrackChapterSelectorScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 track = track,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
@@ -495,7 +495,7 @@ private data class TrackChapterSelectorScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val track: Track,
         private val tracker: Tracker,
     ) : StateScreenModel<Model.State>(State(track.lastChapterRead.toInt())) {
@@ -526,7 +526,7 @@ private data class TrackChapterSelectorScreen(
     }
 }
 
-private data class TrackScoreSelectorScreen(
+data class TrackScoreSelectorScreen(
     private val track: Track,
     private val serviceId: Long,
 ) : Screen() {
@@ -534,7 +534,7 @@ private data class TrackScoreSelectorScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 track = track,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
@@ -554,7 +554,7 @@ private data class TrackScoreSelectorScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val track: Track,
         private val tracker: Tracker,
     ) : StateScreenModel<Model.State>(State(tracker.displayScore(track))) {
@@ -580,7 +580,7 @@ private data class TrackScoreSelectorScreen(
     }
 }
 
-private data class TrackDateSelectorScreen(
+data class TrackDateSelectorScreen(
     private val track: Track,
     private val serviceId: Long,
     private val start: Boolean,
@@ -636,7 +636,7 @@ private data class TrackDateSelectorScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 track = track,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
@@ -666,7 +666,7 @@ private data class TrackDateSelectorScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val track: Track,
         private val tracker: Tracker,
         private val start: Boolean,
@@ -700,7 +700,7 @@ private data class TrackDateSelectorScreen(
     }
 }
 
-private data class TrackDateRemoverScreen(
+data class TrackDateRemoverScreen(
     private val track: Track,
     private val serviceId: Long,
     private val start: Boolean,
@@ -709,7 +709,7 @@ private data class TrackDateRemoverScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 track = track,
                 tracker = Injekt.get<TrackerManager>().get(serviceId)!!,
@@ -765,7 +765,7 @@ private data class TrackDateRemoverScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val track: Track,
         private val tracker: Tracker,
         private val start: Boolean,
@@ -795,7 +795,7 @@ data class TrackerSearchScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 mangaId = mangaId,
                 currentUrl = currentUrl,
@@ -824,7 +824,7 @@ data class TrackerSearchScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val mangaId: Long,
         private val currentUrl: String? = null,
         initialQuery: String,
@@ -878,7 +878,7 @@ data class TrackerSearchScreen(
     }
 }
 
-private data class TrackerRemoveScreen(
+data class TrackerRemoveScreen(
     private val mangaId: Long,
     private val track: Track,
     private val serviceId: Long,
@@ -887,7 +887,7 @@ private data class TrackerRemoveScreen(
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val screenModel = rememberScreenModel {
+val screenModel = rememberScreenModel {
             Model(
                 mangaId = mangaId,
                 track = track,
@@ -956,7 +956,7 @@ private data class TrackerRemoveScreen(
         )
     }
 
-    private class Model(
+private class Model(
         private val mangaId: Long,
         private val track: Track,
         private val tracker: Tracker,

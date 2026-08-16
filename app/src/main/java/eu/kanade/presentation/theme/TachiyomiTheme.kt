@@ -34,6 +34,7 @@ import eu.kanade.presentation.theme.colorscheme.TealTurqoiseColorScheme
 import eu.kanade.presentation.theme.colorscheme.TidalWaveColorScheme
 import eu.kanade.presentation.theme.colorscheme.YinYangColorScheme
 import eu.kanade.presentation.theme.colorscheme.YotsubaColorScheme
+import mihon.app.di.appGraph
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -43,7 +44,8 @@ fun TachiyomiTheme(
     amoled: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
-    val uiPreferences = Injekt.get<UiPreferences>()
+    val context = LocalContext.current
+    val uiPreferences = remember { context.appGraph.uiPreferences }
     BaseTachiyomiTheme(
         appTheme = appTheme ?: uiPreferences.appTheme().get(),
         isAmoled = amoled ?: uiPreferences.themeDarkAmoled().get(),
