@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package xyz.nulldev.ts.api.http.serializer
 
 import eu.kanade.tachiyomi.source.model.Filter

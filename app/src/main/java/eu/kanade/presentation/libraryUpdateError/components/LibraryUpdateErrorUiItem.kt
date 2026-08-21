@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package eu.kanade.presentation.libraryUpdateError.components
 
 import androidx.compose.animation.animateColorAsState
