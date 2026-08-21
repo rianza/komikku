@@ -98,8 +98,8 @@ android {
     }
 
     sourceSets {
-        getByName("preview").res.srcDirs("src/beta/res")
-        getByName("benchmark").res.srcDirs("src/debug/res")
+        getByName("preview").res.directories.add("src/beta/res")
+        getByName("benchmark").res.directories.add("src/debug/res")
     }
 
     splits {

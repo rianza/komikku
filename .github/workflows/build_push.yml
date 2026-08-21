@@ -62,7 +62,7 @@ jobs:
 
       - name: Run unit tests
         id: unit_tests
-        run: ./gradlew testReleaseUnitTest
+        run: ./gradlew testDebugUnitTest
 
       - name: Upload test report
         if: steps.unit_tests.outcome == 'failure'
