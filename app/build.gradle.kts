@@ -155,6 +155,10 @@ android {
                 "META-INF/LICENSE",
                 "META-INF/NOTICE",
                 "META-INF/README.md",
+                // Compiler plugin service registrations bundled by a build-time
+                // dependency; never used at runtime and only produce R8 warnings.
+                "META-INF/services/org.jetbrains.kotlin.compiler.plugin.*",
+                "META-INF/services/org.jetbrains.kotlin.diagnostics.rendering.*",
             )
         }
     }
