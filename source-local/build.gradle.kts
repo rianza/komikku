@@ -9,11 +9,9 @@ kotlin {
     android {
         namespace = "tachiyomi.source.local"
 
-        optimization {
-            consumerKeepRules {
-                publish = true
-                files("consumer-rules.pro")
-            }
+        optimization.consumerKeepRules.apply {
+            publish = true
+            files("consumer-rules.pro")
         }
     }
 

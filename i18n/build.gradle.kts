@@ -42,7 +42,7 @@ val generateLocalesConfig = getLocalesConfigTask()
 
 androidComponents {
     onVariants { variant ->
-        variant.sources.res.addGeneratedSourceDirectory(
+        variant.sources.res?.addGeneratedSourceDirectory(
             generateLocalesConfig,
             LocalesConfigTask::outputResourceDir,
         )

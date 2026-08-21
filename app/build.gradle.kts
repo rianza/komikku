@@ -1,5 +1,5 @@
 import mihon.buildlogic.Config
-import mihon.buildlogic.PrepareShortcutsTask
+import mihon.buildlogic.tasks.PrepareShortcutsTask
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
@@ -115,8 +115,10 @@ android {
     }
 
     sourceSets {
-        getByName("preview").res.srcDirs("src/beta/res")
-        getByName("benchmark").res.srcDirs("src/debug/res")
+        // srcDirs()/setSrcDirs() are deprecated in AGP 9; `directories` is a live
+        // mutable set at runtime despite its read-only static type.
+        getByName("preview") { (res.directories as MutableSet<String>).add("src/beta/res") }
+        getByName("benchmark") { (res.directories as MutableSet<String>).add("src/debug/res") }
     }
 
     splits {
@@ -168,7 +170,6 @@ android {
         aidl = true
 
         // Disable some unused things
-        renderScript = false
         shaders = false
     }
 

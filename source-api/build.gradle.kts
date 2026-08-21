@@ -11,11 +11,9 @@ kotlin {
     android {
         namespace = "eu.kanade.tachiyomi.source"
 
-        optimization {
-            consumerKeepRules {
-                publish = true
-                files("consumer-proguard.pro")
-            }
+        optimization.consumerKeepRules.apply {
+            publish = true
+            files("consumer-proguard.pro")
         }
     }
     sourceSets {
