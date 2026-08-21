@@ -1,4 +1,5 @@
 import mihon.buildlogic.Config
+import mihon.buildlogic.PrepareShortcutsTask
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
@@ -6,8 +7,6 @@ import mihon.buildlogic.getGitSha
 plugins {
     id("mihon.android.application")
     id("mihon.android.application.compose")
-    id("com.github.zellius.shortcut-helper")
-    kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
     alias(libs.plugins.aboutLibraries)
     id("com.github.ben-manes.versions")
@@ -20,7 +19,23 @@ if (Config.includeTelemetry) {
     }
 }
 
-shortcutHelper.setFilePath("./shortcuts.xml")
+androidComponents {
+    onVariants { variant ->
+        // Replacement for the shortcut-helper plugin (incompatible with AGP 9):
+        // generate a variant-specific shortcuts.xml with the applicationId injected
+        val prepareShortcuts = tasks.register(
+            "prepare${variant.name.replaceFirstChar { it.uppercase() }}Shortcuts",
+            PrepareShortcutsTask::class.java,
+        ) {
+            shortcutFile.set(project.file("shortcuts.xml"))
+            applicationId.set(variant.applicationId)
+        }
+        variant.sources.res?.addGeneratedSourceDirectory(
+            prepareShortcuts,
+            PrepareShortcutsTask::outputDir,
+        )
+    }
+}
 
 android {
     namespace = "eu.kanade.tachiyomi"
@@ -342,11 +357,5 @@ androidComponents {
         // Only excluding in standard flavor because this breaks
         // Layout Inspector's Compose tree
         it.packaging.resources.excludes.add("META-INF/*.version")
-    }
-}
-
-buildscript {
-    dependencies {
-        classpath(kotlinx.gradle)
     }
 }

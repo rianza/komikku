@@ -1,12 +1,22 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    id("mihon.library")
     kotlin("multiplatform")
+    id("mihon.kotlin.multiplatform")
 }
 
 kotlin {
-    androidTarget()
+    android {
+        namespace = "tachiyomi.source.local"
+
+        optimization {
+            consumerKeepRules {
+                publish = true
+                files("consumer-rules.pro")
+            }
+        }
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -39,14 +49,5 @@ kotlin {
             "-Xexpect-actual-classes",
             "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
         )
-    }
-}
-
-android {
-    namespace = "tachiyomi.source.local"
-
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 }
