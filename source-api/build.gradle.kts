@@ -44,6 +44,7 @@ kotlin {
                 implementation(project.dependencies.platform(kotlinx.coroutines.bom))
             }
         }
+        androidUnitTest { dependsOn(commonTest.get()) }
     }
 
     @OptIn(ExperimentalKotlinGradlePluginApi::class)

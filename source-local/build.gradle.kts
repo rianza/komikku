@@ -39,6 +39,7 @@ kotlin {
                 implementation(kotlinx.bundles.serialization)
             }
         }
+        androidUnitTest { dependsOn(commonTest.get()) }
     }
 
     @OptIn(ExperimentalKotlinGradlePluginApi::class)

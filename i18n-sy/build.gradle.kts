@@ -22,6 +22,7 @@ kotlin {
                 api(libs.moko.core)
             }
         }
+        androidUnitTest { dependsOn(commonTest.get()) }
     }
 
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
