@@ -21,6 +21,11 @@ extensions.configure<KotlinMultiplatformExtension> {
             enable = true
         }
 
+        // Create the host unit test compilation so the auto-generated
+        // commonTest source set is not left unused (AGP built-in KMP
+        // does not create test compilations unless opted in).
+        withHostTest {}
+
         compilerOptions {
             jvmTarget.set(AndroidConfig.JvmTarget)
             freeCompilerArgs.addAll(

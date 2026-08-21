@@ -202,9 +202,7 @@ class SettingsDebugScreen : Screen() {
                         .background(color = Color.White.copy(alpha = 0.3F))
                         .pointerInput(running && result == null) {
                             awaitEachGesture {
-                                awaitPointerEventScope {
-                                    waitForUpOrCancellation()?.consume()
-                                }
+                                waitForUpOrCancellation()?.consume()
                             }
                         },
                     contentAlignment = Alignment.Center,
