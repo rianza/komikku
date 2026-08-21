@@ -22,14 +22,14 @@ val Project.kotlinx get() = the<LibrariesForKotlinx>()
 val Project.libs get() = the<LibrariesForLibs>()
 
 internal fun Project.configureAndroid(commonExtension: CommonExtension) {
+    // AGP 9: CommonExtension only exposes properties; the lambda-style actions
+    // (defaultConfig {}, compileOptions {}, ...) live on the per-plugin subtypes.
     commonExtension.apply {
         compileSdk = AndroidConfig.COMPILE_SDK
 
-        defaultConfig {
-            minSdk = AndroidConfig.MIN_SDK
-        }
+        defaultConfig.minSdk = AndroidConfig.MIN_SDK
 
-        compileOptions {
+        compileOptions.apply {
             sourceCompatibility = AndroidConfig.JavaVersion
             targetCompatibility = AndroidConfig.JavaVersion
             isCoreLibraryDesugaringEnabled = true
@@ -62,13 +62,11 @@ internal fun Project.configureCompose(commonExtension: CommonExtension) {
     pluginManager.apply(kotlinx.plugins.compose.compiler.get().pluginId)
 
     commonExtension.apply {
-        buildFeatures {
-            compose = true
-        }
+        buildFeatures.compose = true
+    }
 
-        dependencies {
-            "implementation"(platform(compose.bom))
-        }
+    dependencies {
+        "implementation"(platform(compose.bom))
     }
 
     extensions.configure<ComposeCompilerGradlePluginExtension> {
