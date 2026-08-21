@@ -8,8 +8,6 @@ plugins {
 }
 
 kotlin {
-    applyDefaultHierarchyTemplate()
-
     android {
         namespace = "tachiyomi.i18n.kmk"
 

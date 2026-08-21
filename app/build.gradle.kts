@@ -1,8 +1,8 @@
 import mihon.buildlogic.Config
-import mihon.buildlogic.tasks.PrepareShortcutsTask
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
+import mihon.buildlogic.tasks.PrepareShortcutsTask
 
 plugins {
     id("mihon.android.application")
