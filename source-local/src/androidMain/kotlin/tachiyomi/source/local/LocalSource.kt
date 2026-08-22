@@ -46,6 +46,7 @@ import tachiyomi.source.local.io.LocalSourceFileSystem
 import tachiyomi.source.local.metadata.fillMetadata
 import uy.kohesive.injekt.injectLazy
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import kotlin.time.Duration.Companion.days
 import tachiyomi.domain.source.model.Source as DomainSource
@@ -165,7 +166,7 @@ class LocalSource(
         val comicInfoArchiveReader = comicInfoArchiveFile?.archiveReader(context)
         val existingComicInfo =
             (existingFile?.openInputStream() ?: comicInfoArchiveReader?.getInputStream(COMIC_INFO_FILE))?.use {
-                xmlStreaming.newReader(it, StandardCharsets.UTF_8.name()).use { xmlReader ->
+                xmlStreaming.newReader(InputStreamReader(it, StandardCharsets.UTF_8)).use { xmlReader ->
                     xml.decodeFromReader<ComicInfo>(xmlReader)
                 }
             }
@@ -343,7 +344,7 @@ class LocalSource(
     }
 
     private fun parseComicInfo(stream: InputStream): ComicInfo {
-        return xmlStreaming.newReader(stream, StandardCharsets.UTF_8.name()).use {
+        return xmlStreaming.newReader(InputStreamReader(stream, StandardCharsets.UTF_8)).use {
             xml.decodeFromReader<ComicInfo>(it)
         }
     }
