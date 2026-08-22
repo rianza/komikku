@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package mihon.core.migration.migrations
 
 import eu.kanade.domain.source.service.SourcePreferences

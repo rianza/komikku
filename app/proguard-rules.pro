@@ -315,3 +315,11 @@
 -dontwarn org.ietf.jgss.Oid
 -dontwarn com.google.re2j.Matcher
 -dontwarn com.google.re2j.Pattern
+
+# === Jetpack WindowManager: optional vendor APIs that only exist on some OEM devices
+-dontwarn androidx.window.extensions.**
+-dontwarn androidx.window.sidecar.**
+
+# === Compose compiler plugin classes pulled in by a build-time dependency; never used at runtime
+-dontwarn org.jetbrains.kotlin.compiler.plugin.**
+-dontwarn org.jetbrains.kotlin.diagnostics.**

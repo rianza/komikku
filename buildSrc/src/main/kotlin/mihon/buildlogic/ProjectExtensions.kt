@@ -14,34 +14,33 @@ import org.gradle.kotlin.dsl.provideDelegate
 import org.gradle.kotlin.dsl.the
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.io.File
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 val Project.androidx get() = the<LibrariesForAndroidx>()
 val Project.compose get() = the<LibrariesForCompose>()
 val Project.kotlinx get() = the<LibrariesForKotlinx>()
 val Project.libs get() = the<LibrariesForLibs>()
 
-internal fun Project.configureAndroid(commonExtension: CommonExtension<*, *, *, *, *, *>) {
+internal fun Project.configureAndroid(commonExtension: CommonExtension) {
+    // AGP 9: CommonExtension only exposes properties; the lambda-style actions
+    // (defaultConfig {}, compileOptions {}, ...) live on the per-plugin subtypes.
     commonExtension.apply {
         compileSdk = AndroidConfig.COMPILE_SDK
 
-        defaultConfig {
-            minSdk = AndroidConfig.MIN_SDK
-        }
+        defaultConfig.minSdk = AndroidConfig.MIN_SDK
 
-        compileOptions {
+        compileOptions.apply {
             sourceCompatibility = AndroidConfig.JavaVersion
             targetCompatibility = AndroidConfig.JavaVersion
             isCoreLibraryDesugaringEnabled = true
         }
     }
 
-    tasks.withType<KotlinCompile>().configureEach {
+    // Built-in Kotlin (AGP 9+) registers a KotlinAndroidProjectExtension named "kotlin"
+    extensions.configure<KotlinAndroidProjectExtension>("kotlin") {
         compilerOptions {
             jvmTarget.set(AndroidConfig.JvmTarget)
             freeCompilerArgs.addAll(
-                "-Xcontext-parameters",
                 "-opt-in=kotlin.RequiresOptIn",
             )
 
@@ -58,17 +57,15 @@ internal fun Project.configureAndroid(commonExtension: CommonExtension<*, *, *, 
     }
 }
 
-internal fun Project.configureCompose(commonExtension: CommonExtension<*, *, *, *, *, *>) {
+internal fun Project.configureCompose(commonExtension: CommonExtension) {
     pluginManager.apply(kotlinx.plugins.compose.compiler.get().pluginId)
 
     commonExtension.apply {
-        buildFeatures {
-            compose = true
-        }
+        buildFeatures.compose = true
+    }
 
-        dependencies {
-            "implementation"(platform(compose.bom))
-        }
+    dependencies {
+        "implementation"(platform(compose.bom))
     }
 
     extensions.configure<ComposeCompilerGradlePluginExtension> {
@@ -97,5 +94,3 @@ internal fun Project.configureTest() {
         }
     }
 }
-
-val Project.generatedBuildDir: File get() = project.layout.buildDirectory.asFile.get().resolve("generated/mihon")
