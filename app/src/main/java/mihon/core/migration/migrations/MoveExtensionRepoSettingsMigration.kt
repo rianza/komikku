@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package mihon.core.migration.migrations
 
 import android.app.Application
