@@ -131,7 +131,11 @@
 -keep class rx.android.** { *; }
 
 # XmlUtil
--keep public enum nl.adaptivity.xmlutil.EventType { *; }
+# The KMP DOM impl (nl.adaptivity.xmlutil.core.impl.*) is reached via
+# reflective lookups, so AGP 9's stricter R8 strips it without an explicit
+# keep -> NoClassDefFoundError: IDocument at startup.
+-keep class nl.adaptivity.xmlutil.** { *; }
+-dontwarn nl.adaptivity.xmlutil.**
 
 # Firebase
 -keep class com.google.firebase.installations.** { *; }
