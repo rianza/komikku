@@ -85,7 +85,9 @@ open class WebGpuViewer(
     private val decodeDispatcher = decodeExecutor.asCoroutineDispatcher()
 
     // Single lock for all page cache and queue operations
-    private val lock = Any()
+    // wait()/notify() require java.lang.Object; kotlin.Any does not have them
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+    private val lock = Object()
 
     // Page cache - keyed by stable PageKey for O(1) lookup
     private val pageCache = LinkedHashMap<PageKey, ViewerPage>()
