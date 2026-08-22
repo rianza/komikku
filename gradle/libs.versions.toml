@@ -54,6 +54,12 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp" }
 subsamplingscaleimageview = "com.github.tachiyomiorg:subsampling-scale-image-view:66e0db195d"
 image-decoder = "com.github.tachiyomiorg:image-decoder:41c059e540"
 
+# KMK -->
+image-decoder2 = "ca.mpreg:imagedecoder:6"
+webgpuviewer = "ca.mpreg:webgpuviewer:25"
+kim = "de.stefan-oltmann:kim:0.34.0"
+# KMK <--
+
 natural-comparator = "com.github.gpanther:java-nat-sort:natural-comparator-1.1"
 
 richeditor-compose = "com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc13"

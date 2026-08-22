@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
+import eu.kanade.tachiyomi.ui.reader.viewer.webgpu.WebGpuViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.webtoon.WebtoonViewer
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.kmk.KMR
@@ -41,6 +42,27 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         }
     }
 
+    // KMK -->
+    val resolved = ReadingMode.fromPreference(
+        when {
+            readingMode == ReadingMode.DEFAULT -> screenModel.preferences.defaultReadingMode().get()
+            else -> manga?.readingMode?.toInt() ?: screenModel.preferences.defaultReadingMode().get()
+        },
+    )
+    if (resolved == ReadingMode.LEFT_TO_RIGHT || resolved == ReadingMode.RIGHT_TO_LEFT) {
+        val dualPageView by screenModel.preferences.dualPageView().collectAsState()
+        SettingsChipRow(KMR.strings.pref_dual_page_view) {
+            ReaderPreferences.DualPageView.entries.map {
+                FilterChip(
+                    selected = it == dualPageView,
+                    onClick = { screenModel.preferences.dualPageView().set(it) },
+                    label = { Text(stringResource(it.titleRes)) },
+                )
+            }
+        }
+    }
+    // KMK <--
+
     val orientation = remember(manga) { ReaderOrientation.fromPreference(manga?.readerOrientation?.toInt()) }
     SettingsChipRow(MR.strings.rotation_type) {
         ReaderOrientation.entries.map {
@@ -65,6 +87,11 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         // SY <--
     } else {
         PagerViewerSettings(screenModel)
+        // KMK -->
+        if (viewer is WebGpuViewer) {
+            WebGpuViewerSettings(screenModel)
+        }
+        // KMK <--
     }
 }
 
@@ -332,6 +359,35 @@ private fun WebtoonWithGapsViewerSettings(screenModel: ReaderSettingsScreenModel
     )
 }
 // SY <--
+
+// KMK -->
+@Composable
+private fun WebGpuViewerSettings(screenModel: ReaderSettingsScreenModel) {
+    HeadingItem(KMR.strings.webgpu_viewer)
+
+    val transitionAnimation by screenModel.preferences.transitionAnimation().collectAsState()
+    SettingsChipRow(KMR.strings.pref_transition_animation) {
+        ReaderPreferences.TransitionAnimation.entries.map {
+            FilterChip(
+                selected = it == transitionAnimation,
+                onClick = { screenModel.preferences.transitionAnimation().set(it) },
+                label = { Text(stringResource(it.titleRes)) },
+            )
+        }
+    }
+
+    val cutoutMode by screenModel.preferences.cutoutMode().collectAsState()
+    SettingsChipRow(KMR.strings.pref_cutout_mode) {
+        ReaderPreferences.CutoutMode.entries.map {
+            FilterChip(
+                selected = it == cutoutMode,
+                onClick = { screenModel.preferences.cutoutMode().set(it) },
+                label = { Text(stringResource(it.titleRes)) },
+            )
+        }
+    }
+}
+// KMK <--
 
 @Composable
 private fun TapZonesItems(

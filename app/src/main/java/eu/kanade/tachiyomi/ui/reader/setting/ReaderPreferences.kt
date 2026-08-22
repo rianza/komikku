@@ -124,7 +124,19 @@ class ReaderPreferences(
 
     fun dualPageRotateToFitInvertWebtoon() = preferenceStore.getBoolean("pref_dual_page_rotate_invert_webtoon", false)
 
+    // KMK -->
+    fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.NEVER)
+
     // endregion
+
+    // region WebGpu
+
+    fun transitionAnimation() = preferenceStore.getEnum("webgpu_transition_animation", TransitionAnimation.DEFAULT)
+
+    fun cutoutMode() = preferenceStore.getEnum("webgpu_cutout_mode", CutoutMode.AVOID)
+
+    // endregion
+    // KMK <--
 
     // region Color filter
 
@@ -252,6 +264,35 @@ class ReaderPreferences(
         R3_2(KMR.strings.scale_type_3_2, 2f / 3f),
         R16_9(KMR.strings.scale_type_16_9, 9f / 16f),
         R20_9(KMR.strings.scale_type_20_9, 9f / 20f),
+    }
+    // KMK <--
+
+    // KMK -->
+    enum class TransitionAnimation(val titleRes: StringResource) {
+        DEFAULT(KMR.strings.transition_animation_default),
+        FLIP_LEFT(KMR.strings.transition_animation_flip_left),
+        FLIP_RIGHT(KMR.strings.transition_animation_flip_right),
+        STACK_LEFT(KMR.strings.transition_animation_stack_left),
+        STACK_RIGHT(KMR.strings.transition_animation_stack_right),
+        STACK_UP(KMR.strings.transition_animation_stack_up),
+        STACK_DOWN(KMR.strings.transition_animation_stack_down),
+        SPHERE(KMR.strings.transition_animation_sphere),
+        CUBE_INSIDE(KMR.strings.transition_animation_cube_inside),
+        CUBE_OUTSIDE(KMR.strings.transition_animation_cube_outside),
+        FADE(KMR.strings.transition_animation_fade),
+        FADE_WHITE(KMR.strings.transition_animation_fade_white),
+    }
+
+    enum class CutoutMode(val titleRes: StringResource) {
+        IGNORE(KMR.strings.cutout_mode_ignore),
+        AVOID(KMR.strings.cutout_mode_avoid),
+        SHIFT(KMR.strings.cutout_mode_shift),
+    }
+
+    enum class DualPageView(val titleRes: StringResource) {
+        NEVER(KMR.strings.dual_page_view_never),
+        ALWAYS(KMR.strings.dual_page_view_always),
+        WIDE(KMR.strings.dual_page_view_wide),
     }
     // KMK <--
 
