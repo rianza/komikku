@@ -11,12 +11,11 @@ import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -209,36 +208,34 @@ object DownloadQueueScreen : Screen() {
             },
             floatingActionButton = {
                 val isRunning by screenModel.isDownloaderRunning.collectAsState()
-                SmallExtendedFloatingActionButton(
-                    text = {
-                        val id = if (isRunning) {
-                            MR.strings.action_pause
-                        } else {
-                            MR.strings.action_resume
-                        }
-                        Text(text = stringResource(id))
-                    },
-                    icon = {
-                        val icon = if (isRunning) {
-                            Icons.Outlined.Pause
-                        } else {
-                            Icons.Filled.PlayArrow
-                        }
-                        Icon(imageVector = icon, contentDescription = null)
-                    },
-                    onClick = {
-                        if (isRunning) {
-                            screenModel.pauseDownloads()
-                        } else {
-                            screenModel.startDownloads()
-                        }
-                    },
-                    expanded = fabExpanded,
-                    modifier = Modifier.animateFloatingActionButton(
-                        visible = downloadList.isNotEmpty(),
-                        alignment = Alignment.BottomEnd,
-                    ),
-                )
+                if (downloadList.isNotEmpty()) {
+                    ExtendedFloatingActionButton(
+                        text = {
+                            val id = if (isRunning) {
+                                MR.strings.action_pause
+                            } else {
+                                MR.strings.action_resume
+                            }
+                            Text(text = stringResource(id))
+                        },
+                        icon = {
+                            val icon = if (isRunning) {
+                                Icons.Outlined.Pause
+                            } else {
+                                Icons.Filled.PlayArrow
+                            }
+                            Icon(imageVector = icon, contentDescription = null)
+                        },
+                        onClick = {
+                            if (isRunning) {
+                                screenModel.pauseDownloads()
+                            } else {
+                                screenModel.startDownloads()
+                            }
+                        },
+                        expanded = fabExpanded,
+                    )
+                }
             },
         ) { contentPadding ->
             if (downloadList.isEmpty()) {

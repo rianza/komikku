@@ -199,7 +199,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="komikku" />
-                <data android:scheme="komikkurnz" />
                 <data android:scheme="mihon" />
 
                 <data android:host="anilist-auth" />

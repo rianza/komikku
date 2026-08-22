@@ -2,12 +2,11 @@ import mihon.buildlogic.Config
 import mihon.buildlogic.getBuildTime
 import mihon.buildlogic.getCommitCount
 import mihon.buildlogic.getGitSha
+import mihon.buildlogic.tasks.PrepareShortcutsTask
 
 plugins {
     id("mihon.android.application")
     id("mihon.android.application.compose")
-    id("com.github.zellius.shortcut-helper")
-    kotlin("plugin.parcelize")
     kotlin("plugin.serialization")
     alias(libs.plugins.aboutLibraries)
     id("com.github.ben-manes.versions")
@@ -20,7 +19,23 @@ if (Config.includeTelemetry) {
     }
 }
 
-shortcutHelper.setFilePath("./shortcuts.xml")
+androidComponents {
+    onVariants { variant ->
+        // Replacement for the shortcut-helper plugin (incompatible with AGP 9):
+        // generate a variant-specific shortcuts.xml with the applicationId injected
+        val prepareShortcuts = tasks.register(
+            "prepare${variant.name.replaceFirstChar { it.uppercase() }}Shortcuts",
+            PrepareShortcutsTask::class.java,
+        ) {
+            shortcutFile.set(project.file("shortcuts.xml"))
+            applicationId.set(variant.applicationId)
+        }
+        variant.sources.res?.addGeneratedSourceDirectory(
+            prepareShortcuts,
+            PrepareShortcutsTask::outputDir,
+        )
+    }
+}
 
 android {
     namespace = "eu.kanade.tachiyomi"
@@ -100,8 +115,10 @@ android {
     }
 
     sourceSets {
-        getByName("preview").res.srcDirs("src/beta/res")
-        getByName("benchmark").res.srcDirs("src/debug/res")
+        // srcDirs()/setSrcDirs() are deprecated in AGP 9; `directories` is a live
+        // mutable set at runtime despite its read-only static type.
+        getByName("preview") { (res.directories as MutableSet<String>).add("src/beta/res") }
+        getByName("benchmark") { (res.directories as MutableSet<String>).add("src/debug/res") }
     }
 
     splits {
@@ -138,6 +155,10 @@ android {
                 "META-INF/LICENSE",
                 "META-INF/NOTICE",
                 "META-INF/README.md",
+                // Compiler plugin service registrations bundled by a build-time
+                // dependency; never used at runtime and only produce R8 warnings.
+                "META-INF/services/org.jetbrains.kotlin.compiler.plugin.*",
+                "META-INF/services/org.jetbrains.kotlin.diagnostics.rendering.*",
             )
         }
     }
@@ -153,7 +174,6 @@ android {
         aidl = true
 
         // Disable some unused things
-        renderScript = false
         shaders = false
     }
 
@@ -178,7 +198,6 @@ kotlin {
             "-opt-in=kotlinx.coroutines.FlowPreview",
             "-opt-in=kotlinx.coroutines.InternalCoroutinesApi",
             "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
-            "-Xannotation-default-target=param-property",
         )
     }
 }
@@ -346,11 +365,5 @@ androidComponents {
         // Only excluding in standard flavor because this breaks
         // Layout Inspector's Compose tree
         it.packaging.resources.excludes.add("META-INF/*.version")
-    }
-}
-
-buildscript {
-    dependencies {
-        classpath(kotlinx.gradle)
     }
 }

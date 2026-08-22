@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package eu.kanade.tachiyomi.data.sync.service
 
 import android.app.Activity
