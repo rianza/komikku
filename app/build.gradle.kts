@@ -277,7 +277,6 @@ dependencies {
     }
     implementation(libs.image.decoder)
     // KMK -->
-    implementation(libs.image.decoder2)
     implementation(libs.webgpuviewer)
     implementation(libs.kim)
     // KMK <--
