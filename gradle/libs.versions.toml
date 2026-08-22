@@ -55,7 +55,7 @@ subsamplingscaleimageview = "com.github.tachiyomiorg:subsampling-scale-image-vie
 image-decoder = "ca.mpreg:imagedecoder:9"
 
 # KMK -->
-webgpuviewer = "ca.mpreg:webgpuviewer:25"
+webgpuviewer = "ca.mpreg:webgpuviewer:28"
 kim = "de.stefan-oltmann:kim:0.34.0"
 # KMK <--
 
