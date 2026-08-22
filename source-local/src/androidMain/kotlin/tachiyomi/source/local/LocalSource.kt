@@ -21,8 +21,8 @@ import mihon.core.archive.ArchiveReader
 import mihon.core.archive.ZipWriter
 import mihon.core.archive.archiveReader
 import mihon.core.archive.epubReader
-import nl.adaptivity.xmlutil.XmlStreaming
 import nl.adaptivity.xmlutil.serialization.XML
+import nl.adaptivity.xmlutil.xmlStreaming
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.extension
 import tachiyomi.core.common.storage.nameWithoutExtension
@@ -165,7 +165,7 @@ class LocalSource(
         val comicInfoArchiveReader = comicInfoArchiveFile?.archiveReader(context)
         val existingComicInfo =
             (existingFile?.openInputStream() ?: comicInfoArchiveReader?.getInputStream(COMIC_INFO_FILE))?.use {
-                XmlStreaming.newReader(it, StandardCharsets.UTF_8.name()).use { xmlReader ->
+                xmlStreaming.newReader(it, StandardCharsets.UTF_8.name()).use { xmlReader ->
                     xml.decodeFromReader<ComicInfo>(xmlReader)
                 }
             }
@@ -343,7 +343,7 @@ class LocalSource(
     }
 
     private fun parseComicInfo(stream: InputStream): ComicInfo {
-        return XmlStreaming.newReader(stream, StandardCharsets.UTF_8.name()).use {
+        return xmlStreaming.newReader(stream, StandardCharsets.UTF_8.name()).use {
             xml.decodeFromReader<ComicInfo>(it)
         }
     }
