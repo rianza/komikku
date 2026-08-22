@@ -138,7 +138,7 @@ class AppModule(val app: Application) : InjektModule {
         }
         addSingletonFactory {
             XML.recommended_1_0 {
-                defaultPolicy {
+                policy {
                     ignoreUnknownChildren()
                     autoPolymorphic = true
                 }
