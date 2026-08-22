@@ -22,11 +22,15 @@ serialization-json-okio = { module = "org.jetbrains.kotlinx:kotlinx-serializatio
 serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "serialization_version" }
 
 serialization-xml-core = { module = "io.github.pdvrieze.xmlutil:core-android", version.ref = "xml_serialization_version" }
+# xmlutil's Gradle module metadata never references core-jvmcommon (only the
+# POM does), so the common bytecode - incl. nl.adaptivity.xmlutil.core.impl.idom
+# used by the serializers - is missing at runtime without an explicit dep.
+serialization-xml-core-jvmcommon = { module = "io.github.pdvrieze.xmlutil:core-jvmcommon", version.ref = "xml_serialization_version" }
 serialization-xml = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xml_serialization_version" }
 
 [bundles]
 coroutines = ["coroutines-core", "coroutines-android", "coroutines-guava"]
-serialization = ["serialization-json", "serialization-json-okio", "serialization-protobuf", "serialization-xml-core", "serialization-xml"]
+serialization = ["serialization-json", "serialization-json-okio", "serialization-protobuf", "serialization-xml-core", "serialization-xml-core-jvmcommon", "serialization-xml"]
 
 [plugins]
 android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin_version" }
