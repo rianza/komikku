@@ -1,7 +1,7 @@
 [versions]
 kotlin_version = "2.4.0"
 serialization_version = "1.11.0"
-xml_serialization_version = "0.91.3"
+xml_serialization_version = "1.0.2"
 coroutines_version = "1.11.0"
 
 [libraries]
@@ -21,16 +21,14 @@ serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-jso
 serialization-json-okio = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-okio", version.ref = "serialization_version" }
 serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "serialization_version" }
 
-serialization-xml-core = { module = "io.github.pdvrieze.xmlutil:core-android", version.ref = "xml_serialization_version" }
-# xmlutil's Gradle module metadata never references core-jvmcommon (only the
-# POM does), so the common bytecode - incl. nl.adaptivity.xmlutil.core.impl.idom
-# used by the serializers - is missing at runtime without an explicit dep.
-serialization-xml-core-jvmcommon = { module = "io.github.pdvrieze.xmlutil:core-jvmcommon", version.ref = "xml_serialization_version" }
+# core-jvm (not core-android) to stay a single module with xmpcore-android,
+# which pulls io.github.pdvrieze.xmlutil:core-jvm transitively via kim.
+serialization-xml-core = { module = "io.github.pdvrieze.xmlutil:core-jvm", version.ref = "xml_serialization_version" }
 serialization-xml = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xml_serialization_version" }
 
 [bundles]
 coroutines = ["coroutines-core", "coroutines-android", "coroutines-guava"]
-serialization = ["serialization-json", "serialization-json-okio", "serialization-protobuf", "serialization-xml-core", "serialization-xml-core-jvmcommon", "serialization-xml"]
+serialization = ["serialization-json", "serialization-json-okio", "serialization-protobuf", "serialization-xml-core", "serialization-xml"]
 
 [plugins]
 android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin_version" }
