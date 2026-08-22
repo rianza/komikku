@@ -25,15 +25,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SmallExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.State
@@ -533,49 +532,48 @@ private fun MangaScreenSmallImpl(
             val isFABVisible = remember(chapters) {
                 chapters.fastAny { !it.chapter.read } && !isAnySelected
             }
-            SmallExtendedFloatingActionButton(
-                text = {
-                    val isReading = remember(state.chapters) {
-                        state.chapters.fastAny { it.chapter.read }
-                    }
-                    Text(
-                        text = stringResource(if (isReading) MR.strings.action_resume else MR.strings.action_start),
-                    )
-                },
-                icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
-                onClick = onContinueReading,
-                expanded = chapterListState.shouldExpandFAB(),
-                modifier = Modifier.animateFloatingActionButton(
-                    visible = isFABVisible,
-                    alignment = Alignment.BottomEnd,
-                )
-                    // KMK -->
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
-                    .onGloballyPositioned { coordinates ->
-                        fabSize = coordinates.size
-                        positionOnScreen = coordinates.positionOnScreen()
-                    }
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                if (positionOnScreen.x + fabSize.width / 2 >= layoutSize.width / 2) {
-                                    readButtonPosition.set(FabPosition.End.toString())
-                                } else {
-                                    readButtonPosition.set(FabPosition.Start.toString())
-                                }
-                                offsetX = 0f
-                            },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            val newOffsetX = offsetX + dragAmount
-                            if (!newOffsetX.isNaN()) {
-                                offsetX = newOffsetX
-                            }
+            if (isFABVisible) {
+                ExtendedFloatingActionButton(
+                    text = {
+                        val isReading = remember(state.chapters) {
+                            state.chapters.fastAny { it.chapter.read }
                         }
+                        Text(
+                            text = stringResource(if (isReading) MR.strings.action_resume else MR.strings.action_start),
+                        )
                     },
-                containerColor = MaterialTheme.colorScheme.primary,
-                // KMK <--
-            )
+                    icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueReading,
+                    expanded = chapterListState.shouldExpandFAB(),
+                    // KMK -->
+                    modifier = Modifier
+                        .offset { IntOffset(offsetX.roundToInt(), 0) }
+                        .onGloballyPositioned { coordinates ->
+                            fabSize = coordinates.size
+                            positionOnScreen = coordinates.positionOnScreen()
+                        }
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    if (positionOnScreen.x + fabSize.width / 2 >= layoutSize.width / 2) {
+                                        readButtonPosition.set(FabPosition.End.toString())
+                                    } else {
+                                        readButtonPosition.set(FabPosition.Start.toString())
+                                    }
+                                    offsetX = 0f
+                                },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                val newOffsetX = offsetX + dragAmount
+                                if (!newOffsetX.isNaN()) {
+                                    offsetX = newOffsetX
+                                }
+                            }
+                        },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    // KMK <--
+                )
+            }
         },
         // KMK -->
         floatingActionButtonPosition = if (fabPosition == FabPosition.End.toString()) {
@@ -993,51 +991,50 @@ private fun MangaScreenLargeImpl(
             val isFABVisible = remember(chapters) {
                 chapters.fastAny { !it.chapter.read } && !isAnySelected
             }
-            SmallExtendedFloatingActionButton(
-                text = {
-                    val isReading = remember(state.chapters) {
-                        state.chapters.fastAny { it.chapter.read }
-                    }
-                    Text(
-                        text = stringResource(
-                            if (isReading) MR.strings.action_resume else MR.strings.action_start,
-                        ),
-                    )
-                },
-                icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
-                onClick = onContinueReading,
-                expanded = chapterListState.shouldExpandFAB(),
-                modifier = Modifier.animateFloatingActionButton(
-                    visible = isFABVisible,
-                    alignment = Alignment.BottomEnd,
-                )
-                    // KMK -->
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
-                    .onGloballyPositioned { coordinates ->
-                        fabSize = coordinates.size
-                        positionOnScreen = coordinates.positionOnScreen()
-                    }
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                if (positionOnScreen.x + fabSize.width / 2 >= layoutSize.width / 2) {
-                                    readButtonPosition.set(FabPosition.End.toString())
-                                } else {
-                                    readButtonPosition.set(FabPosition.Start.toString())
-                                }
-                                offsetX = 0f
-                            },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            val newOffsetX = offsetX + dragAmount
-                            if (!newOffsetX.isNaN()) {
-                                offsetX = newOffsetX
-                            }
+            if (isFABVisible) {
+                ExtendedFloatingActionButton(
+                    text = {
+                        val isReading = remember(state.chapters) {
+                            state.chapters.fastAny { it.chapter.read }
                         }
+                        Text(
+                            text = stringResource(
+                                if (isReading) MR.strings.action_resume else MR.strings.action_start,
+                            ),
+                        )
                     },
-                containerColor = MaterialTheme.colorScheme.primary,
-                // KMK <--
-            )
+                    icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueReading,
+                    expanded = chapterListState.shouldExpandFAB(),
+                    // KMK -->
+                    modifier = Modifier
+                        .offset { IntOffset(offsetX.roundToInt(), 0) }
+                        .onGloballyPositioned { coordinates ->
+                            fabSize = coordinates.size
+                            positionOnScreen = coordinates.positionOnScreen()
+                        }
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    if (positionOnScreen.x + fabSize.width / 2 >= layoutSize.width / 2) {
+                                        readButtonPosition.set(FabPosition.End.toString())
+                                    } else {
+                                        readButtonPosition.set(FabPosition.Start.toString())
+                                    }
+                                    offsetX = 0f
+                                },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                val newOffsetX = offsetX + dragAmount
+                                if (!newOffsetX.isNaN()) {
+                                    offsetX = newOffsetX
+                                }
+                            }
+                        },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    // KMK <--
+                )
+            }
         },
         // KMK -->
         floatingActionButtonPosition = if (fabPosition == FabPosition.End.toString()) {

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package tachiyomi.presentation.core.components
 
 import androidx.activity.compose.BackHandler

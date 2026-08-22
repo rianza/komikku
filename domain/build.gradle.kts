@@ -1,6 +1,5 @@
 plugins {
     id("mihon.library")
-    kotlin("android")
     kotlin("plugin.serialization")
 }
 
@@ -31,6 +30,7 @@ dependencies {
 
     api(libs.sqldelight.android.paging)
 
+    compileOnly(platform(compose.bom))
     compileOnly(compose.runtime.annotation)
 
     testImplementation(libs.bundles.test)
