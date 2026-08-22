@@ -56,7 +56,7 @@ subsamplingscaleimageview = { module = "com.github.mihonapp:subsampling-scale-im
 image-decoder = { module = "ca.mpreg:imagedecoder", version.ref = "image-decoder" }
 
 # KMK -->
-webgpuviewer = "ca.mpreg:webgpuviewer:31"
+webgpuviewer = "ca.mpreg:webgpuviewer:32"
 kim = "de.stefan-oltmann:kim:0.34.0"
 # KMK <--
 

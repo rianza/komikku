@@ -137,13 +137,13 @@ class AppModule(val app: Application) : InjektModule {
             }
         }
         addSingletonFactory {
-            XML {
+            XML.recommended_1_0 {
                 defaultPolicy {
                     ignoreUnknownChildren()
+                    autoPolymorphic = true
                 }
-                autoPolymorphic = true
                 xmlDeclMode = XmlDeclMode.Charset
-                indent = 2
+                setIndent(2)
                 xmlVersion = XmlVersion.XML10
             }
         }
