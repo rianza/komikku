@@ -1,4 +1,4 @@
-@file:Suppress("PropertyName")
+@file:Suppress("PropertyName", "DEPRECATION")
 
 package eu.kanade.tachiyomi.source.online.all
 

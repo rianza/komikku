@@ -1,6 +1,7 @@
 buildscript {
     dependencies {
-        classpath(libs.android.shortcut.gradle)
+        // KGP above the version bundled with AGP (see AGP 9 release notes)
+        classpath(kotlinx.gradle)
         classpath(sylibs.gradleversionsx)
     }
 }

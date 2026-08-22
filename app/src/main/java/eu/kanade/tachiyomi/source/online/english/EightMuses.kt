@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package eu.kanade.tachiyomi.source.online.english
 
 import android.content.Context
