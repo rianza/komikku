@@ -27,11 +27,6 @@ dependencyResolutionManagement {
         mavenCentral()
         google()
         maven(url = "https://www.jitpack.io")
-        // KMK -->
-        // Hosts androidx.webgpu:webgpu:1.0.0-dev05 (custom Dawn build) required by
-        // com.github.rianza:webgpuviewer fork experiments.
-        maven(url = "https://raw.githubusercontent.com/mpreg-ca/androidx-webgpu-repo/main")
-        // KMK <--
     }
 }
 
