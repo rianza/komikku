@@ -281,6 +281,7 @@ class ReaderPreferences(
         CUBE_OUTSIDE(KMR.strings.transition_animation_cube_outside),
         FADE(KMR.strings.transition_animation_fade),
         FADE_WHITE(KMR.strings.transition_animation_fade_white),
+        NONE(KMR.strings.transition_animation_none),
     }
 
     enum class CutoutMode(val titleRes: StringResource) {
