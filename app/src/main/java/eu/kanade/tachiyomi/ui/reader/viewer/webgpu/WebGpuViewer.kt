@@ -297,7 +297,7 @@ open class WebGpuViewer(
         pageCache.remove(pageKey(toRemove))
         decodeQueue.remove(toRemove)
         toRemove.state = PageState.IDLE
-        Log.d("WebGpuViewer", "evict imagePage#${System.identityHashCode(toRemove.imagePage)} idx=${toRemove.page.index}")
+        Log.d("WebGpuViewer", "evict imagePage#${System.identityHashCode(toRemove.imagePage)} idx=${(toRemove as? ViewerReaderPage)?.page?.index}")
         (toRemove as? ViewerReaderPage)?.spreadPage?.cleanup()
         toRemove.imagePage.cleanup()
     }
@@ -902,7 +902,7 @@ open class WebGpuViewer(
                 imagePage = ImagePage(firstImage)
                 Log.d(
                     "WebGpuViewer",
-                    "loaded ch=${page.chapter.chapter.id} idx=${page.index} " +
+                    "loaded ch=${page.page.chapter.chapter.id} idx=${page.page.index} " +
                         "as imagePage#${System.identityHashCode(imagePage)} " +
                         "(${firstFrame.width}x${firstFrame.height})",
                 )
