@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
+import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -296,6 +297,7 @@ open class WebGpuViewer(
         pageCache.remove(pageKey(toRemove))
         decodeQueue.remove(toRemove)
         toRemove.state = PageState.IDLE
+        Log.d("WebGpuViewer", "evict imagePage#${System.identityHashCode(toRemove.imagePage)} idx=${toRemove.page.index}")
         (toRemove as? ViewerReaderPage)?.spreadPage?.cleanup()
         toRemove.imagePage.cleanup()
     }
@@ -898,6 +900,12 @@ open class WebGpuViewer(
 
                 // Create ImagePage early so its cleanup handles all frames
                 imagePage = ImagePage(firstImage)
+                Log.d(
+                    "WebGpuViewer",
+                    "loaded ch=${page.chapter.chapter.id} idx=${page.index} " +
+                        "as imagePage#${System.identityHashCode(imagePage)} " +
+                        "(${firstFrame.width}x${firstFrame.height})",
+                )
 
                 // Create remaining frames for animation (only for animated images)
                 if (pageCount > 1) {
