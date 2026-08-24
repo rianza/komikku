@@ -120,6 +120,7 @@ open class WebGpuViewer(
      * Must be called while holding lock.
      */
     private fun queueForDecode(page: ViewerPage, prioritize: Boolean = false) {
+        Log.d("WebGpuViewerTrace", "queue page=${pageKey(page)} state=${page.state} prioritize=$prioritize decoded=${page.imagePage.isDecoded}")
         // Already has a decoded image
         if (page.imagePage.isDecoded) return
 
@@ -131,6 +132,7 @@ open class WebGpuViewer(
                 } else {
                     decodeQueue.addFirst(page)
                 }
+                Log.d("WebGpuViewerTrace", "queue-added page=${pageKey(page)} queueSize=${decodeQueue.size}")
                 lock.notify()
             }
 
@@ -294,6 +296,7 @@ open class WebGpuViewer(
 
         val toRemove = candidates.firstOrNull() ?: farthest ?: return
 
+        Log.d("WebGpuViewerTrace", "evict-start page=${pageKey(toRemove)} cacheSize=${pageCache.size} queueSize=${decodeQueue.size}")
         pageCache.remove(pageKey(toRemove))
         decodeQueue.remove(toRemove)
         toRemove.state = PageState.IDLE
@@ -603,6 +606,7 @@ open class WebGpuViewer(
                 }
             }
 
+            Log.d("WebGpuViewerTrace", "reader-reset cacheSize=${pageCache.size} queueSize=${decodeQueue.size}")
             synchronized(lock) {
                 decodeQueue.clear()
                 pageCache.values.forEach {
@@ -661,6 +665,7 @@ open class WebGpuViewer(
      * Called when decode worker encounters a page that isn't downloaded yet.
      */
     private fun startPageLoad(page: ViewerReaderPage) {
+        Log.d("WebGpuViewerTrace", "load-start page=${page.page.index} chapter=${page.page.chapter.chapter.id} state=${page.state}")
         val loader = page.page.chapter.pageLoader ?: run {
             synchronized(lock) { if (pageInCache(page)) page.state = PageState.IDLE }
             return
@@ -900,6 +905,7 @@ open class WebGpuViewer(
 
                 // Create ImagePage early so its cleanup handles all frames
                 imagePage = ImagePage(firstImage)
+                Log.d("WebGpuViewerTrace", "load-complete page=${page.page.index} chapter=${page.page.chapter.chapter.id} imagePage=${System.identityHashCode(imagePage)}")
                 Log.d(
                     "WebGpuViewer",
                     "loaded ch=${page.page.chapter.chapter.id} idx=${page.page.index} " +
