@@ -30,6 +30,7 @@ import java.text.NumberFormat
 internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
     HeadingItem(MR.strings.pref_category_for_this_series)
     val manga by screenModel.mangaFlow.collectAsState()
+    val viewer by screenModel.viewerFlow.collectAsState()
 
     val readingMode = remember(manga) { ReadingMode.fromPreference(manga?.readingMode?.toInt()) }
     SettingsChipRow(MR.strings.pref_category_reading_mode) {
@@ -43,21 +44,23 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
     }
 
     // KMK -->
-    val resolved = ReadingMode.fromPreference(
-        when {
-            readingMode == ReadingMode.DEFAULT -> screenModel.preferences.defaultReadingMode().get()
-            else -> manga?.readingMode?.toInt() ?: screenModel.preferences.defaultReadingMode().get()
-        },
-    )
-    if (resolved == ReadingMode.LEFT_TO_RIGHT || resolved == ReadingMode.RIGHT_TO_LEFT) {
-        val dualPageView by screenModel.preferences.dualPageView().collectAsState()
-        SettingsChipRow(KMR.strings.pref_dual_page_view) {
-            ReaderPreferences.DualPageView.entries.map {
-                FilterChip(
-                    selected = it == dualPageView,
-                    onClick = { screenModel.preferences.dualPageView().set(it) },
-                    label = { Text(stringResource(it.titleRes)) },
-                )
+    if (viewer is WebGpuViewer) {
+        val resolved = ReadingMode.fromPreference(
+            when {
+                readingMode == ReadingMode.DEFAULT -> screenModel.preferences.defaultReadingMode().get()
+                else -> manga?.readingMode?.toInt() ?: screenModel.preferences.defaultReadingMode().get()
+            },
+        )
+        if (resolved == ReadingMode.LEFT_TO_RIGHT || resolved == ReadingMode.RIGHT_TO_LEFT) {
+            val dualPageView by screenModel.preferences.dualPageView().collectAsState()
+            SettingsChipRow(KMR.strings.pref_dual_page_view) {
+                ReaderPreferences.DualPageView.entries.map {
+                    FilterChip(
+                        selected = it == dualPageView,
+                        onClick = { screenModel.preferences.dualPageView().set(it) },
+                        label = { Text(stringResource(it.titleRes)) },
+                    )
+                }
             }
         }
     }
@@ -74,24 +77,20 @@ internal fun ReadingModePage(screenModel: ReaderSettingsScreenModel) {
         }
     }
 
-    val viewer by screenModel.viewerFlow.collectAsState()
-    if (viewer is WebtoonViewer) {
-        WebtoonViewerSettings(
-            screenModel,
-            // KMK -->
-            readingMode,
-            // KMK <--
-        )
-        // SY -->
-        WebtoonWithGapsViewerSettings(screenModel)
-        // SY <--
-    } else {
-        PagerViewerSettings(screenModel)
-        // KMK -->
-        if (viewer is WebGpuViewer) {
-            WebGpuViewerSettings(screenModel)
+    when (viewer) {
+        is WebtoonViewer -> {
+            WebtoonViewerSettings(
+                screenModel,
+                // KMK -->
+                readingMode,
+                // KMK <--
+            )
+            // SY -->
+            WebtoonWithGapsViewerSettings(screenModel)
+            // SY <--
         }
-        // KMK <--
+        is WebGpuViewer -> WebGpuViewerSettings(screenModel)
+        else -> PagerViewerSettings(screenModel)
     }
 }
 
