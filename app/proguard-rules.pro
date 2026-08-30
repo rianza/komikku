@@ -323,3 +323,7 @@
 # === Compose compiler plugin classes pulled in by a build-time dependency; never used at runtime
 -dontwarn org.jetbrains.kotlin.compiler.plugin.**
 -dontwarn org.jetbrains.kotlin.diagnostics.**
+
+# === SSIV still references the removed tachiyomi.decoder.ImageDecoder in its
+# === decoder registry; the class is never instantiated on this configuration.
+-dontwarn tachiyomi.decoder.**

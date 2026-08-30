@@ -124,7 +124,19 @@ class ReaderPreferences(
 
     fun dualPageRotateToFitInvertWebtoon() = preferenceStore.getBoolean("pref_dual_page_rotate_invert_webtoon", false)
 
+    // KMK -->
+    fun dualPageView() = preferenceStore.getEnum("pref_dual_page_view", DualPageView.NEVER)
+
     // endregion
+
+    // region WebGpu
+
+    fun transitionAnimation() = preferenceStore.getEnum("webgpu_transition_animation", TransitionAnimation.DEFAULT)
+
+    fun cutoutMode() = preferenceStore.getEnum("webgpu_cutout_mode", CutoutMode.AVOID)
+
+    // endregion
+    // KMK <--
 
     // region Color filter
 
@@ -255,6 +267,36 @@ class ReaderPreferences(
     }
     // KMK <--
 
+    // KMK -->
+    enum class TransitionAnimation(val titleRes: StringResource) {
+        DEFAULT(KMR.strings.transition_animation_default),
+        FLIP_LEFT(KMR.strings.transition_animation_flip_left),
+        FLIP_RIGHT(KMR.strings.transition_animation_flip_right),
+        STACK_LEFT(KMR.strings.transition_animation_stack_left),
+        STACK_RIGHT(KMR.strings.transition_animation_stack_right),
+        STACK_UP(KMR.strings.transition_animation_stack_up),
+        STACK_DOWN(KMR.strings.transition_animation_stack_down),
+        SPHERE(KMR.strings.transition_animation_sphere),
+        CUBE_INSIDE(KMR.strings.transition_animation_cube_inside),
+        CUBE_OUTSIDE(KMR.strings.transition_animation_cube_outside),
+        FADE(KMR.strings.transition_animation_fade),
+        FADE_WHITE(KMR.strings.transition_animation_fade_white),
+        NONE(KMR.strings.transition_animation_none),
+    }
+
+    enum class CutoutMode(val titleRes: StringResource) {
+        IGNORE(KMR.strings.cutout_mode_ignore),
+        AVOID(KMR.strings.cutout_mode_avoid),
+        SHIFT(KMR.strings.cutout_mode_shift),
+    }
+
+    enum class DualPageView(val titleRes: StringResource) {
+        NEVER(KMR.strings.dual_page_view_never),
+        ALWAYS(KMR.strings.dual_page_view_always),
+        WIDE(KMR.strings.dual_page_view_wide),
+    }
+    // KMK <--
+
     object ArchiveReaderMode {
         const val LOAD_FROM_FILE = 0
         const val LOAD_INTO_MEMORY = 1
@@ -283,6 +325,13 @@ class ReaderPreferences(
             MR.strings.scale_type_fit_height,
             MR.strings.scale_type_original_size,
             MR.strings.scale_type_smart_fit,
+        )
+
+        val ImageScaleTypeWebGpuViewer = listOf(
+            MR.strings.scale_type_fit_screen,
+            MR.strings.scale_type_fit_width,
+            MR.strings.scale_type_fit_height,
+            MR.strings.scale_type_original_size,
         )
 
         val ZoomStart = listOf(

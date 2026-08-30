@@ -45,6 +45,17 @@ val Options.customDecoder: Boolean
 private val customDecoderKey = Extras.Key(default = false)
 
 // KMK -->
+fun ImageRequest.Builder.newDecoder(enable: Boolean) = apply {
+    extras[newDecoderKey] = enable
+}
+
+val Options.newDecoder: Boolean
+    get() = getExtra(newDecoderKey)
+
+private val newDecoderKey = Extras.Key(default = false)
+// KMK <--
+
+// KMK -->
 /**
  * Calculate the best [Palette.Swatch] from [Palette]
  * @author Jays2Kings

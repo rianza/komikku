@@ -1,7 +1,7 @@
 [versions]
 kotlin_version = "2.4.0"
 serialization_version = "1.11.0"
-xml_serialization_version = "0.91.3"
+xml_serialization_version = "1.0.2"
 coroutines_version = "1.11.0"
 
 [libraries]
@@ -21,7 +21,9 @@ serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-jso
 serialization-json-okio = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-okio", version.ref = "serialization_version" }
 serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "serialization_version" }
 
-serialization-xml-core = { module = "io.github.pdvrieze.xmlutil:core-android", version.ref = "xml_serialization_version" }
+# core-jvm (not core-android) to stay a single module with xmpcore-android,
+# which pulls io.github.pdvrieze.xmlutil:core-jvm transitively via kim.
+serialization-xml-core = { module = "io.github.pdvrieze.xmlutil:core-jvm", version.ref = "xml_serialization_version" }
 serialization-xml = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xml_serialization_version" }
 
 [bundles]
