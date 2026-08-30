@@ -1,7 +1,7 @@
 [versions]
 aboutlib_version = "14.2.1"
 firebase-bom = "34.15.0"
-image-decoder = "9"
+image-decoder = "10"
 junit = "6.0.3"
 kim = "0.34.0"
 ktlint-core = "1.8.0"
@@ -16,7 +16,7 @@ sqldelight = "2.3.2"
 sqlite = "2.6.2"
 voyager = "1.1.0-beta03"
 subsamplingScaleImageView = "94915e6f73"
-webgpuviewer = "s1"
+webgpuviewer = "38"
 
 [libraries]
 desugar = "com.android.tools:desugar_jdk_libs:2.1.5"
@@ -58,7 +58,7 @@ subsamplingscaleimageview = { module = "com.github.mihonapp:subsampling-scale-im
 image-decoder = { module = "ca.mpreg:imagedecoder", version.ref = "image-decoder" }
 
 # KMK -->
-webgpuviewer = { module = "com.github.rianza:webgpuviewer", version.ref = "webgpuviewer" }
+webgpuviewer = { module = "ca.mpreg:webgpuviewer", version.ref = "webgpuviewer" }
 kim = { module = "de.stefan-oltmann:kim", version.ref = "kim" }
 # KMK <--
 
