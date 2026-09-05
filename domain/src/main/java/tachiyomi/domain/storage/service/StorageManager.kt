@@ -36,6 +36,7 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import android.os.storage.StorageManager as AndroidStorageManager
 
 class StorageManager(
@@ -45,38 +46,70 @@ class StorageManager(
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // KMK --> Guards every compound update of [baseDir]: the preference collector and [refresh]
-    // are independent coroutines on the same multi-threaded scope, and both read-then-write it.
+    // KMK --> Guards every compound update of [settled]: the preference collector, [refresh] and
+    // [invalidate] are independent coroutines on the same multi-threaded scope, and all three
+    // read-then-write it.
     private val baseDirMutex = Mutex()
 
-    // Raw-access state of the last resolve+prepare that fully succeeded, so a failed attempt
-    // leaves the next [refresh] free to retry. `null` means nothing has settled yet, which is why
-    // this can never become a terminal state: only success narrows it.
-    @Volatile
-    private var settledRawAccess: Boolean? = null
+    /**
+     * The storage base together with the raw-access state it was validated under.
+     *
+     * Keeping the two in one record makes the no-latch invariant structural: there is no way to
+     * leave a directory committed while its accompanying raw-access state says something else.
+     */
+    private data class SettledStorage(val dir: UniFile, val rawAccess: Boolean)
 
     @Volatile
-    private var baseDir: UniFile? = getBaseDir(storagePreferences.baseStorageDirectory().get())
+    private var settled: SettledStorage? =
+        getBaseDir(storagePreferences.baseStorageDirectory().get())
+            ?.let { SettledStorage(it, hasAllFilesAccess()) }
+
+    /**
+     * Whether the children of [settled] were last seen to be creatable.
+     *
+     * Separate from [settled] because recovery needs a *health* transition, not an identity one:
+     * an SD card pulled or a folder deleted from outside leaves the URI unchanged. Starts false
+     * because the constructor resolves the directory but does not validate it - the init block
+     * below does that.
+     *
+     * [AtomicBoolean] rather than a volatile flag: [invalidate] needs a true -> false CAS so that
+     * two consumers hitting the same broken directory cannot both launch a repair.
+     */
+    private val healthy = AtomicBoolean(false)
+
+    /** Guards the repair throttle in [invalidate]; written only by the winner of that CAS. */
+    @Volatile
+    private var lastRepairAt = 0L
     // KMK <--
 
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
+
+    /**
+     * Emits when consumers must re-read the directories handed out by this class.
+     *
+     * KMK: this can now re-emit for an *unchanged* URI, when a previously broken base dir becomes
+     * usable again. Identity alone cannot express that recovery.
+     */
     val changes = _changes.receiveAsFlow()
         .shareIn(scope, SharingStarted.Lazily, 1)
 
     init {
         // KMK --> Upstream created these inside getBaseDir on every resolution, including the
         // constructor's. Doing it here keeps the .nomedia guarantee without putting SAF writes
-        // on the main thread during Application.onCreate. Guarded so a throwing provider cannot
-        // cancel [scope] and take the preference collector and `changes` flow down with it.
+        // on the main thread during Application.onCreate. Deliberately not routed through
+        // [applyBaseDir]: that would notify on the very first settle and make every cold start
+        // cost a full download-index rescan. Guarded so a throwing provider cannot cancel
+        // [scope] and take the preference collector and `changes` flow down with it.
         scope.launch {
             try {
                 baseDirMutex.withLock {
-                    val dir = baseDir ?: return@withLock
-                    prepareBaseDirectories(dir)
-                    settledRawAccess = hasAllFilesAccess()
+                    val current = settled ?: return@withLock
+                    prepareBaseDirectories(current.dir)
+                    settled = current.copy(rawAccess = hasAllFilesAccess())
+                    healthy.set(true)
                 }
             } catch (e: Throwable) {
-                logcat(LogPriority.ERROR, e) { "Failed to prepare base directories" }
+                this@StorageManager.logcat(LogPriority.ERROR, e) { "Failed to prepare base directories" }
             }
         }
         // KMK <--
@@ -85,14 +118,14 @@ class StorageManager(
             .distinctUntilChanged()
             .onEach { uri ->
                 // KMK --> Notify consumers only when the new location actually resolved. An
-                // unresolvable location still has to be reflected in [baseDir], but telling
+                // unresolvable location still has to be reflected in [settled], but telling
                 // consumers to invalidate would make them discard state describing a location
                 // that is still the last usable one. Guarded so a throwing provider cannot
                 // cancel [scope].
                 val notify = try {
                     baseDirMutex.withLock { applyBaseDir(getBaseDir(uri), hasAllFilesAccess()) }
                 } catch (e: Throwable) {
-                    logcat(LogPriority.ERROR, e) { "Failed to apply storage directory for $uri" }
+                    this@StorageManager.logcat(LogPriority.ERROR, e) { "Failed to apply storage directory for $uri" }
                     false
                 }
                 if (notify) _changes.send(Unit)
@@ -112,75 +145,124 @@ class StorageManager(
     /**
      * Re-resolves the storage backend while the process is alive.
      *
-     * [baseDir] is otherwise only computed at construction and on preference change, so
+     * [settled] is otherwise only computed at construction and on preference change, so
      * "All files access" granted mid-session - which is exactly what the onboarding permission
      * step and the system settings shortcut do - would not take effect until the next cold start.
+     *
+     * The gate is identity **or** health: an unchanged raw-access state is only enough to skip the
+     * work when the last settle is also still healthy. Nothing throttles this - while unhealthy,
+     * every foreground retries, which is what keeps a reported failure from becoming terminal.
      *
      * Safe to call from a lifecycle callback: only the AppOps read happens on the caller's
      * thread, the resolution itself is dispatched to [scope].
      */
     fun refresh() {
-        // Only a raw-access state that differs from the last fully successful one is worth disk
-        // work. A failed attempt never settles, so this gate cannot latch.
         val rawAccess = hasAllFilesAccess()
-        if (rawAccess == settledRawAccess) return
+        if (rawAccess == settled?.rawAccess && healthy.get()) return
 
         scope.launch {
             try {
-                val notify = baseDirMutex.withLock {
-                    val updated = getBaseDir(storagePreferences.baseStorageDirectory().get())
-                    if (updated == null) {
-                        // Nothing is committed and nothing settles, so the next foreground
-                        // retries rather than being locked out with a stale [baseDir].
-                        logcat(LogPriority.WARN) { "Storage backend unresolved; keeping ${baseDir?.uri}" }
-                        return@withLock false
-                    }
-                    applyBaseDir(updated, rawAccess)
-                }
-                if (notify) _changes.send(Unit)
+                reapply(rawAccess)
             } catch (e: Throwable) {
                 // Never let this cancel [scope]; that would silently kill the preference
                 // collector and the `changes` flow for the rest of the process lifetime.
-                logcat(LogPriority.ERROR, e) { "Failed to refresh storage backend" }
+                this@StorageManager.logcat(LogPriority.ERROR, e) { "Failed to refresh storage backend" }
             }
         }
     }
 
     /**
+     * Reports that a directory handed out by this class turned out to be unusable, so the next
+     * [refresh] re-validates instead of trusting the last settle.
+     *
+     * Non-suspending and lock-free, so it is safe to call from a `changes` subscriber or from any
+     * thread that just got a null out of one of the getters.
+     *
+     * The throttle here bounds a consumer that keeps hitting the same broken directory from
+     * launching a repair per call. It deliberately does **not** gate [refresh]: the health flag
+     * stays false, so every foreground still retries for free and a throttled report can never
+     * delay recovery beyond the next foreground. The interval is therefore seconds, not minutes.
+     */
+    fun invalidate(reason: String) {
+        if (!healthy.compareAndSet(true, false)) return
+        this.logcat(LogPriority.WARN) { "Storage directory unusable ($reason); will re-prepare" }
+
+        val now = System.currentTimeMillis()
+        if (now - lastRepairAt < REPAIR_MIN_INTERVAL_MS) return
+        lastRepairAt = now
+
+        scope.launch {
+            try {
+                reapply(hasAllFilesAccess())
+            } catch (e: Throwable) {
+                this@StorageManager.logcat(LogPriority.ERROR, e) { "Failed to repair storage backend" }
+            }
+        }
+    }
+
+    /**
+     * Re-resolves the configured location and re-validates it, shared by [refresh] and
+     * [invalidate].
+     *
+     * A null resolution leaves [settled] alone: the preference has not changed, so the previous
+     * directory is still the best guess and destroying it would only make consumers see nothing.
+     * Health stays false, which keeps the [refresh] gate open for the next attempt.
+     */
+    private suspend fun reapply(rawAccess: Boolean) {
+        val notify = baseDirMutex.withLock {
+            val updated = getBaseDir(storagePreferences.baseStorageDirectory().get())
+            if (updated == null) {
+                healthy.set(false)
+                this@StorageManager.logcat(LogPriority.WARN) {
+                    "Storage backend unresolved; keeping ${settled?.dir?.uri}"
+                }
+                return@withLock false
+            }
+            applyBaseDir(updated, rawAccess)
+        }
+        if (notify) _changes.send(Unit)
+    }
+
+    /**
      * Commits [candidate] as the storage base, and reports whether consumers must be notified.
      *
-     * Every fallible step runs on [candidate] BEFORE a field is written, so a throw leaves both
-     * [baseDir] and [settledRawAccess] exactly as they were. That is what makes the transition
-     * atomic: a partial failure cannot record itself as handled and lock out later retries.
+     * Every fallible step runs on [candidate] BEFORE any state is written, so a throw leaves
+     * [settled] and [healthy] exactly as they were. That is what makes the transition atomic: a
+     * partial failure cannot record itself as handled and lock out later retries.
      *
-     * A null [candidate] means the configured location is unusable. That is reflected in
-     * [baseDir], but [settledRawAccess] is cleared rather than recorded, so a retry stays
-     * possible, and consumers are not notified.
+     * Notifies on a URI change **or** on recovery from an unhealthy state, so a base dir whose
+     * children were repaired reaches consumers even though its URI never moved. It stays silent on
+     * a clean re-settle, which is what keeps a full download-index rescan tied to a real outage.
+     *
+     * A null [candidate] means the configured location is unusable. That is reflected in [settled],
+     * but consumers are not notified, since telling them to invalidate would discard state
+     * describing the last location that did work.
      *
      * Callers must hold [baseDirMutex].
      */
     private fun applyBaseDir(candidate: UniFile?, rawAccess: Boolean): Boolean {
+        val wasHealthy = healthy.get()
         if (candidate == null) {
-            baseDir = null
-            settledRawAccess = null
+            settled = null
+            healthy.set(false)
             return false
         }
 
         prepareBaseDirectories(candidate)
 
-        val previous = baseDir
-        baseDir = candidate
-        settledRawAccess = rawAccess
-        if (candidate.uri == previous?.uri) return false
+        val previous = settled?.dir
+        settled = SettledStorage(candidate, rawAccess)
+        healthy.set(true)
+        if (candidate.uri == previous?.uri && wasHealthy) return false
 
-        logcat { "Storage backend switched: ${previous?.uri} -> ${candidate.uri}" }
+        this.logcat { "Storage backend settled: ${previous?.uri} -> ${candidate.uri}" }
         return true
     }
 
     /**
      * Creates the subdirectories handed out by this class inside [dir].
      *
-     * Takes the directory as a parameter instead of reading [baseDir], so a caller can validate a
+     * Takes the directory as a parameter instead of reading [settled], so a caller can validate a
      * candidate before committing it. Throws if any of them cannot be created - which is the
      * signal the caller needs, since a base dir whose children are missing is not usable.
      */
@@ -193,23 +275,44 @@ class StorageManager(
         }
         DiskUtil.createNoMediaFile(downloads, context)
     }
+
+    /**
+     * Resolves [name] under the settled base dir, reporting the base dir as unhealthy when the
+     * child cannot be created. The `createDirectory` call is the cost the getters already paid, so
+     * detection here is free - which is why recovery is pull-based rather than probed per
+     * foreground.
+     */
+    private fun childDirectory(name: String): UniFile? {
+        val dir = settled?.dir ?: return null
+        val child = dir.createDirectory(name)
+        if (child == null) invalidate("could not create $name in ${dir.uri}")
+        return child
+    }
     // KMK <--
 
     fun getAutomaticBackupsDirectory(): UniFile? {
-        return baseDir?.createDirectory(AUTOMATIC_BACKUPS_PATH)
+        // KMK -->
+        return childDirectory(AUTOMATIC_BACKUPS_PATH)
+        // KMK <--
     }
 
     fun getDownloadsDirectory(): UniFile? {
-        return baseDir?.createDirectory(DOWNLOADS_PATH)
+        // KMK -->
+        return childDirectory(DOWNLOADS_PATH)
+        // KMK <--
     }
 
     fun getLocalSourceDirectory(): UniFile? {
-        return baseDir?.createDirectory(LOCAL_SOURCE_PATH)
+        // KMK -->
+        return childDirectory(LOCAL_SOURCE_PATH)
+        // KMK <--
     }
 
     // SY -->
     fun getLogsDirectory(): UniFile? {
-        return baseDir?.createDirectory(LOGS_PATH)
+        // KMK -->
+        return childDirectory(LOGS_PATH)
+        // KMK <--
     }
     // SY <--
 
@@ -450,6 +553,14 @@ class StorageManager(
 
 // KMK -->
 private const val EXTERNAL_STORAGE_PROVIDER_AUTHORITY = "com.android.externalstorage.documents"
+
+/**
+ * Shortest gap between two repair attempts driven by [StorageManager.invalidate].
+ *
+ * Seconds by design: it only bounds a consumer that keeps reporting the same broken directory. It
+ * never gates [StorageManager.refresh], so recovery is at worst one foreground away regardless.
+ */
+private const val REPAIR_MIN_INTERVAL_MS = 5_000L
 // KMK <--
 private const val AUTOMATIC_BACKUPS_PATH = "autobackup"
 private const val DOWNLOADS_PATH = "downloads"
