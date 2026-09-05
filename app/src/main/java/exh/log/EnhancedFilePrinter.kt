@@ -27,7 +27,9 @@ import com.elvishew.xlog.flattener.Flattener2 as Flattener
  */
 @Suppress("unused")
 class EnhancedFilePrinter internal constructor(
-    private val folder: UniFile,
+    // KMK --> `var` so the folder can follow a mid-session storage backend switch
+    private var folder: UniFile,
+    // KMK <--
     private val fileNameGenerator: FileNameGenerator,
     private val backupStrategy: BackupStrategy,
     private val flattener: Flattener,
@@ -56,7 +58,15 @@ class EnhancedFilePrinter internal constructor(
     /**
      * Do the real job of writing log to file.
      */
+    // KMK --> synchronized against [updateFolder] so the writer cannot be closed between the
+    // lastFileName read and the appendLog call, which would trip appendLog's requireNotNull.
+    @Synchronized
+    // KMK <--
     private fun doPrintln(timeMillis: Long, logLevel: Int, tag: String, msg: String) {
+        // KMK --> No writable folder is known right now; see [updateFolder]. Reopening here
+        // would resurrect the stream on the backend we just stopped using.
+        if (suspended) return
+        // KMK <--
         val lastFileName = writer.lastFileName
         if (fileNameGenerator.isFileNameChangeable) {
             val newFileName = fileNameGenerator.generateFileName(logLevel, System.currentTimeMillis())
@@ -82,6 +92,42 @@ class EnhancedFilePrinter internal constructor(
         val flattenedLog = flattener.flatten(timeMillis, logLevel, tag, msg).toString()
         writer.appendLog(flattenedLog)
     }
+
+    // KMK -->
+    /**
+     * Set while no writable log folder is known, so [doPrintln] stops reopening a stream on the
+     * folder we are supposed to have left. Only touched under the instance monitor.
+     */
+    private var suspended = false
+
+    /**
+     * Re-points this printer at [newFolder], closing the stream currently held on the old one.
+     *
+     * The storage base can switch from a SAF tree to a raw file path while the process is alive.
+     * A writer left open on a SAF document holds a stable ExternalStorageProvider reference for
+     * as long as the stream lives - up to a full day, since it is otherwise only closed on log
+     * file rotation - and that reference is what makes ActivityManager chain-kill the app when
+     * the provider process is reclaimed. So the stream has to be released, not merely the folder
+     * reference replaced. The next log line reopens against [newFolder].
+     *
+     * A null [newFolder] means the new base dir did not resolve. The stream is still closed and
+     * file logging is suspended until a usable folder arrives, because keeping it open would
+     * hold the very reference this exists to drop.
+     */
+    @Synchronized
+    fun updateFolder(newFolder: UniFile?) {
+        if (newFolder != null && !suspended && newFolder.uri == folder.uri) return
+        if (writer.isOpened) {
+            writer.close()
+        }
+        if (newFolder == null) {
+            suspended = true
+        } else {
+            folder = newFolder
+            suspended = false
+        }
+    }
+    // KMK <--
 
     private val maxTimeMillis = 7.days.inWholeMilliseconds
     private fun shouldClean(file: UniFile): Boolean {
@@ -272,7 +318,10 @@ class EnhancedFilePrinter internal constructor(
          */
         fun open(file: UniFile): Boolean {
             return try {
-                bufferedWriter = file.openOutputStream().bufferedWriter()
+                // KMK --> append, not truncate: the file name is per-day, so a reopen within the
+                // same day - a cold start, or a storage backend swap - must not wipe today's log.
+                bufferedWriter = file.openOutputStream(true).bufferedWriter()
+                // KMK <--
                 lastFileName = file.name
                 this.file = file
                 true

@@ -77,6 +77,7 @@ import exh.log.EnhancedFilePrinter
 import exh.log.XLogLogcatLogger
 import exh.log.xLogD
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import logcat.AndroidLogcatLogger
@@ -108,6 +109,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     private val privacyPreferences: PrivacyPreferences by injectLazy()
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
+
+    // KMK --> Kept so the file logger can be re-pointed when the storage backend switches
+    private var logFilePrinter: EnhancedFilePrinter? = null
+    // KMK <--
 
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
@@ -166,6 +171,16 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         val scope = ProcessLifecycleOwner.get().lifecycleScope
+
+        // KMK --> The file logger captures its folder once at boot. Without this, a mid-session
+        // SAF -> direct-file switch would leave it writing through ExternalStorageProvider, which
+        // is the long-lived provider reference that gets the app chain-killed.
+        val storageManager = Injekt.get<StorageManager>()
+        storageManager.changes
+            .onEach { logFilePrinter?.updateFolder(storageManager.getLogsDirectory()) }
+            .flowOn(Dispatchers.IO)
+            .launchIn(scope)
+        // KMK <--
 
         // Show notification to disable Incognito Mode when it's enabled
         basePreferences.incognitoMode().changes()
@@ -302,6 +317,11 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     }
 
     override fun onStart(owner: LifecycleOwner) {
+        // KMK --> "All files access" can be granted while the process is alive (onboarding's
+        // permission step, or the system settings shortcut). Re-resolve the storage backend so
+        // the SAF -> direct-file switch applies without waiting for a cold start.
+        Injekt.get<StorageManager>().refresh()
+        // KMK <--
         SecureActivityDelegate.onApplicationStart()
 
         val syncPreferences: SyncPreferences = Injekt.get()
@@ -381,7 +401,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (logFolder != null) {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
-            printers += EnhancedFilePrinter
+            // KMK --> retained so it can be re-pointed on a storage backend switch
+            val printer = EnhancedFilePrinter
+                // KMK <--
                 .Builder(logFolder) {
                     fileNameGenerator = object : DateFileNameGenerator() {
                         override fun generateFileName(logLevel: Int, timestamp: Long): String {
@@ -396,6 +418,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                     }
                     backupStrategy = NeverBackupStrategy()
                 }
+            // KMK -->
+            logFilePrinter = printer
+            printers += printer
+            // KMK <--
         }
 
         // Install Crashlytics in prod

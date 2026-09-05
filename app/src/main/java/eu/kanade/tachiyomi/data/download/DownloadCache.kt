@@ -117,8 +117,25 @@ class DownloadCache(
                         val diskCache = diskCacheFile.inputStream().use {
                             ProtoBuf.decodeFromByteArray<RootDirectory>(it.readBytes())
                         }
-                        rootDownloadsDir = diskCache
-                        lastRenew = System.currentTimeMillis()
+                        // KMK -->
+                        val currentDownloadsDirUri = storageManager.getDownloadsDirectory()?.uri?.toString()
+                        val diskCacheDirUri = diskCache.dir?.uri?.toString()
+                        if (currentDownloadsDirUri == null) {
+                            // Storage is not resolvable yet (unmounted volume, revoked grant).
+                            // Keep the index untouched; `storageManager.changes` invalidates it
+                            // once the backend actually settles.
+                            logcat(LogPriority.WARN) { "Downloads dir unresolved; keeping disk cache" }
+                        } else if (diskCacheDirUri == currentDownloadsDirUri) {
+                            rootDownloadsDir = diskCache
+                            lastRenew = System.currentTimeMillis()
+                        } else {
+                            // Storage backend changed (e.g. a SAF ExternalStorageProvider URI was
+                            // resolved to a direct file:// path). Do not restore stale UniFile
+                            // entries that would keep depending on the old provider.
+                            logcat { "Storage backend changed; discarding stale download index" }
+                            diskCacheFile.delete()
+                        }
+                        // KMK <--
                     }
                 } catch (e: Throwable) {
                     logcat(LogPriority.ERROR, e) { "Failed to initialize from disk cache" }
