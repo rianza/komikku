@@ -266,9 +266,10 @@ class StorageManager(
     /**
      * Commits [candidate] as the storage base, and reports whether consumers must be notified.
      *
-     * Every fallible step runs on [candidate] BEFORE any state is written, so a throw leaves
-     * [settled] and [healthy] exactly as they were. That is what makes the transition atomic: a
-     * partial failure cannot record itself as handled and lock out later retries.
+     * Every fallible step runs on [candidate] BEFORE [settled] is written, so a throw leaves the
+     * previous location in place. The one exception is [healthy]: if the candidate *is* the settled
+     * directory, a failed validation is a genuine report about it and must be recorded, otherwise a
+     * stale true would later suppress the recovery notify.
      *
      * Notifies on a URI change **or** on recovery from an unhealthy state, so a base dir whose
      * children were repaired reaches consumers even though its URI never moved. It stays silent on
@@ -281,7 +282,6 @@ class StorageManager(
      * Callers must hold [baseDirMutex].
      */
     private fun applyBaseDir(candidate: UniFile?, rawAccess: Boolean): Boolean {
-        val wasHealthy = healthy.get()
         if (candidate == null) {
             settled = null
             healthy.set(false)
@@ -291,7 +291,25 @@ class StorageManager(
         // Sampled before the slow part: a report arriving while we validate must not be overwritten
         // by the health write below.
         val gen = generation.get()
-        prepareBaseDirectories(candidate)
+        try {
+            prepareBaseDirectories(candidate)
+        } catch (e: Throwable) {
+            // Only the settled directory's health is ours to falsify. A candidate that is not yet
+            // settled failing says nothing about the one still in use.
+            //
+            // URI is ACCESS-PATH identity, not folder identity: after a rawAccess flip the same
+            // physical folder shows up as file:// vs content://. So this comparison never tests
+            // "same folder" - the revoked-All-Files-Access case relies on
+            // `settled?.rawAccess != rawAccess` in the [refresh] gate to reopen instead. Do not
+            // drop that rawAccess comparison: it is what carries the load here.
+            if (candidate.uri == settled?.dir?.uri) healthy.set(false)
+            throw e
+        }
+
+        // Read after validation but before publishing: earlier would miss an [invalidate] that
+        // landed during prepare and defer the rescan to the next foreground, later would see
+        // [publishHealthy]'s own write and kill the recovery notify entirely.
+        val wasHealthy = healthy.get()
 
         val previous = settled?.dir
         settled = SettledStorage(candidate, rawAccess)
