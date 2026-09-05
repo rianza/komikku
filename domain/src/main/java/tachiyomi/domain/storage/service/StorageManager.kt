@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +20,7 @@ import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -37,6 +39,8 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import android.os.storage.StorageManager as AndroidStorageManager
 
 class StorageManager(
@@ -69,17 +73,32 @@ class StorageManager(
      *
      * Separate from [settled] because recovery needs a *health* transition, not an identity one:
      * an SD card pulled or a folder deleted from outside leaves the URI unchanged. Starts false
-     * because the constructor resolves the directory but does not validate it - the init block
-     * below does that.
+     * because the constructor resolves the directory but does not validate it - [initialPrepare]
+     * does that.
      *
-     * [AtomicBoolean] rather than a volatile flag: [invalidate] needs a true -> false CAS so that
-     * two consumers hitting the same broken directory cannot both launch a repair.
+     * Invariant: **false always wins.** [invalidate] writes false unconditionally, while
+     * [applyBaseDir] may only write true if no [invalidate] has been observed since its
+     * validation began - see [generation]. Every latch this class ever had came from recording
+     * "already handled" too early, so a failure report is never allowed to lose a race.
      */
     private val healthy = AtomicBoolean(false)
 
-    /** Guards the repair throttle in [invalidate]; written only by the winner of that CAS. */
-    @Volatile
-    private var lastRepairAt = 0L
+    /**
+     * Bumped by every [invalidate]. [applyBaseDir] samples it before validating and refuses to
+     * publish health if it has moved since, which is what stops a slow re-validation from
+     * overwriting a failure reported while it was running.
+     */
+    private val generation = AtomicInteger(0)
+
+    /**
+     * Serialises the repair throttle in [invalidate].
+     *
+     * [AtomicLong] with a compare-and-set rather than a plain field: dropping the CAS on [healthy]
+     * means several reporters can now pass the health write concurrently, so the timestamp swap is
+     * what elects a single repairer. Losing that CAS cannot latch - it only means another thread
+     * is already repairing.
+     */
+    private val lastRepairAt = AtomicLong(0L)
     // KMK <--
 
     private val _changes: Channel<Unit> = Channel(Channel.UNLIMITED)
@@ -93,26 +112,36 @@ class StorageManager(
     val changes = _changes.receiveAsFlow()
         .shareIn(scope, SharingStarted.Lazily, 1)
 
-    init {
-        // KMK --> Upstream created these inside getBaseDir on every resolution, including the
-        // constructor's. Doing it here keeps the .nomedia guarantee without putting SAF writes
-        // on the main thread during Application.onCreate. Deliberately not routed through
-        // [applyBaseDir]: that would notify on the very first settle and make every cold start
-        // cost a full download-index rescan. Guarded so a throwing provider cannot cancel
-        // [scope] and take the preference collector and `changes` flow down with it.
-        scope.launch {
-            try {
-                baseDirMutex.withLock {
-                    val current = settled ?: return@withLock
-                    prepareBaseDirectories(current.dir)
-                    settled = current.copy(rawAccess = hasAllFilesAccess())
-                    healthy.set(true)
-                }
-            } catch (e: Throwable) {
-                this@StorageManager.logcat(LogPriority.ERROR, e) { "Failed to prepare base directories" }
+    // KMK -->
+    /**
+     * The first validation pass over the directory resolved by the constructor.
+     *
+     * Deliberately not routed through [applyBaseDir]: that would notify on the very first settle
+     * and cost every cold start a full download-index rescan. [reapply] joins this for the same
+     * reason - an early foreground [refresh] that won the mutex first would re-settle the same URI
+     * while health was still false, and notify.
+     *
+     * Upstream created these directories inside `getBaseDir` on every resolution, including the
+     * constructor's; doing it here keeps the `.nomedia` guarantee without putting SAF writes on
+     * the main thread during `Application.onCreate`. Guarded so a throwing provider cannot cancel
+     * [scope] and take the preference collector and `changes` flow down with it.
+     */
+    private val initialPrepare: Job = scope.launch {
+        try {
+            baseDirMutex.withLock {
+                val current = settled ?: return@withLock
+                val gen = generation.get()
+                prepareBaseDirectories(current.dir)
+                settled = current.copy(rawAccess = hasAllFilesAccess())
+                publishHealthy(gen)
             }
+        } catch (e: Throwable) {
+            this@StorageManager.logcat(LogPriority.ERROR, e) { "Failed to prepare base directories" }
         }
-        // KMK <--
+    }
+    // KMK <--
+
+    init {
         storagePreferences.baseStorageDirectory().changes()
             .drop(1)
             .distinctUntilChanged()
@@ -184,12 +213,18 @@ class StorageManager(
      * delay recovery beyond the next foreground. The interval is therefore seconds, not minutes.
      */
     fun invalidate(reason: String) {
-        if (!healthy.compareAndSet(true, false)) return
+        // Unconditional, and before the health write: a failure report must always win, otherwise a
+        // process that never sees ON_START - a WorkManager-only one, say - has no way back.
+        generation.incrementAndGet()
+        healthy.set(false)
         this.logcat(LogPriority.WARN) { "Storage directory unusable ($reason); will re-prepare" }
 
-        val now = System.currentTimeMillis()
-        if (now - lastRepairAt < REPAIR_MIN_INTERVAL_MS) return
-        lastRepairAt = now
+        val now = SystemClock.elapsedRealtime()
+        val prev = lastRepairAt.get()
+        if (now - prev < REPAIR_MIN_INTERVAL_MS) return
+        // Elects a single repairer now that the health write no longer serialises reporters.
+        // Losing here cannot latch: it means another thread is already repairing.
+        if (!lastRepairAt.compareAndSet(prev, now)) return
 
         scope.launch {
             try {
@@ -209,6 +244,11 @@ class StorageManager(
      * Health stays false, which keeps the [refresh] gate open for the next attempt.
      */
     private suspend fun reapply(rawAccess: Boolean) {
+        // Wait for the constructor's validation pass. Without this, a foreground refresh can win
+        // the mutex first, re-settle the same URI while health is still false, and notify - which
+        // costs a full download-index rescan on every cold start.
+        initialPrepare.join()
+
         val notify = baseDirMutex.withLock {
             val updated = getBaseDir(storagePreferences.baseStorageDirectory().get())
             if (updated == null) {
@@ -248,15 +288,32 @@ class StorageManager(
             return false
         }
 
+        // Sampled before the slow part: a report arriving while we validate must not be overwritten
+        // by the health write below.
+        val gen = generation.get()
         prepareBaseDirectories(candidate)
 
         val previous = settled?.dir
         settled = SettledStorage(candidate, rawAccess)
-        healthy.set(true)
+        publishHealthy(gen)
         if (candidate.uri == previous?.uri && wasHealthy) return false
 
         this.logcat { "Storage backend settled: ${previous?.uri} -> ${candidate.uri}" }
         return true
+    }
+
+    /**
+     * Publishes health only if no [invalidate] has been observed since [gen] was sampled, then
+     * re-checks and stands down if one landed in between.
+     *
+     * Both halves are needed: the first check covers a report during validation, the re-check
+     * covers one that lands between the check and the write. Together they make "false always
+     * wins" hold without [invalidate] needing a lock.
+     */
+    private fun publishHealthy(gen: Int) {
+        if (generation.get() != gen) return
+        healthy.set(true)
+        if (generation.get() != gen) healthy.set(false)
     }
 
     /**
