@@ -142,7 +142,11 @@ fun LibraryPager(
             // LibraryDisplayMode.default (CompactGrid, showTitle = true) instead and log the
             // incoming class name so it can be resolved through mapping.txt.
             else -> {
-                this.logcat(LogPriority.ERROR, tag = "LibraryPager") { "Unexpected LibraryDisplayMode: ${displayMode.javaClass.name}" }
+                // ?. and ?: "null" is an intentional canary — displayMode is guaranteed non-null.
+                // throughout the preference chain (AndroidPreference.read ?: default, deserializer.
+                // else -> default, PreferenceMutableState init non-null; see review b466c349e).
+                // If this log ever prints "null", the type contract is broken upstream.
+                this.logcat(LogPriority.ERROR, tag = "LibraryPager") { "Unexpected LibraryDisplayMode: ${displayMode?.javaClass?.name ?: "null"}" }
                 LibraryCompactGrid(
                     items = items,
                     showTitle = true,
