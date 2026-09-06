@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.tachiyomi.ui.library.LibraryItem
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryManga
@@ -131,6 +133,27 @@ fun LibraryPager(
                     searchQuery = searchQuery,
                     onGlobalSearchClicked = onGlobalSearchClicked,
                     usePanoramaCover = true,
+                )
+            }
+            // KMK <--
+            // KMK -->
+            // Defensive fallback: a value outside the five known singletons used to throw
+            // NoWhenBranchMatchedException and take down the whole app. Render
+            // LibraryDisplayMode.default (CompactGrid, showTitle = true) instead and log the
+            // incoming class name so it can be resolved through mapping.txt.
+            else -> {
+                this.logcat(LogPriority.ERROR, tag = "LibraryPager") { "Unexpected LibraryDisplayMode: ${displayMode.javaClass.name}" }
+                LibraryCompactGrid(
+                    items = items,
+                    showTitle = true,
+                    columns = columns,
+                    contentPadding = contentPadding,
+                    selection = selection,
+                    onClick = onClickManga,
+                    onLongClick = onLongClickManga,
+                    onClickContinueReading = onClickContinueReading,
+                    searchQuery = searchQuery,
+                    onGlobalSearchClicked = onGlobalSearchClicked,
                 )
             }
             // KMK <--
