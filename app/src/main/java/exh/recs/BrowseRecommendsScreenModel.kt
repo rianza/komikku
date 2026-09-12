@@ -1,8 +1,7 @@
 package exh.recs
 
-import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.tachiyomi.source.model.FilterList
-import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel
+import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.recs.sources.RECOMMENDS_SOURCE
 import exh.recs.sources.RecommendationPagingSource
@@ -23,7 +22,7 @@ import uy.kohesive.injekt.api.get
 class BrowseRecommendsScreenModel(
     private val args: BrowseRecommendsScreen.Args,
     private val getManga: GetManga = Injekt.get(),
-) : BrowseSourceScreenModel(
+) : BrowseSourceViewModel(
     sourceId = when (args) {
         is BrowseRecommendsScreen.Args.SingleSourceManga -> args.sourceId
         is BrowseRecommendsScreen.Args.MergedSourceMangas -> args.results.recAssociatedSourceId ?: RECOMMENDS_SOURCE
@@ -33,7 +32,7 @@ class BrowseRecommendsScreenModel(
     private var manga: Manga? = null
 
     init {
-        screenModelScope.launchIO {
+        viewModelScope.launchIO {
             manga = when (args) {
                 is BrowseRecommendsScreen.Args.SingleSourceManga -> getManga.await(args.mangaId)
                 is BrowseRecommendsScreen.Args.MergedSourceMangas -> null

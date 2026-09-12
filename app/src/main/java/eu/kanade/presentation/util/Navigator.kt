@@ -15,15 +15,12 @@ import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransitionContent
-import eu.kanade.tachiyomi.util.system.isPreviewBuildType
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.plus
-import logcat.LogPriority
-import logcat.logcat
 import soup.compose.material.motion.animation.materialSharedAxisX
 import soup.compose.material.motion.animation.rememberSlideDistance
 
@@ -47,10 +44,15 @@ abstract class Screen : Screen {
     override val key: ScreenKey = "$uniqueScreenKey#${this::class.simpleName}"
 }
 
+interface AssistContentScreen {
+    fun onProvideAssistUrl(): String?
+}
+
 /**
  * A variant of ScreenModel.coroutineScope except with the IO dispatcher instead of the
  * main dispatcher.
  */
+// KMK --> kept for remaining exh/KMK ScreenModels that were not migrated to ViewModel
 val ScreenModel.ioCoroutineScope: CoroutineScope
     get() = ScreenModelStore.getOrPutDependency(
         screenModel = this,
@@ -58,10 +60,7 @@ val ScreenModel.ioCoroutineScope: CoroutineScope
         factory = { key -> CoroutineScope(Dispatchers.IO + SupervisorJob()) + CoroutineName(key) },
         onDispose = { scope -> scope.cancel() },
     )
-
-interface AssistContentScreen {
-    fun onProvideAssistUrl(): String?
-}
+// KMK <--
 
 @Composable
 fun DefaultNavigatorScreenTransition(
