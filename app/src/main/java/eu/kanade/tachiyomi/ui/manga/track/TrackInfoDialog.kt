@@ -177,84 +177,19 @@ data class TrackInfoDialogHomeScreen(
                 if (it.tracker is EnhancedTracker) {
                     viewModel.registerEnhancedTracking(it)
                 } else {
-                    navigator.push(
-                        TrackerSearchScreen(
-                            mangaId = mangaId,
-                            initialQuery = it.track?.title ?: mangaTitle,
-                            currentUrl = it.track?.remoteUrl,
-                            serviceId = it.tracker.id,
-                        ),
-                    )
+                    // SY -->
+                    viewModel.newSearch(navigator, it, mangaTitle)
+                    // SY <--
                 }
-            }
-            // SY <--
-            else {
-                TrackInfoDialogHome(
-                    trackItems = state.trackItems,
-                    dateFormat = dateFormat,
-                    onStatusClick = {
-                        navigator.push(
-                            TrackStatusSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
-                    },
-                    onChapterClick = {
-                        navigator.push(
-                            TrackChapterSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
-                    },
-                    onScoreClick = {
-                        navigator.push(
-                            TrackScoreSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
-                    },
-                    onStartDateEdit = {
-                        navigator.push(
-                            TrackDateSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                                start = true,
-                            ),
-                        )
-                    },
-                    onEndDateEdit = {
-                        navigator.push(
-                            TrackDateSelectorScreen(
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                                start = false,
-                            ),
-                        )
-                    },
-                    onNewSearch = {
-                        if (it.tracker is EnhancedTracker) {
-                            viewModel.registerEnhancedTracking(it)
-                        } else {
-                            // SY -->
-                            viewModel.newSearch(navigator, it, mangaTitle)
-                            // SY <--
-                        }
-                    },
-                    onOpenInBrowser = { openTrackerInBrowser(context, it) },
-                    onRemoved = {
-                        navigator.push(
-                            TrackerRemoveScreen(
-                                mangaId = mangaId,
-                                track = it.track!!,
-                                serviceId = it.tracker.id,
-                            ),
-                        )
-                    },
-                    onCopyLink = { context.copyTrackerLink(it) },
-                    onTogglePrivate = viewModel::togglePrivate,
+            },
+            onOpenInBrowser = { openTrackerInBrowser(context, it) },
+            onRemoved = {
+                navigator.push(
+                    TrackerRemoveScreen(
+                        mangaId = mangaId,
+                        track = it.track!!,
+                        serviceId = it.tracker.id,
+                    ),
                 )
             },
             onCopyLink = { context.copyTrackerLink(it) },

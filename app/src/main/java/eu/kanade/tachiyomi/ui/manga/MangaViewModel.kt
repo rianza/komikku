@@ -528,7 +528,7 @@ class MangaViewModel(
                         PagePreviewState.Unused
                     },
                     alwaysShowReadingProgress =
-                        readerPreferences.preserveReadingPosition().get() && manga.is EhBasedManga(),
+                        readerPreferences.preserveReadingPosition().get() && manga.isEhBasedManga(),
                     previewsRowCount = uiPreferences.previewsRowCount().get(),
                     // SY <--
                 )
