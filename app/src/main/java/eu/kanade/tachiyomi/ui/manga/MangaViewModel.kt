@@ -10,7 +10,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.State as RuntimeState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.toMutableStateList
@@ -89,8 +88,6 @@ import exh.source.isEhBasedManga
 import exh.source.mangaDexSourceIds
 import exh.util.nullIfEmpty
 import exh.util.trimOrNull
-import java.io.File
-import kotlin.math.floor
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableList
@@ -176,6 +173,9 @@ import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import java.io.File
+import kotlin.math.floor
+import androidx.compose.runtime.State as RuntimeState
 
 class MangaViewModel(
     private val context: Context,
@@ -528,7 +528,7 @@ class MangaViewModel(
                         PagePreviewState.Unused
                     },
                     alwaysShowReadingProgress =
-                        readerPreferences.preserveReadingPosition().get() && manga.isEhBasedManga(),
+                        readerPreferences.preserveReadingPosition().get() && manga.is EhBasedManga(),
                     previewsRowCount = uiPreferences.previewsRowCount().get(),
                     // SY <--
                 )
