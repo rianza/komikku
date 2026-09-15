@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.library
 
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.preference.asState
