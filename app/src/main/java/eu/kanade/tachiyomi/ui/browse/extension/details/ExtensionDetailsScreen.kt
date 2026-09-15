@@ -46,6 +46,21 @@ data class ExtensionDetailsScreen(
             navigateUp = navigator::pop,
             state = state,
             onClickSourcePreferences = { navigator.push(SourcePreferencesScreen(it)) },
+            // KMK -->
+            onOpenWebView = if (source != null && source is HttpSource) {
+                {
+                    navigator.push(
+                        WebViewScreen(
+                            url = source.baseUrl,
+                            initialTitle = source.name,
+                            sourceId = source.id,
+                        ),
+                    )
+                }
+            } else {
+                null
+            },
+            // KMK <--
             onClickEnableAll = { viewModel.toggleSources(true) },
             onClickDisableAll = { viewModel.toggleSources(false) },
             onClickClearCookies = viewModel::clearCookies,

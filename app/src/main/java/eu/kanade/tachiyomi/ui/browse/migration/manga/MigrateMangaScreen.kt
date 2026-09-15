@@ -158,11 +158,6 @@ data class MigrateMangaScreen(
                         }
                     },
                     // KMK <--
-                    onClick = {
-                        val selection = state.selection
-                        viewModel.clearSelection()
-                        navigator.push(MigrationConfigScreen(selection))
-                    },
                 )
             },
             // KMK <--

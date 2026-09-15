@@ -36,4 +36,4 @@ test-espresso-core = "androidx.test.espresso:espresso-core:3.7.0"
 test-uiautomator = "androidx.test.uiautomator:uiautomator:2.4.0"
 
 [bundles]
-lifecycle = ["lifecycle-common", "lifecycle-process", "lifecycle-runtimektx"]
+lifecycle = ["lifecycle-common", "lifecycle-process", "lifecycle-runtimektx", "lifecycle-viewmodel", "lifecycle-viewmodel-compose"]

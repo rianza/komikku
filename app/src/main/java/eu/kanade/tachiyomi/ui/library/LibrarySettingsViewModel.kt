@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import kotlinx.coroutines.flow.SharingStarted

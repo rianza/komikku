@@ -50,11 +50,11 @@ fun extensionsTab(
                 title = stringResource(KMR.strings.action_toggle_nsfw_only),
                 icon = Icons.Outlined._18UpRating,
                 iconTint = if (state.nsfwOnly) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                onClick = { extensionsScreenModel.toggleNsfwOnly() },
+                onClick = { extensionsViewModel.toggleNsfwOnly() },
             ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.action_webview_refresh),
-                onClick = extensionsScreenModel::findAvailableExtensions,
+                onClick = extensionsViewModel::findAvailableExtensions,
             ),
             // KMK <--
             AppBar.OverflowAction(

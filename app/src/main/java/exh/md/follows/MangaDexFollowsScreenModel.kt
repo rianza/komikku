@@ -1,5 +1,8 @@
 package exh.md.follows
 
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel
@@ -14,10 +17,10 @@ import tachiyomi.domain.source.repository.SourcePagingSource
 class MangaDexFollowsScreenModel(sourceId: Long) : BrowseSourceViewModel(sourceId, null) {
 
     companion object {
-        val SOURCE_ID_KEY = androidx.lifecycle.viewmodel.CreationExtras.Key<Long>()
+        val SOURCE_ID_KEY = CreationExtras.Key<Long>()
 
-        val Factory = androidx.lifecycle.viewmodel.viewModelFactory {
-            androidx.lifecycle.viewmodel.initializer {
+        val Factory = viewModelFactory {
+            initializer {
                 MangaDexFollowsScreenModel(
                     sourceId = get(SOURCE_ID_KEY)!!,
                 )

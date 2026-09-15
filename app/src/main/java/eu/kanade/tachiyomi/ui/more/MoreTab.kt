@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -111,8 +112,8 @@ internal class MoreViewModel(
     // SY <--
 ) : ViewModel() {
 
-    var downloadedOnly by preferences.downloadedOnly.asState(viewModelScope)
-    var incognitoMode by preferences.incognitoMode.asState(viewModelScope)
+    var downloadedOnly by preferences.downloadedOnly().asState(viewModelScope)
+    var incognitoMode by preferences.incognitoMode().asState(viewModelScope)
 
     // SY -->
     val showNavUpdates by uiPreferences.showNavUpdates().asState(viewModelScope)

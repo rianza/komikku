@@ -3,6 +3,10 @@ package eu.kanade.tachiyomi.ui.download
 import android.view.MenuItem
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import cafe.adriel.voyager.navigator.Navigator
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
@@ -27,7 +31,24 @@ import uy.kohesive.injekt.api.get
 
 class DownloadQueueViewModel(
     private val downloadManager: DownloadManager = Injekt.get(),
+    // KMK -->
+    private val navigator: Navigator? = null,
+    // KMK <--
 ) : ViewModel() {
+
+    companion object {
+        // KMK -->
+        val NAVIGATOR_KEY = CreationExtras.Key<Navigator?>()
+
+        val Factory = viewModelFactory {
+            initializer {
+                DownloadQueueViewModel(
+                    navigator = get(NAVIGATOR_KEY),
+                )
+            }
+        }
+        // KMK <--
+    }
 
     private val _state = MutableStateFlow(emptyList<DownloadHeaderItem>())
     val state = _state.asStateFlow()

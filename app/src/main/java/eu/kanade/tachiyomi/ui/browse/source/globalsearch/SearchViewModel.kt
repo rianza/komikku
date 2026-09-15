@@ -73,7 +73,7 @@ abstract class SearchViewModel(
 
     init {
         viewModelScope.launch {
-            preferences.globalSearchFilterState.changes().collectLatest { state ->
+            preferences.globalSearchFilterState().changes().collectLatest { state ->
                 mutableState.update { it.copy(onlyShowHasResults = state) }
             }
         }

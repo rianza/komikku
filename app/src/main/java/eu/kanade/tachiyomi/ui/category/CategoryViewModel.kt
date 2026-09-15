@@ -28,6 +28,9 @@ class CategoryViewModel(
     private val deleteCategory: DeleteCategory = Injekt.get(),
     private val reorderCategory: ReorderCategory = Injekt.get(),
     private val renameCategory: RenameCategory = Injekt.get(),
+    // KMK -->
+    private val hideCategory: HideCategory = Injekt.get(),
+    // KMK <--
 ) : StateViewModel<CategoryScreenState>(CategoryScreenState.Loading) {
 
     private val _events: Channel<CategoryEvent> = Channel()

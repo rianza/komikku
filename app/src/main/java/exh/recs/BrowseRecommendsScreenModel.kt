@@ -1,5 +1,9 @@
 package exh.recs
 
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel
 import exh.metadata.metadata.RaisedSearchMetadata
@@ -29,6 +33,18 @@ class BrowseRecommendsScreenModel(
     },
     listingQuery = null,
 ) {
+    companion object {
+        val ARGS_KEY = CreationExtras.Key<BrowseRecommendsScreen.Args>()
+
+        val Factory = viewModelFactory {
+            initializer {
+                BrowseRecommendsScreenModel(
+                    args = get(ARGS_KEY)!!,
+                )
+            }
+        }
+    }
+
     private var manga: Manga? = null
 
     init {

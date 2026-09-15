@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.recyclerview.widget.LinearLayoutManager
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -68,7 +69,12 @@ object DownloadQueueScreen : Screen() {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
-        val viewModel = viewModel<DownloadQueueViewModel>()
+        val viewModel = viewModel<DownloadQueueViewModel>(
+            factory = DownloadQueueViewModel.Factory,
+            extras = CreationExtras {
+                set(DownloadQueueViewModel.NAVIGATOR_KEY, navigator)
+            },
+        )
         val downloadList by viewModel.state.collectAsState()
         val downloadCount by remember {
             derivedStateOf { downloadList.sumOf { it.subItems.size } }
@@ -256,7 +262,12 @@ object DownloadQueueScreen : Screen() {
                     modifier = Modifier.fillMaxWidth(),
                     factory = { context ->
                         viewModel.controllerBinding = DownloadListBinding.inflate(LayoutInflater.from(context))
-                        viewModel.adapter = DownloadAdapter(viewModel.listener)
+                        viewModel.adapter = DownloadAdapter(
+                            viewModel.listener,
+                            // KMK -->
+                            colorScheme,
+                            // KMK <--
+                        )
                         viewModel.controllerBinding.root.adapter = viewModel.adapter
                         viewModel.adapter?.isHandleDragEnabled = true
                         viewModel.controllerBinding.root.layoutManager = LinearLayoutManager(context)

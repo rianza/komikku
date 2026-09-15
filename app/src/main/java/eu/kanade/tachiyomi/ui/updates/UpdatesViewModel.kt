@@ -76,7 +76,7 @@ class UpdatesViewModel(
     private val _events: Channel<Event> = Channel(Int.MAX_VALUE)
     val events: Flow<Event> = _events.receiveAsFlow()
 
-    val lastUpdated by libraryPreferences.lastUpdatedTimestamp.asState(viewModelScope)
+    val lastUpdated by libraryPreferences.lastUpdatedTimestamp().asState(viewModelScope)
 
     // SY -->
     val preserveReadingPosition by readerPreferences.preserveReadingPosition().asState(viewModelScope)

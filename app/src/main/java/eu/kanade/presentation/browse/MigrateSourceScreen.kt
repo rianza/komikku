@@ -36,6 +36,9 @@ import eu.kanade.domain.source.interactor.SetMigrateSorting
 import eu.kanade.domain.source.model.installedExtension
 import eu.kanade.presentation.browse.components.BaseSourceItem
 import eu.kanade.presentation.browse.components.SourceIcon
+import eu.kanade.presentation.components.AnimatedFloatingSearchBox
+import eu.kanade.presentation.components.SOURCE_SEARCH_BOX_HEIGHT
+import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceViewModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import exh.source.ExhPreferences

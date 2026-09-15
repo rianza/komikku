@@ -54,14 +54,14 @@ class CategoryScreen : Screen() {
                 CategoryCreateDialog(
                     onDismissRequest = viewModel::dismissDialog,
                     onCreate = viewModel::createCategory,
-                    categories = successState.categories.fastMap { it.name },
+                    categories = successState.categories.fastMap { it.name }.toImmutableList(),
                 )
             }
             is CategoryDialog.Rename -> {
                 CategoryRenameDialog(
                     onDismissRequest = viewModel::dismissDialog,
                     onRename = { viewModel.renameCategory(dialog.category, it) },
-                    categories = successState.categories.fastMap { it.name },
+                    categories = successState.categories.fastMap { it.name }.toImmutableList(),
                     category = dialog.category.name,
                 )
             }

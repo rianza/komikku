@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.history
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.util.fastFilter
 import androidx.lifecycle.viewModelScope
 import eu.kanade.core.util.insertSeparators
 import eu.kanade.domain.manga.interactor.UpdateManga
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.core.common.utils.mutate
 import mihon.core.viewmodel.StateViewModel
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState

@@ -453,7 +453,7 @@ class ReaderActivity : BaseActivity() {
                         mutableStateOf(viewModel.getChapters().toImmutableList())
                     }
                     ChapterListDialog(
-                        onDismissRequest = onDismissDialog,
+                        onDismissRequest = onDismissRequest,
                         viewModel = settingsViewModel,
                         chapters = chapters,
                         onClickChapter = {

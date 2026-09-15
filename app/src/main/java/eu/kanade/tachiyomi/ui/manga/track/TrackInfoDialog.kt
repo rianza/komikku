@@ -218,7 +218,19 @@ data class TrackInfoDialogHomeScreen(
         private val mangaId: Long,
         private val sourceId: Long,
         private val getTracks: GetTracks = Injekt.get(),
+        // SY -->
+        private val trackerManager: TrackerManager = Injekt.get(),
+        private val trackPreferences: TrackPreferences = Injekt.get(),
+        // SY <--
+        // KMK -->
+        private val sourceManager: SourceManager = Injekt.get(),
+        // KMK <--
     ) : StateViewModel<Model.State>(State()) {
+        // KMK -->
+        private val getFlatMetadataById: GetFlatMetadataById by injectLazy()
+        private val getMangaById: GetManga by injectLazy()
+        private val getMergedReferencesById: GetMergedReferencesById by injectLazy()
+        // KMK <--
 
         companion object {
             val MANGA_ID_KEY = CreationExtras.Key<Long>()

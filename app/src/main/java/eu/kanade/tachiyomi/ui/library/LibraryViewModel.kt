@@ -126,6 +126,8 @@ import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import kotlin.random.Random
+import tachiyomi.domain.source.model.Source as DomainSource
 
 class LibraryViewModel(
     private val getLibraryManga: GetLibraryManga = Injekt.get(),

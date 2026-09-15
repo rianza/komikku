@@ -27,6 +27,10 @@ class UpcomingViewModel(
     private val getUpcomingManga: GetUpcomingManga = Injekt.get(),
 ) : StateViewModel<UpcomingViewModel.State>(State()) {
 
+    // KMK -->
+    private val libraryPreferences: LibraryPreferences = Injekt.get()
+    // KMK <--
+
     init {
         viewModelScope.launch {
             getUpcomingManga.subscribe().collectLatest {

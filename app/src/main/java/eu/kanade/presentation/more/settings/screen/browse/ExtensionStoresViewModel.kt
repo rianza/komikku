@@ -78,7 +78,7 @@ class ExtensionStoresViewModel(
      *
      * @param indexUrl The baseUrl of the repo to create.
      */
-    fun createRepo(baseUrl: String) {
+    fun createRepo(indexUrl: String) {
         viewModelScope.launch {
             updateSuccessState {
                 it.copy(

@@ -184,6 +184,10 @@ data object LibraryTab : Tab {
                     // SY <--
                     searchQuery = state.searchQuery,
                     onSearchQueryChange = viewModel::search,
+                    onInvalidateDownloadCache = { context ->
+                        Injekt.get<DownloadCache>().invalidateCache()
+                        context.toast(MR.strings.download_cache_invalidated)
+                    },
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
                 )
