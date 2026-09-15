@@ -1,8 +1,11 @@
 package exh.md.follows
 
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.all.MangaDex
-import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel
+import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel
 import exh.metadata.metadata.RaisedSearchMetadata
 import exh.source.getMainSource
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +14,19 @@ import kotlinx.coroutines.flow.update
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.repository.SourcePagingSource
 
-class MangaDexFollowsScreenModel(sourceId: Long) : BrowseSourceScreenModel(sourceId, null) {
+class MangaDexFollowsScreenModel(sourceId: Long) : BrowseSourceViewModel(sourceId, null) {
+
+    companion object {
+        val SOURCE_ID_KEY = CreationExtras.Key<Long>()
+
+        val Factory = viewModelFactory {
+            initializer {
+                MangaDexFollowsScreenModel(
+                    sourceId = get(SOURCE_ID_KEY)!!,
+                )
+            }
+        }
+    }
 
     override fun createSourcePagingSource(query: String, filters: FilterList): SourcePagingSource {
         return MangaDexFollowsPagingSource(source.getMainSource() as MangaDex)

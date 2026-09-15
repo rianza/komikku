@@ -56,7 +56,7 @@ import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionUiModel
-import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsScreenModel
+import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import eu.kanade.tachiyomi.util.system.launchRequestPackageInstallsPermission
 import kotlinx.collections.immutable.persistentListOf
@@ -80,7 +80,7 @@ import tachiyomi.presentation.core.util.secondaryItemAlpha
 
 @Composable
 fun ExtensionScreen(
-    state: ExtensionsScreenModel.State,
+    state: ExtensionsViewModel.State,
     contentPadding: PaddingValues,
     searchQuery: String?,
     onLongClickItem: (Extension) -> Unit,
@@ -142,7 +142,7 @@ fun ExtensionScreen(
 
 @Composable
 private fun ExtensionContent(
-    state: ExtensionsScreenModel.State,
+    state: ExtensionsViewModel.State,
     contentPadding: PaddingValues,
     onLongClickItem: (Extension) -> Unit,
     onClickItemCancel: (Extension) -> Unit,

@@ -28,8 +28,8 @@ import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.util.animateItemFastScroll
-import eu.kanade.tachiyomi.ui.history.HistoryScreenModel
-import eu.kanade.tachiyomi.ui.history.HistoryScreenModel.HistorySelectionOptions
+import eu.kanade.tachiyomi.ui.history.HistoryViewModel
+import eu.kanade.tachiyomi.ui.history.HistoryViewModel.HistorySelectionOptions
 import kotlinx.collections.immutable.persistentListOf
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
@@ -44,13 +44,13 @@ import java.time.LocalDate
 
 @Composable
 fun HistoryScreen(
-    state: HistoryScreenModel.State,
+    state: HistoryViewModel.State,
     snackbarHostState: SnackbarHostState,
     onSearchQueryChange: (String?) -> Unit,
     onClickCover: (mangaId: Long) -> Unit,
     onClickResume: (mangaId: Long, chapterId: Long) -> Unit,
     onClickFavorite: (mangaId: Long) -> Unit,
-    onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
+    onDialogChange: (HistoryViewModel.Dialog?) -> Unit,
     // KMK -->
     toggleSelectionMode: () -> Unit,
     onSelectAll: (Boolean) -> Unit,
@@ -74,7 +74,7 @@ fun HistoryScreen(
                     onCancelActionMode = toggleSelectionMode,
                     onClickSelectAll = { onSelectAll(true) },
                     onClickInvertSelection = onInvertSelection,
-                    onClickClearHistory = { onDialogChange(HistoryScreenModel.Dialog.Delete(state.selected)) },
+                    onClickClearHistory = { onDialogChange(HistoryViewModel.Dialog.Delete(state.selected)) },
                 )
                 // KMK <--
                 else -> SearchToolbar(
@@ -135,7 +135,7 @@ fun HistoryScreen(
                     contentPadding = contentPadding,
                     onClickCover = { history -> onClickCover(history.mangaId) },
                     onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
-                    onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
+                    onClickDelete = { item -> onDialogChange(HistoryViewModel.Dialog.Delete(item)) },
                     onClickFavorite = { history -> onClickFavorite(history.mangaId) },
                     // KMK -->
                     selectionMode = state.selectionMode,
@@ -151,7 +151,7 @@ fun HistoryScreen(
 @Composable
 private fun HistoryScreenContent(
     // KMK -->
-    state: HistoryScreenModel.State,
+    state: HistoryViewModel.State,
 
     history: List<HistoryUiModel>,
     contentPadding: PaddingValues,
@@ -288,8 +288,8 @@ private fun HistorySelectionToolbar(
 @PreviewLightDark
 @Composable
 internal fun HistoryScreenPreviews(
-    @PreviewParameter(HistoryScreenModelStateProvider::class)
-    historyState: HistoryScreenModel.State,
+    @PreviewParameter(HistoryviewModelStateProvider::class)
+    historyState: HistoryViewModel.State,
 ) {
     TachiyomiPreviewTheme {
         HistoryScreen(

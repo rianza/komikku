@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
@@ -145,25 +147,34 @@ class MangaScreen(
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
+        // KMK -->
         val lifecycleOwner = LocalLifecycleOwner.current
-        val screenModel = rememberScreenModel {
-            MangaScreenModel(
-                context = context,
-                lifecycle = lifecycleOwner.lifecycle,
-                mangaId = mangaId,
-                isFromSource = fromSource,
-                smartSearched = smartSearchConfig != null,
-            )
-        }
+        // KMK <--
+        val viewModel = viewModel<MangaViewModel>(
+            // KMK -->
+            key = "manga-$mangaId",
+            // KMK <--
+            factory = MangaViewModel.Factory,
+            extras = CreationExtras {
+                set(MangaViewModel.MANGA_ID_KEY, mangaId)
+                set(MangaViewModel.IS_FROM_SOURCE_KEY, fromSource)
+                // SY -->
+                set(MangaViewModel.SMART_SEARCHED_KEY, smartSearchConfig != null)
+                // SY <--
+                // KMK -->
+                set(MangaViewModel.LIFECYCLE_KEY, lifecycleOwner.lifecycle)
+                // KMK <--
+            },
+        )
 
-        val state by screenModel.state.collectAsStateWithLifecycle()
+        val state by viewModel.state.collectAsStateWithLifecycle()
 
-        if (state is MangaScreenModel.State.Loading) {
+        if (state is MangaViewModel.State.Loading) {
             LoadingScreen()
             return
         }
 
-        val successState = state as MangaScreenModel.State.Success
+        val successState = state as MangaViewModel.State.Success
 
         // KMK -->
         val bulkFavoriteScreenModel = rememberScreenModel { BulkFavoriteScreenModel() }
@@ -185,7 +196,7 @@ class MangaScreen(
             ) { showRelatedMangasScreen ->
                 when (showRelatedMangasScreen) {
                     true -> RelatedMangasScreen(
-                        screenModel = screenModel,
+                        screenModel = viewModel,
                         successState = successState,
                         bulkFavoriteScreenModel = bulkFavoriteScreenModel,
                         navigateUp = { showingRelatedMangasScreen.value = false },
@@ -194,7 +205,7 @@ class MangaScreen(
                     )
                     false -> MangaDetailContent(
                         context = context,
-                        screenModel = screenModel,
+                        screenModel = viewModel,
                         successState = successState,
                         bulkFavoriteScreenModel = bulkFavoriteScreenModel,
                         showRelatedMangasScreen = { showingRelatedMangasScreen.value = true },
@@ -207,7 +218,7 @@ class MangaScreen(
 
         val seedColor = successState.seedColor
         TachiyomiTheme(
-            seedColor = seedColor.takeIf { screenModel.themeCoverBased },
+            seedColor = seedColor.takeIf { viewModel.themeCoverBased },
         ) {
             content()
         }
@@ -221,8 +232,8 @@ class MangaScreen(
     @Composable
     fun MangaDetailContent(
         context: Context,
-        screenModel: MangaScreenModel,
-        successState: MangaScreenModel.State.Success,
+        screenModel: MangaViewModel,
+        successState: MangaViewModel.State.Success,
         bulkFavoriteScreenModel: BulkFavoriteScreenModel,
         showRelatedMangasScreen: () -> Unit,
         navigator: Navigator,
@@ -477,7 +488,7 @@ class MangaScreen(
         }
         when (val dialog = successState.dialog) {
             null -> {}
-            is MangaScreenModel.Dialog.ChangeCategory -> {
+            is MangaViewModel.Dialog.ChangeCategory -> {
                 ChangeCategoryDialog(
                     initialSelection = dialog.initialSelection,
                     onDismissRequest = onDismissRequest,
@@ -487,7 +498,7 @@ class MangaScreen(
                     },
                 )
             }
-            is MangaScreenModel.Dialog.DeleteChapters -> {
+            is MangaViewModel.Dialog.DeleteChapters -> {
                 DeleteChaptersDialog(
                     onDismissRequest = onDismissRequest,
                     onConfirm = {
@@ -497,7 +508,7 @@ class MangaScreen(
                 )
             }
 
-            is MangaScreenModel.Dialog.DuplicateManga -> {
+            is MangaViewModel.Dialog.DuplicateManga -> {
                 DuplicateMangaDialog(
                     duplicates = dialog.duplicates,
                     onDismissRequest = onDismissRequest,
@@ -510,7 +521,7 @@ class MangaScreen(
                 )
             }
 
-            is MangaScreenModel.Dialog.Migrate -> {
+            is MangaViewModel.Dialog.Migrate -> {
                 MigrateMangaDialog(
                     current = dialog.current,
                     target = dialog.target,
@@ -519,7 +530,7 @@ class MangaScreen(
                     onDismissRequest = onDismissRequest,
                 )
             }
-            MangaScreenModel.Dialog.SettingsSheet -> ChapterSettingsDialog(
+            MangaViewModel.Dialog.SettingsSheet -> ChapterSettingsDialog(
                 onDismissRequest = onDismissRequest,
                 manga = successState.manga,
                 onDownloadFilterChanged = screenModel::setDownloadedFilter,
@@ -532,7 +543,7 @@ class MangaScreen(
                 scanlatorFilterActive = successState.scanlatorFilterActive,
                 onScanlatorFilterClicked = { showScanlatorsDialog = true },
             )
-            MangaScreenModel.Dialog.TrackSheet -> {
+            MangaViewModel.Dialog.TrackSheet -> {
                 NavigatorAdaptiveSheet(
                     screen = TrackInfoDialogHomeScreen(
                         mangaId = successState.manga.id,
@@ -543,8 +554,16 @@ class MangaScreen(
                     onDismissRequest = onDismissRequest,
                 )
             }
-            MangaScreenModel.Dialog.FullCover -> {
-                val sm = rememberScreenModel { MangaCoverScreenModel(successState.manga.id) }
+            MangaViewModel.Dialog.FullCover -> {
+                val sm = viewModel<MangaCoverViewModel>(
+                    // KMK -->
+                    key = "manga-cover-${successState.manga.id}",
+                    // KMK <--
+                    factory = MangaCoverViewModel.Factory,
+                    extras = CreationExtras {
+                        set(MangaCoverViewModel.MANGA_ID_KEY, successState.manga.id)
+                    },
+                )
                 val manga by sm.state.collectAsState()
                 if (manga != null) {
                     val getContent = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
@@ -599,7 +618,7 @@ class MangaScreen(
                     LoadingScreen(Modifier.systemBarsPadding())
                 }
             }
-            is MangaScreenModel.Dialog.SetFetchInterval -> {
+            is MangaViewModel.Dialog.SetFetchInterval -> {
                 SetIntervalDialog(
                     interval = dialog.manga.fetchInterval,
                     nextUpdate = dialog.manga.expectedNextUpdate,
@@ -609,7 +628,7 @@ class MangaScreen(
                 )
             }
             // SY -->
-            is MangaScreenModel.Dialog.EditMangaInfo -> {
+            is MangaViewModel.Dialog.EditMangaInfo -> {
                 EditMangaDialog(
                     manga = dialog.manga,
                     // KMK -->
@@ -620,7 +639,7 @@ class MangaScreen(
                 )
             }
 
-            is MangaScreenModel.Dialog.EditMergedSettings -> {
+            is MangaViewModel.Dialog.EditMergedSettings -> {
                 EditMergedSettingsDialog(
                     mergedData = dialog.mergedData,
                     onDismissRequest = screenModel::dismissDialog,
@@ -635,7 +654,7 @@ class MangaScreen(
             }
             // SY <--
             // KMK -->
-            is MangaScreenModel.Dialog.ClearManga -> {
+            is MangaViewModel.Dialog.ClearManga -> {
                 ClearMangaDialog(
                     onDismissRequest = onDismissRequest,
                     onConfirm = screenModel::clearManga,

@@ -47,10 +47,15 @@ abstract class Screen : Screen {
     override val key: ScreenKey = "$uniqueScreenKey#${this::class.simpleName}"
 }
 
+interface AssistContentScreen {
+    fun onProvideAssistUrl(): String?
+}
+
 /**
  * A variant of ScreenModel.coroutineScope except with the IO dispatcher instead of the
  * main dispatcher.
  */
+// KMK --> kept for remaining exh/KMK ScreenModels that were not migrated to ViewModel
 val ScreenModel.ioCoroutineScope: CoroutineScope
     get() = ScreenModelStore.getOrPutDependency(
         screenModel = this,
@@ -58,10 +63,7 @@ val ScreenModel.ioCoroutineScope: CoroutineScope
         factory = { key -> CoroutineScope(Dispatchers.IO + SupervisorJob()) + CoroutineName(key) },
         onDispose = { scope -> scope.cancel() },
     )
-
-interface AssistContentScreen {
-    fun onProvideAssistUrl(): String?
-}
+// KMK <--
 
 @Composable
 fun DefaultNavigatorScreenTransition(

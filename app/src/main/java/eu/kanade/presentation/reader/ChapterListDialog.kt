@@ -18,7 +18,7 @@ import eu.kanade.presentation.manga.components.MangaChapterListItem
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.reader.chapter.ReaderChapterItem
-import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsViewModel
 import eu.kanade.tachiyomi.util.lang.toRelativeString
 import exh.metadata.MetadataUtil
 import exh.source.isEhBasedManga
@@ -38,7 +38,7 @@ import java.time.ZonedDateTime
 @Composable
 fun ChapterListDialog(
     onDismissRequest: () -> Unit,
-    screenModel: ReaderSettingsScreenModel,
+    viewModel: ReaderSettingsViewModel,
     chapters: ImmutableList<ReaderChapterItem>,
     onClickChapter: (Chapter) -> Unit,
     onBookmark: (Chapter) -> Unit,
@@ -47,7 +47,7 @@ fun ChapterListDialog(
     onDownloadAction: ((Chapter, ChapterDownloadAction) -> Unit)? = null,
     // KMK <--
 ) {
-    val manga by screenModel.mangaFlow.collectAsState()
+    val manga by viewModel.mangaFlow.collectAsState()
     val context = LocalContext.current
     val state = rememberLazyListState(chapters.indexOfFirst { it.isCurrent }.coerceAtLeast(0))
     val downloadManager: DownloadManager = remember { Injekt.get() }

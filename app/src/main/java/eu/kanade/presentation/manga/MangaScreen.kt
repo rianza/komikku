@@ -95,7 +95,7 @@ import eu.kanade.tachiyomi.source.online.all.NHentai
 import eu.kanade.tachiyomi.source.online.all.Pururin
 import eu.kanade.tachiyomi.source.online.english.EightMuses
 import eu.kanade.tachiyomi.ui.manga.ChapterList
-import eu.kanade.tachiyomi.ui.manga.MangaScreenModel
+import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.ui.manga.MergedMangaData
 import eu.kanade.tachiyomi.ui.manga.PagePreviewState
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -135,7 +135,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun MangaScreen(
-    state: MangaScreenModel.State.Success,
+    state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
     nextUpdate: Instant?,
     isTabletUi: Boolean,
@@ -345,7 +345,7 @@ fun MangaScreen(
 
 @Composable
 private fun MangaScreenSmallImpl(
-    state: MangaScreenModel.State.Success,
+    state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
     nextUpdate: Instant?,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
@@ -807,8 +807,8 @@ private fun MangaScreenSmallImpl(
 }
 
 @Composable
-private fun MangaScreenLargeImpl(
-    state: MangaScreenModel.State.Success,
+fun MangaScreenLargeImpl(
+    state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
     nextUpdate: Instant?,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
@@ -1409,7 +1409,7 @@ private fun onChapterItemClick(
 
 // SY -->
 typealias MetadataDescriptionComposable = @Composable (
-    state: MangaScreenModel.State.Success,
+    state: MangaViewModel.State.Success,
     openMetadataViewer: () -> Unit,
     search: (String) -> Unit,
 ) -> Unit

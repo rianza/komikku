@@ -8,12 +8,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import cafe.adriel.voyager.core.model.rememberScreenModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -28,12 +29,12 @@ class ExtensionsScreen(private val searchSource: String? = null) : Screen() {
         val context = LocalContext.current
         val navigator = LocalNavigator.current
 
-        val extensionsScreenModel = rememberScreenModel { ExtensionsScreenModel() }
-        val extensionsState by extensionsScreenModel.state.collectAsState()
-        val extensionsTab = extensionsTab(extensionsScreenModel)
+        val extensionsViewModel = viewModel<ExtensionsViewModel>()
+        val extensionsState by extensionsViewModel.state.collectAsState()
+        val extensionsTab = extensionsTab(extensionsViewModel)
 
         val searchQuery = extensionsState.searchQuery
-        val onChangeSearchQuery = extensionsScreenModel::search
+        val onChangeSearchQuery = extensionsViewModel::search
 
         val snackbarHostState = remember { SnackbarHostState() }
 
